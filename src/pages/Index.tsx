@@ -8,6 +8,7 @@ import WhyChooseSection from "@/components/WhyChooseSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
+import WhatsAppButton from "@/components/WhatsAppButton";
 
 const Index = () => (
   <div className="min-h-screen bg-background">
@@ -21,6 +22,7 @@ const Index = () => (
     <TestimonialsSection />
     <CTASection />
     <Footer />
+    <WhatsAppButton />
   </div>
 );
 
