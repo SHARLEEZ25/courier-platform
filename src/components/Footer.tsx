@@ -10,7 +10,7 @@ const Footer = () => (
           <img 
             src="/logos/logoforbrand.png" 
             alt="Uniex Courier" 
-            className="h-14 w-auto object-contain mb-6 brightness-0 invert"
+            className="h-14 w-auto object-contain mb-6"
           />
           <p className="text-sm text-[#6B7280] leading-[1.7] max-w-[240px] mb-5">
             Trusted international courier from Chennai since 2006.
