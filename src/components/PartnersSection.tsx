@@ -1,24 +1,30 @@
+import { motion } from "framer-motion";
+
 const partners = [
   { name: "DHL", url: "https://uniex.in/public/uploads/client-24.png" },
-  { name: "UPS", url: "https://uniex.in/public/uploads/client-18.png" },
+  { name: "FedEx", url: "https://uniex.in/public/uploads/client-17.png" },
   { name: "Aramex", url: "https://uniex.in/public/uploads/client-22.png" },
-  { name: "DPD", url: "https://uniex.in/public/uploads/client-23.png" },
-  { name: "DPEX", url: "https://uniex.in/public/uploads/client-17.png" },
+  { name: "UPS", url: "https://uniex.in/public/uploads/client-18.png" },
 ];
 
 const PartnersSection = () => (
-  <section className="py-12 border-y border-border overflow-hidden">
-    <div className="container text-center mb-8">
-      <span className="text-sm font-semibold text-muted-foreground tracking-wider uppercase">Our Shipping Partners</span>
-    </div>
-    <div className="relative">
-      <div className="flex animate-scroll-left">
-        {[...partners, ...partners, ...partners].map((p, i) => (
-          <div key={i} className="flex items-center justify-center px-10 shrink-0">
-            <img src={p.url} alt={p.name} className="h-10 object-contain opacity-50 hover:opacity-100 transition-opacity grayscale hover:grayscale-0" />
+  <section className="py-14 bg-light-bg">
+    <div className="container">
+      <p className="text-center text-xs font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-8">
+        Powered by Global Logistics Leaders
+      </p>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="flex flex-wrap justify-center gap-6"
+      >
+        {partners.map((p) => (
+          <div key={p.name} className="bg-card border border-card-border rounded-xl px-10 py-5 flex items-center justify-center">
+            <img src={p.url} alt={p.name} className="h-8 object-contain" />
           </div>
         ))}
-      </div>
+      </motion.div>
     </div>
   </section>
 );
