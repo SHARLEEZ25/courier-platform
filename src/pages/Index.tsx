@@ -1,14 +1,37 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import TopBar from "@/components/TopBar";
+import Navbar from "@/components/Navbar";
+import HeroSection from "@/components/HeroSection";
+import PricingSection from "@/components/PricingSection";
+import ServicesSection from "@/components/ServicesSection";
+import MedicineCourierSection from "@/components/MedicineCourierSection";
+import AcceptedItemsSection from "@/components/AcceptedItemsSection";
+import ShopShipSection from "@/components/ShopShipSection";
+import BranchesSection from "@/components/BranchesSection";
+import TestimonialsSection from "@/components/TestimonialsSection";
+import CustomersSection from "@/components/CustomersSection";
+import BlogSection from "@/components/BlogSection";
+import PartnersSection from "@/components/PartnersSection";
+import CTASection from "@/components/CTASection";
+import Footer from "@/components/Footer";
 
-const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
-};
+const Index = () => (
+  <div className="min-h-screen bg-background">
+    <TopBar />
+    <Navbar />
+    <HeroSection />
+    <PricingSection />
+    <ServicesSection />
+    <MedicineCourierSection />
+    <AcceptedItemsSection />
+    <ShopShipSection />
+    <BranchesSection />
+    <TestimonialsSection />
+    <CustomersSection />
+    <BlogSection />
+    <PartnersSection />
+    <CTASection />
+    <Footer />
+  </div>
+);
 
 export default Index;
