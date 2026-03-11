@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
-import { Phone, MessageCircle } from "lucide-react";
+import { Phone } from "lucide-react";
 
 const CTASection = () => (
-  <section className="py-16 bg-navy">
+  <section className="py-16 bg-primary">
     <div className="container">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -10,26 +10,25 @@ const CTASection = () => (
         viewport={{ once: true }}
         className="text-center"
       >
-        <h2 className="text-3xl lg:text-4xl font-extrabold text-primary-foreground mb-4">
-          Ready to Ship Your Parcel?
+        <h2 className="text-3xl lg:text-4xl font-semibold text-primary-foreground mb-3">
+          Ready to Ship? Get a Free Quote in 60 Seconds.
         </h2>
-        <p className="text-primary-foreground/60 mb-8 max-w-md mx-auto">
-          Contact us today for the best international courier rates from India.
+        <p className="text-primary-foreground/80 mb-8 max-w-md mx-auto">
+          No sign-up needed. Just enter your destination and package weight.
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <a
-            href="tel:+919380839266"
-            className="inline-flex items-center gap-2 bg-accent text-accent-foreground px-8 py-3 rounded-lg font-semibold shadow-button hover:brightness-110 transition"
+            href="https://uniex.in/home/get_quote"
+            className="inline-flex items-center gap-2 bg-card text-primary px-8 py-3 rounded-lg font-medium hover:bg-muted transition-colors"
           >
-            <Phone className="w-5 h-5" />
-            Call Now
+            Get a Free Quote
           </a>
           <a
-            href="https://wa.me/917550020068?text=hi"
-            className="inline-flex items-center gap-2 bg-teal text-accent-foreground px-8 py-3 rounded-lg font-semibold hover:brightness-110 transition"
+            href="tel:+919380839266"
+            className="inline-flex items-center gap-2 border border-primary-foreground text-primary-foreground px-8 py-3 rounded-lg font-medium hover:bg-primary-foreground/10 transition-colors"
           >
-            <MessageCircle className="w-5 h-5" />
-            WhatsApp
+            <Phone className="w-4 h-4" />
+            Call Us Now
           </a>
         </div>
       </motion.div>

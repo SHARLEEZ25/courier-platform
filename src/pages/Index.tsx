@@ -1,16 +1,11 @@
 import TopBar from "@/components/TopBar";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
-import PricingSection from "@/components/PricingSection";
-import ServicesSection from "@/components/ServicesSection";
-import MedicineCourierSection from "@/components/MedicineCourierSection";
-import AcceptedItemsSection from "@/components/AcceptedItemsSection";
-import ShopShipSection from "@/components/ShopShipSection";
-import BranchesSection from "@/components/BranchesSection";
-import TestimonialsSection from "@/components/TestimonialsSection";
-import CustomersSection from "@/components/CustomersSection";
-import BlogSection from "@/components/BlogSection";
 import PartnersSection from "@/components/PartnersSection";
+import ServicesSection from "@/components/ServicesSection";
+import HowItWorksSection from "@/components/HowItWorksSection";
+import WhyChooseSection from "@/components/WhyChooseSection";
+import TestimonialsSection from "@/components/TestimonialsSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 
@@ -19,16 +14,11 @@ const Index = () => (
     <TopBar />
     <Navbar />
     <HeroSection />
-    <PricingSection />
-    <ServicesSection />
-    <MedicineCourierSection />
-    <AcceptedItemsSection />
-    <ShopShipSection />
-    <BranchesSection />
-    <TestimonialsSection />
-    <CustomersSection />
-    <BlogSection />
     <PartnersSection />
+    <ServicesSection />
+    <HowItWorksSection />
+    <WhyChooseSection />
+    <TestimonialsSection />
     <CTASection />
     <Footer />
   </div>

@@ -1,46 +1,36 @@
 import { motion } from "framer-motion";
-import { GraduationCap, UtensilsCrossed, Luggage, Ship, PackageOpen, Plane, FileText, Cpu } from "lucide-react";
+import { FileText, GraduationCap, Luggage, Plane, ShoppingBag, Package, ArrowRight } from "lucide-react";
 
 const services = [
   {
-    icon: GraduationCap,
-    title: "Students Courier",
-    desc: "Save more than 50% on student documents, university applications, and parcels worldwide.",
+    icon: FileText,
+    title: "Document Courier",
+    desc: "Send legal documents, certificates, and important papers worldwide with guaranteed delivery timelines.",
   },
   {
-    icon: UtensilsCrossed,
-    title: "Indian Food Items Shipping",
-    desc: "Miss Indian food? We guarantee timely door-to-door delivery of your favourite food items.",
+    icon: GraduationCap,
+    title: "University Express",
+    desc: "Trusted courier for university applications, student documents, and academic submissions across the globe.",
   },
   {
     icon: Luggage,
-    title: "Excess Baggage Shipping",
-    desc: "Save more than 50% on international excess baggage & unaccompanied baggage worldwide.",
-  },
-  {
-    icon: Ship,
-    title: "Export & Import",
-    desc: "Bulk consignment solutions for businesses needing international export and import services.",
+    title: "Excess Baggage",
+    desc: "Ship your extra luggage ahead at a fraction of airline excess baggage fees.",
   },
   {
     icon: Plane,
     title: "On-Board Courier (OBC)",
-    desc: "Premier on-board courier service for time-critical shipments across international borders.",
+    desc: "The fastest option — a dedicated courier personally carries your shipment on the next available flight.",
   },
   {
-    icon: PackageOpen,
+    icon: ShoppingBag,
     title: "Shop & Ship",
-    desc: "We buy products from across India and ship them directly to your doorstep abroad.",
+    desc: "We shop from USA, UK, Australia, Canada & Europe and ship directly to your Indian address.",
   },
   {
-    icon: FileText,
-    title: "Document Delivery",
-    desc: "Secure handling and delivery of sensitive legal, business, and government documents globally.",
-  },
-  {
-    icon: Cpu,
-    title: "Technology & Prototype",
-    desc: "Bespoke courier service for sensitive technology, prototypes, and high-value innovations.",
+    icon: Package,
+    title: "Commercial Cargo",
+    desc: "Full-service cargo solutions for businesses shipping goods internationally — customs handled end-to-end.",
   },
 ];
 
@@ -53,14 +43,13 @@ const ServicesSection = () => (
         viewport={{ once: true }}
         className="text-center mb-14"
       >
-        <span className="text-accent font-semibold text-sm tracking-wider uppercase">What We Offer</span>
-        <h2 className="text-3xl lg:text-4xl font-extrabold text-foreground mt-2">Our Services</h2>
-        <p className="text-muted-foreground mt-3 max-w-xl mx-auto">
-          Shop & Ship Medicines / Products from Chennai, India to the world.
+        <h2 className="text-3xl lg:text-4xl font-semibold text-dark-text">Our Courier Services</h2>
+        <p className="text-body-text mt-3 max-w-xl mx-auto">
+          Everything from lightweight documents to heavy cargo — we handle it all
         </p>
       </motion.div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {services.map((s, i) => (
           <motion.div
             key={s.title}
@@ -68,13 +57,14 @@ const ServicesSection = () => (
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: i * 0.05 }}
-            className="bg-card rounded-2xl p-6 shadow-card hover:shadow-card-hover transition-all group"
+            className="bg-card border border-card-border rounded-xl p-6 hover:shadow-card-hover transition-all group border-l-4 border-l-primary"
           >
-            <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
-              <s.icon className="w-6 h-6 text-accent" />
-            </div>
-            <h3 className="font-display font-bold text-foreground mb-2">{s.title}</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+            <s.icon className="w-8 h-8 text-primary mb-4" />
+            <h3 className="font-display font-bold text-dark-text mb-2">{s.title}</h3>
+            <p className="text-sm text-body-text leading-relaxed mb-4">{s.desc}</p>
+            <a href="https://uniex.in/service" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+              Learn More <ArrowRight className="w-3.5 h-3.5" />
+            </a>
           </motion.div>
         ))}
       </div>

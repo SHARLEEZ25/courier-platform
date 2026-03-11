@@ -1,39 +1,42 @@
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, X, Globe } from "lucide-react";
 
 const navLinks = [
   { label: "Home", href: "#" },
   { label: "About", href: "https://uniex.in/about" },
-  { label: "Service", href: "https://uniex.in/service" },
+  { label: "Services", href: "#services" },
+  { label: "Track", href: "#hero" },
   { label: "News", href: "https://uniex.in/news" },
   { label: "Contact", href: "https://uniex.in/contact" },
 ];
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <nav className="bg-card sticky top-0 z-50 shadow-card">
+    <nav className={`bg-card sticky top-0 z-50 transition-shadow ${scrolled ? "shadow-card-hover" : ""}`}>
       <div className="container flex items-center justify-between py-4">
         <a href="/" className="flex items-center gap-2">
-          <div className="bg-navy rounded-lg p-2">
-            <span className="text-accent font-display font-extrabold text-xl leading-none">U</span>
-          </div>
-          <div className="leading-tight">
-            <span className="font-display font-bold text-lg text-foreground">Uniex</span>
-            <span className="block text-[10px] text-muted-foreground tracking-widest uppercase">Courier & Cargo</span>
-          </div>
+          <Globe className="w-7 h-7 text-primary" />
+          <span className="font-display font-bold text-xl text-primary">Uniex Courier</span>
         </a>
 
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((l) => (
-            <a key={l.label} href={l.href} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <a key={l.label} href={l.href} className="text-[15px] font-medium text-muted-foreground hover:text-primary transition-colors">
               {l.label}
             </a>
           ))}
           <a
             href="https://uniex.in/home/get_quote"
-            className="bg-accent text-accent-foreground px-5 py-2.5 rounded-lg text-sm font-semibold shadow-button hover:brightness-110 transition"
+            className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-[15px] font-medium hover:bg-green-dark transition-colors"
           >
             Get Quote
           </a>
@@ -47,13 +50,13 @@ const Navbar = () => {
       {open && (
         <div className="md:hidden bg-card border-t border-border px-6 pb-4 space-y-3">
           {navLinks.map((l) => (
-            <a key={l.label} href={l.href} className="block text-sm font-medium text-muted-foreground py-2">
+            <a key={l.label} href={l.href} className="block text-[15px] font-medium text-muted-foreground py-2">
               {l.label}
             </a>
           ))}
           <a
             href="https://uniex.in/home/get_quote"
-            className="block bg-accent text-accent-foreground px-5 py-2.5 rounded-lg text-sm font-semibold text-center shadow-button"
+            className="block bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-[15px] font-medium text-center"
           >
             Get Quote
           </a>

@@ -1,73 +1,70 @@
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, MessageCircle } from "lucide-react";
 
 const Footer = () => (
-  <footer className="bg-navy-dark text-primary-foreground/70 py-16">
+  <footer className="bg-footer-bg text-primary-foreground/70 py-16">
     <div className="container">
       <div className="grid md:grid-cols-4 gap-10 mb-12">
         {/* Brand */}
         <div>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="bg-accent rounded-lg p-2">
-              <span className="font-display font-extrabold text-xl text-accent-foreground leading-none">U</span>
-            </div>
-            <div>
-              <span className="font-display font-bold text-lg text-primary-foreground">Uniex</span>
-              <span className="block text-[10px] tracking-widest uppercase text-primary-foreground/40">Courier & Cargo</span>
-            </div>
-          </div>
-          <p className="text-sm leading-relaxed">
-            Your trusted partner for reliable and cost-effective parcel delivery from India to 200+ countries.
+          <span className="font-display font-bold text-lg text-primary block mb-3">Uniex Courier</span>
+          <p className="text-sm leading-relaxed mb-4">
+            Trusted international courier from Chennai to the world since 2006.
           </p>
-        </div>
-
-        {/* Quick Links */}
-        <div>
-          <h4 className="font-display font-bold text-primary-foreground mb-4">Quick Links</h4>
-          <div className="space-y-2 text-sm">
-            <a href="https://uniex.in/about" className="block hover:text-accent transition-colors">About</a>
-            <a href="https://uniex.in/service" className="block hover:text-accent transition-colors">Services</a>
-            <a href="https://uniex.in/pricing" className="block hover:text-accent transition-colors">Pricing</a>
-            <a href="https://uniex.in/faq" className="block hover:text-accent transition-colors">FAQ</a>
-            <a href="https://uniex.in/contact" className="block hover:text-accent transition-colors">Contact</a>
+          <div className="flex gap-3">
+            {[Facebook, Twitter, Instagram, MessageCircle].map((Icon, i) => (
+              <a key={i} href="#" className="w-8 h-8 rounded-full border border-primary-foreground/20 flex items-center justify-center hover:border-primary hover:text-primary transition-colors">
+                <Icon className="w-4 h-4" />
+              </a>
+            ))}
           </div>
         </div>
 
-        {/* Recent Posts */}
+        {/* Services */}
         <div>
-          <h4 className="font-display font-bold text-primary-foreground mb-4">Recent Posts</h4>
+          <h4 className="font-display font-bold text-primary-foreground mb-4">Services</h4>
           <div className="space-y-2 text-sm">
-            <a href="https://uniex.in/news/view/37" className="block hover:text-accent transition-colors">Medicine Courier from India</a>
-            <a href="https://uniex.in/news/view/36" className="block hover:text-accent transition-colors">USA Tariff Regulations</a>
-            <a href="https://uniex.in/news/view/35" className="block hover:text-accent transition-colors">USA Courier from India – Full Guide</a>
+            <a href="https://uniex.in/service" className="block hover:text-primary transition-colors">Document Courier</a>
+            <a href="https://uniex.in/service" className="block hover:text-primary transition-colors">University Express</a>
+            <a href="https://uniex.in/service" className="block hover:text-primary transition-colors">Excess Baggage</a>
+            <a href="https://uniex.in/service" className="block hover:text-primary transition-colors">On-Board Courier</a>
+            <a href="https://uniex.in/service" className="block hover:text-primary transition-colors">Shop & Ship</a>
+            <a href="https://uniex.in/service" className="block hover:text-primary transition-colors">Commercial Cargo</a>
+          </div>
+        </div>
+
+        {/* Company */}
+        <div>
+          <h4 className="font-display font-bold text-primary-foreground mb-4">Company</h4>
+          <div className="space-y-2 text-sm">
+            <a href="https://uniex.in/about" className="block hover:text-primary transition-colors">About Us</a>
+            <a href="https://uniex.in/news" className="block hover:text-primary transition-colors">News</a>
+            <a href="https://uniex.in/contact" className="block hover:text-primary transition-colors">Contact Us</a>
+            <a href="https://app.uniex.in/" className="block hover:text-primary transition-colors">Login / Register</a>
           </div>
         </div>
 
         {/* Contact */}
         <div>
-          <h4 className="font-display font-bold text-primary-foreground mb-4">Address</h4>
+          <h4 className="font-display font-bold text-primary-foreground mb-4">Contact</h4>
           <div className="space-y-3 text-sm">
-            <div className="flex gap-2">
-              <MapPin className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-              <span>First Floor, Old No.4V, New No.7, Gayatri Villa, Josier Street, Nungambakkam, Chennai - 600034</span>
-            </div>
-            <a href="tel:+919380839266" className="flex items-center gap-2 hover:text-accent transition-colors">
-              <Phone className="w-4 h-4 text-accent" />
-              +91 9380839266
-            </a>
-            <a href="mailto:uniexanr@gmail.com" className="flex items-center gap-2 hover:text-accent transition-colors">
-              <Mail className="w-4 h-4 text-accent" />
+            <a href="mailto:uniexanr@gmail.com" className="flex items-center gap-2 hover:text-primary transition-colors">
+              <Mail className="w-4 h-4 text-primary" />
               uniexanr@gmail.com
             </a>
+            <a href="tel:+919600879666" className="flex items-center gap-2 hover:text-primary transition-colors">
+              <Phone className="w-4 h-4 text-primary" />
+              +91 9600879666
+            </a>
+            <div className="flex gap-2">
+              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <span>Chennai, Tamil Nadu, India</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-primary-foreground/10 pt-6 flex flex-wrap justify-between items-center gap-4 text-xs text-primary-foreground/40">
-        <span>Copyright © 2024, Uniex Courier and Cargo</span>
-        <div className="flex gap-4">
-          <a href="https://uniex.in/terms-and-conditions" className="hover:text-accent transition-colors">Terms & Conditions</a>
-          <a href="https://uniex.in/privacy-policy" className="hover:text-accent transition-colors">Privacy Policy</a>
-        </div>
+      <div className="border-t border-primary-foreground/10 pt-6 text-center text-xs text-primary-foreground/40">
+        © 2024 Uniex Courier. All rights reserved.
       </div>
     </div>
   </footer>
