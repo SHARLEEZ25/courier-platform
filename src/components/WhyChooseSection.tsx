@@ -1,63 +1,80 @@
 import { motion } from "framer-motion";
-import { CheckCircle } from "lucide-react";
+import { Check } from "lucide-react";
 
 const stats = [
-  { value: "18+", label: "Years in Business" },
-  { value: "220+", label: "Countries Served" },
-  { value: "50,000+", label: "Shipments Delivered" },
-  { value: "4", label: "Global Carrier Partners" },
+  { value: "18", suffix: "+", label: "YEARS IN BUSINESS" },
+  { value: "220", suffix: "+", label: "COUNTRIES SERVED" },
+  { value: "50", suffix: "K+", label: "SHIPMENTS DELIVERED" },
+  { value: "4", suffix: "", label: "GLOBAL CARRIER PARTNERS" },
 ];
 
 const features = [
   "Door-to-door pickup and delivery",
-  "Real-time shipment tracking",
-  "Competitive rates vs airline excess baggage",
-  "Customs documentation support",
-  "Dedicated support via WhatsApp & phone",
-  "Same-day pickup in Chennai",
+  "Real-time shipment tracking portal",
+  "Competitive rates — cheaper than airline excess baggage",
+  "Full customs documentation support",
+  "Dedicated WhatsApp and phone support",
+  "18 years of zero-compromise reliability",
 ];
 
 const WhyChooseSection = () => (
-  <section className="py-20">
+  <section className="py-24 lg:py-28">
     <div className="container">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="text-center mb-14"
-      >
-        <h2 className="text-3xl lg:text-4xl font-semibold text-dark-text">Why Choose Uniex</h2>
-      </motion.div>
-
-      <div className="grid lg:grid-cols-2 gap-12 items-start">
-        {/* Stats */}
+      <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center">
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          whileInView={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="grid grid-cols-2 gap-4"
+          transition={{ duration: 0.5 }}
+          className="grid grid-cols-2"
         >
-          {stats.map((s) => (
-            <div key={s.label} className="bg-card border border-card-border rounded-xl p-6 text-center">
-              <div className="text-3xl font-bold text-primary mb-1">{s.value}</div>
-              <div className="text-sm text-body-text">{s.label}</div>
+          {stats.map((s, i) => (
+            <div
+              key={s.label}
+              className={`py-8 px-6 ${
+                i % 2 === 0 ? "border-r border-gray-200" : ""
+              } ${i < 2 ? "border-b border-gray-200" : ""}`}
+            >
+              <div className="text-[52px] font-extrabold text-brand-black leading-none tracking-[-0.03em]">
+                {s.value}
+                <span className="text-green-primary">{s.suffix}</span>
+              </div>
+              <p className="text-[13px] font-medium text-gray-500 uppercase tracking-[0.06em] mt-2">
+                {s.label}
+              </p>
             </div>
           ))}
         </motion.div>
 
-        {/* Features */}
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          whileInView={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="space-y-4"
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
-          {features.map((f) => (
-            <div key={f} className="flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-primary shrink-0" />
-              <span className="text-body-text">{f}</span>
-            </div>
-          ))}
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-green-primary mb-3">
+            WHY CHOOSE US
+          </p>
+          <h3 className="text-[24px] lg:text-[28px] font-bold text-brand-black leading-[1.3] tracking-[-0.02em] mb-7">
+            Built for businesses and individuals who can't afford delays.
+          </h3>
+          <div className="space-y-3.5">
+            {features.map((f, i) => (
+              <motion.div
+                key={f}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08, duration: 0.4 }}
+                className="flex items-center gap-3"
+              >
+                <div className="w-4 h-4 rounded-full bg-green-primary flex items-center justify-center shrink-0">
+                  <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                </div>
+                <span className="text-[15px] font-medium text-gray-700">{f}</span>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
       </div>
     </div>
