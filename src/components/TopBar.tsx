@@ -14,10 +14,10 @@ const TopBar = () => (
           +91 9600879666
         </a>
       </div>
-      <div className="flex items-center gap-3 text-xs font-medium">
-        <a href="https://app.uniex.in/" className="opacity-90 hover:opacity-100 transition-opacity">Login</a>
+      <div className="flex items-center gap-4 text-xs font-medium">
+        <a href="/get-quote" className="opacity-90 hover:opacity-100 transition-opacity">Get a Quote</a>
         <span className="opacity-30">|</span>
-        <a href="https://app.uniex.in/" className="opacity-90 hover:opacity-100 transition-opacity">Register</a>
+        <a href="/contact" className="opacity-90 hover:opacity-100 transition-opacity">Contact Us</a>
       </div>
     </div>
   </div>

@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { Menu, X, Globe } from "lucide-react";
 
 const navLinks = [
-  { label: "Home", href: "#" },
-  { label: "About", href: "https://uniex.in/about" },
-  { label: "Services", href: "#services" },
-  { label: "Track", href: "#hero" },
-  { label: "Contact", href: "https://uniex.in/contact" },
+  { label: "Home", href: "/" },
+  { label: "About", href: "/about" },
+  { label: "Services", href: "/services" },
+  { label: "Quote", href: "/get-quote" },
+  { label: "Contact", href: "/contact" },
 ];
 
 const Navbar = () => {
@@ -26,17 +26,15 @@ const Navbar = () => {
           ? "bg-white/90 backdrop-blur-md border-b border-gray-200"
           : "bg-transparent"
       }`}
-      style={{ height: 68 }}
+      style={{ height: 85 }}
     >
       <div className="container h-full flex items-center justify-between">
-        {/* Logo */}
-        <a href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-green-primary flex items-center justify-center">
-            <Globe className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-lg font-bold text-brand-black">
-            Uniex <span className="text-green-primary">Courier</span>
-          </span>
+        <a href="/" className="flex items-center">
+          <img 
+            src="/logos/logoforbrand.png" 
+            alt="Uniex Courier" 
+            className="h-12 md:h-16 w-auto object-contain"
+          />
         </a>
 
         {/* Desktop nav */}
@@ -54,7 +52,7 @@ const Navbar = () => {
 
         {/* CTA */}
         <a
-          href="https://uniex.in/home/get_quote"
+          href="/get-quote"
           className="hidden md:inline-flex bg-green-primary text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-green-dark transition-colors"
         >
           Get a Quote
@@ -80,7 +78,7 @@ const Navbar = () => {
             </a>
           ))}
           <a
-            href="https://uniex.in/home/get_quote"
+            href="/get-quote"
             className="block bg-green-primary text-white px-5 py-2.5 rounded-lg text-sm font-semibold text-center mt-3"
           >
             Get a Quote

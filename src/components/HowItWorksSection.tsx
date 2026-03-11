@@ -1,12 +1,50 @@
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { Calculator, ClipboardList, Truck, MapPin } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 
 const steps = [
-  { icon: Calculator, num: "01", title: "Get a Quote", desc: "Enter your destination and package details for an instant price estimate." },
-  { icon: ClipboardList, num: "02", title: "Book Shipment", desc: "Fill in sender and receiver details and confirm your booking in under 2 minutes." },
-  { icon: Truck, num: "03", title: "Schedule Pickup", desc: "We come to you. Same-day and next-day pickup available across Chennai." },
-  { icon: MapPin, num: "04", title: "Track Live", desc: "Receive real-time status updates from pickup all the way to final delivery." },
+  { icon: Calculator, num: "01", title: "Get a Quote", desc: "Enter your destination, weight, and package details for an instant price estimate." },
+  { icon: ClipboardList, num: "02", title: "Book Your Shipment", desc: "Fill in sender and receiver details and confirm your booking in under 2 minutes." },
+  { icon: Truck, num: "03", title: "We Pick Up From You", desc: "Available across Chennai, Tamil Nadu, and all major cities in India. Same-day and next-day pickup available." },
+  { icon: MapPin, num: "04", title: "Track in Real Time", desc: "Receive live status updates from pickup through customs and all the way to final delivery." },
 ];
+
+const StepNumber = ({ num, delay }: { num: string; delay: number }) => {
+  const isInView = useInView(useRef(null), { once: true, margin: "-50px" });
+  const [displayNum, setDisplayNum] = useState("00");
+
+  useEffect(() => {
+    if (isInView) {
+      const target = parseInt(num);
+      let current = 0;
+      const duration = 600;
+      const interval = duration / (target + 1);
+
+      const timer = setTimeout(() => {
+        const counter = setInterval(() => {
+          current++;
+          setDisplayNum(current.toString().padStart(2, "0"));
+          if (current >= target) clearInterval(counter);
+        }, interval);
+      }, delay * 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isInView, num, delay]);
+
+  return (
+    <div className="overflow-hidden h-[48px]">
+      <motion.span
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="text-[48px] font-extrabold text-green-muted leading-none select-none block"
+      >
+        {displayNum}
+      </motion.span>
+    </div>
+  );
+};
 
 const HowItWorksSection = () => (
   <section className="bg-green-tint py-24 lg:py-28">
@@ -25,10 +63,10 @@ const HowItWorksSection = () => (
           From quote to delivery<br />in four steps.
         </h2>
       </motion.div>
-
+ 
       <div className="relative">
         <div className="hidden lg:block absolute top-6 left-[12.5%] right-[12.5%] border-t border-dashed border-green-muted" />
-
+ 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
           {steps.map((s, i) => (
             <motion.div
@@ -39,9 +77,7 @@ const HowItWorksSection = () => (
               transition={{ delay: i * 0.08, duration: 0.5 }}
               className="text-center relative"
             >
-              <span className="text-[48px] font-extrabold text-green-muted leading-none select-none">
-                {s.num}
-              </span>
+              <StepNumber num={s.num} delay={i * 0.2} />
               <div className="w-12 h-12 rounded-full bg-white border border-gray-200 flex items-center justify-center mx-auto -mt-8 relative z-10 mb-4">
                 <s.icon className="w-5 h-5 text-green-primary" />
               </div>

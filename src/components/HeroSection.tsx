@@ -1,24 +1,24 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Check } from "lucide-react";
 
 /* ── Mockup screens ── */
 const QuoteScreen = () => (
-  <div className="p-5">
-    <p className="text-sm font-bold text-brand-black mb-3">Instant Shipping Quote</p>
-    <div className="grid grid-cols-2 gap-2 mb-2">
-      <div className="bg-gray-100 rounded-lg px-3 py-2 text-xs text-gray-700 font-medium">🇮🇳 India</div>
-      <div className="bg-gray-100 rounded-lg px-3 py-2 text-xs text-gray-700 font-medium">🇺🇸 United States</div>
-    </div>
-    <div className="bg-gray-100 rounded-lg px-3 py-2 text-xs text-gray-500 mb-3">Weight: 2.5 kg</div>
-    <div className="bg-green-primary text-white text-xs font-semibold py-2 rounded-lg text-center mb-3">
+    <div className="p-5">
+      <p className="text-sm font-bold text-brand-black mb-3">Instant Shipping Quote</p>
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="bg-gray-100 rounded-lg px-3 py-2 text-xs text-gray-700 font-medium">🇮🇳 India</div>
+        <div className="bg-gray-100 rounded-lg px-3 py-2 text-xs text-gray-700 font-medium">🇺🇸 United States</div>
+      </div>
+      <div className="bg-gray-100 rounded-lg px-3 py-2 text-xs text-gray-500 mb-3">Weight (kg): 2.5</div>
+      <div className="bg-green-primary text-white text-xs font-semibold py-2 rounded-lg text-center mb-3">
       Calculate Rate →
     </div>
     <div className="space-y-2">
       {[
-        { carrier: "DHL Express", price: "₹2,450", time: "2-3 days", best: true },
-        { carrier: "FedEx Intl.", price: "₹1,980", time: "3-5 days", best: false },
-        { carrier: "Aramex", price: "₹1,640", time: "5-7 days", best: false },
+        { carrier: "DHL Express", price: "₹2,450", time: "2–3 days", best: true },
+        { carrier: "FedEx Intl.", price: "₹1,980", time: "3–5 days", best: false },
+        { carrier: "Aramex", price: "₹1,640", time: "5–7 days", best: false },
       ].map((r) => (
         <div key={r.carrier} className="flex items-center justify-between py-1.5 border-t border-gray-200 first:border-0">
           <div>
@@ -48,7 +48,7 @@ const BookingScreen = () => (
         ["Tracking ID", "UNX-2024-00847"],
         ["Route", "Chennai → New York"],
         ["Carrier", "DHL Express"],
-        ["Delivery", "Dec 18 – Dec 19"],
+        ["Delivery", "3–4 Business Days"],
       ].map(([label, value]) => (
         <div key={label} className="flex justify-between">
           <span className="text-gray-500">{label}</span>
@@ -139,16 +139,16 @@ const HeroSection = () => {
           >
             {/* Pill */}
             <div className="inline-flex items-center gap-1.5 bg-green-muted text-green-deep border border-[hsl(var(--green-muted))] rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
-              ✦ Trusted Since 2006 · 220+ Countries
+              ✦ Trusted Since 2006 · 200+ Countries
             </div>
 
             {/* H1 */}
             <h1
               className="text-[40px] lg:text-[64px] font-extrabold text-brand-black leading-[1.1] tracking-[-0.03em] mb-5"
             >
-              Ship Anything,<br />
+              Fast. Reliable.<br />
               <span className="underline decoration-green-primary decoration-[3px] underline-offset-[6px]">
-                Anywhere
+                International Courier
               </span>
               <br />
               From India.
@@ -156,21 +156,20 @@ const HeroSection = () => {
 
             {/* Subtext */}
             <p className="text-[17px] text-gray-500 leading-[1.75] max-w-[480px] mb-8">
-              18 years of trusted international courier service — documents, parcels,
-              and cargo delivered to 220+ countries worldwide. Powered by DHL, FedEx,
-              Aramex, and UPS.
+              Reliable parcel delivery from India to 200+ countries. 
+              We ship via DPD, DHL, Uniex, DPEX, and Aramex.
             </p>
 
             {/* CTA buttons */}
             <div className="flex flex-wrap items-center gap-3 mb-10">
               <a
-                href="https://uniex.in/home/get_quote"
+                href="/get-quote"
                 className="inline-flex items-center gap-2 bg-green-primary text-white px-7 py-3.5 rounded-lg text-[15px] font-semibold hover:bg-green-dark transition-colors"
               >
                 Get a Free Quote <ArrowRight className="w-4 h-4" />
               </a>
               <a
-                href="#hero"
+                href="/contact"
                 className="inline-flex items-center gap-2 border-[1.5px] border-gray-200 text-gray-700 px-7 py-3.5 rounded-lg text-[15px] font-semibold hover:border-green-primary hover:text-green-primary transition-colors"
               >
                 Track a Shipment
@@ -178,21 +177,41 @@ const HeroSection = () => {
             </div>
 
             {/* Trust strip */}
-            <div className="flex flex-wrap items-center gap-4 text-[13px] font-medium text-gray-700 mb-4">
-              {["18 Yrs Experience", "220+ Countries", "Same Day Pickup"].map((t, i) => (
-                <span key={t} className="flex items-center gap-2">
+            <motion.div 
+              initial="hidden"
+              animate="visible"
+              variants={{
+                visible: {
+                  transition: {
+                    staggerChildren: 0.15,
+                  },
+                },
+              }}
+              className="flex flex-wrap items-center gap-4 text-[13px] font-medium text-gray-700 mb-4"
+            >
+              {[
+                { name: "DPD", color: "text-[#B00000]" },
+                { name: "DHL", color: "text-[#FFCC00]" },
+                { name: "Uniex", color: "text-[#2E7D32]" },
+                { name: "DPEX", color: "text-[#E31E24]" },
+                { name: "Aramex", color: "text-[#E31E24]" }
+              ].map((carrier, i) => (
+                <motion.span 
+                  key={carrier.name}
+                  variants={{
+                    hidden: { opacity: 0, y: 8 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
+                  transition={{ duration: 0.4 }}
+                  className="flex items-center gap-2"
+                >
                   {i > 0 && <span className="w-px h-4 bg-gray-200 -ml-1 mr-1" />}
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-primary" />
-                  {t}
-                </span>
+                  <span className={`w-1.5 h-1.5 rounded-full bg-green-primary`} />
+                  <span className="font-bold">{carrier.name}</span>
+                </motion.span>
               ))}
-            </div>
-            <div className="flex items-center gap-5 text-[11px] text-gray-500">
-              <span>Powered by:</span>
-              {["DHL", "FedEx", "Aramex", "UPS"].map((n) => (
-                <span key={n} className="text-[13px] font-bold text-gray-500/60">{n}</span>
-              ))}
-            </div>
+            </motion.div>
+
           </motion.div>
 
           {/* RIGHT — Animated mockup */}
@@ -212,21 +231,24 @@ const HeroSection = () => {
                 </div>
                 <div className="flex-1 flex justify-center">
                   <div className="bg-white rounded-full px-4 py-0.5 text-[10px] text-gray-500 font-medium">
-                    <span className="text-green-primary">uniex.in</span>/app
+                    <span className="text-green-primary">Uniex</span> Dashboard
                   </div>
                 </div>
               </div>
 
               {/* Content */}
               <div className="bg-white border border-gray-200 border-t-0 rounded-b-xl min-h-[340px] relative overflow-hidden">
-                <motion.div
-                  key={activeScreen}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <ActiveComponent />
-                </motion.div>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeScreen}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                  >
+                    <ActiveComponent />
+                  </motion.div>
+                </AnimatePresence>
               </div>
             </div>
 

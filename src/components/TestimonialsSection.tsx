@@ -5,19 +5,19 @@ const testimonials = [
   {
     text: "Sent my university documents to Canada and they arrived in 3 days. Uniex is the only courier I trust for time-sensitive admissions submissions.",
     name: "Priya R.",
-    detail: "Chennai — University Documents",
+    detail: "Chennai — University Documents to Canada",
     initials: "PR",
   },
   {
-    text: "Used Shop & Ship to buy from Amazon UK. The entire process was seamless — great pricing and zero customs headache on my end.",
+    text: "Used the Shop & Ship service to buy from Amazon UK. Seamless process, great pricing, and zero customs headache on my end.",
     name: "Arjun M.",
-    detail: "Coimbatore — Shop & Ship",
+    detail: "Coimbatore — Shop & Ship from UK",
     initials: "AM",
   },
   {
-    text: "Every Diwali we send parcels to family in the USA. For 6 years straight, not a single issue. That kind of consistency is rare.",
+    text: "Every festival season we send parcels to family in the USA. For 6 years straight, not a single issue. That kind of consistency is rare.",
     name: "Kavitha S.",
-    detail: "Chennai — Personal Parcels",
+    detail: "Chennai — Personal Parcels to USA",
     initials: "KS",
   },
 ];

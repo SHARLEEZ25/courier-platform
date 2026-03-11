@@ -20,13 +20,13 @@ const CTASection = () => (
           Ready to ship? Get your<br />free quote in 60 seconds.
         </h2>
 
-        <p className="text-[13px] text-gray-500 mb-9">
-          No signup required. Just enter your destination and weight.
+        <p className="text-[15px] text-gray-400 mb-9">
+          No signup required. Just enter your destination and package weight.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-3">
           <a
-            href="https://uniex.in/home/get_quote"
+            href="/get-quote"
             className="inline-flex items-center gap-2 bg-green-primary text-white px-7 py-3.5 rounded-lg text-[15px] font-semibold hover:bg-green-dark transition-colors"
           >
             Get a Free Quote <ArrowRight className="w-4 h-4" />
