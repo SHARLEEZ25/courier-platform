@@ -22,6 +22,7 @@ const Index = () => (
     <TestimonialsSection />
     <CTASection />
     <Footer />
+    <WhatsAppButton />
   </div>
 );
 
