@@ -6,7 +6,6 @@ const navLinks = [
   { label: "About", href: "https://uniex.in/about" },
   { label: "Services", href: "#services" },
   { label: "Track", href: "#hero" },
-  { label: "News", href: "https://uniex.in/news" },
   { label: "Contact", href: "https://uniex.in/contact" },
 ];
 
@@ -21,44 +20,70 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav className={`bg-card sticky top-0 z-50 transition-shadow ${scrolled ? "shadow-card-hover" : ""}`}>
-      <div className="container flex items-center justify-between py-4">
+    <nav
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-white/90 backdrop-blur-md border-b border-gray-200"
+          : "bg-transparent"
+      }`}
+      style={{ height: 68 }}
+    >
+      <div className="container h-full flex items-center justify-between">
+        {/* Logo */}
         <a href="/" className="flex items-center gap-2">
-          <Globe className="w-7 h-7 text-primary" />
-          <span className="font-display font-bold text-xl text-primary">Uniex Courier</span>
+          <div className="w-8 h-8 rounded-full bg-green-primary flex items-center justify-center">
+            <Globe className="w-4 h-4 text-white" />
+          </div>
+          <span className="text-lg font-bold text-brand-black">
+            Uniex <span className="text-green-primary">Courier</span>
+          </span>
         </a>
 
+        {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((l) => (
-            <a key={l.label} href={l.href} className="text-[15px] font-medium text-muted-foreground hover:text-primary transition-colors">
+            <a
+              key={l.label}
+              href={l.href}
+              className="text-sm font-medium text-gray-700 hover:text-green-primary transition-colors"
+            >
               {l.label}
             </a>
           ))}
-          <a
-            href="https://uniex.in/home/get_quote"
-            className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-[15px] font-medium hover:bg-green-dark transition-colors"
-          >
-            Get Quote
-          </a>
         </div>
 
-        <button onClick={() => setOpen(!open)} className="md:hidden text-foreground">
-          {open ? <X /> : <Menu />}
+        {/* CTA */}
+        <a
+          href="https://uniex.in/home/get_quote"
+          className="hidden md:inline-flex bg-green-primary text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-green-dark transition-colors"
+        >
+          Get a Quote
+        </a>
+
+        {/* Mobile toggle */}
+        <button onClick={() => setOpen(!open)} className="md:hidden text-brand-black">
+          {open ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
+      {/* Mobile menu */}
       {open && (
-        <div className="md:hidden bg-card border-t border-border px-6 pb-4 space-y-3">
+        <div className="md:hidden bg-white border-t border-gray-200 px-6 pb-5 pt-3 space-y-1">
           {navLinks.map((l) => (
-            <a key={l.label} href={l.href} className="block text-[15px] font-medium text-muted-foreground py-2">
+            <a
+              key={l.label}
+              href={l.href}
+              className="block text-sm font-medium text-gray-700 py-2.5"
+              onClick={() => setOpen(false)}
+            >
               {l.label}
             </a>
           ))}
           <a
             href="https://uniex.in/home/get_quote"
-            className="block bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-[15px] font-medium text-center"
+            className="block bg-green-primary text-white px-5 py-2.5 rounded-lg text-sm font-semibold text-center mt-3"
           >
-            Get Quote
+            Get a Quote
           </a>
         </div>
       )}

@@ -1,179 +1,248 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Globe, CheckCircle, Package, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, Check } from "lucide-react";
 
-const countries = [
-  "United States", "United Kingdom", "Canada", "Australia", "UAE",
-  "Singapore", "Malaysia", "Sri Lanka", "Germany", "France",
-  "Netherlands", "Saudi Arabia", "Qatar", "Kuwait", "Bahrain",
-  "New Zealand", "South Africa", "Japan", "South Korea", "Italy",
-  "Spain", "Switzerland", "Sweden", "Ireland", "Norway",
-];
+/* ── Mockup screens ── */
+const QuoteScreen = () => (
+  <div className="p-5">
+    <p className="text-sm font-bold text-brand-black mb-3">Instant Shipping Quote</p>
+    <div className="grid grid-cols-2 gap-2 mb-2">
+      <div className="bg-gray-100 rounded-lg px-3 py-2 text-xs text-gray-700 font-medium">🇮🇳 India</div>
+      <div className="bg-gray-100 rounded-lg px-3 py-2 text-xs text-gray-700 font-medium">🇺🇸 United States</div>
+    </div>
+    <div className="bg-gray-100 rounded-lg px-3 py-2 text-xs text-gray-500 mb-3">Weight: 2.5 kg</div>
+    <div className="bg-green-primary text-white text-xs font-semibold py-2 rounded-lg text-center mb-3">
+      Calculate Rate →
+    </div>
+    <div className="space-y-2">
+      {[
+        { carrier: "DHL Express", price: "₹2,450", time: "2-3 days", best: true },
+        { carrier: "FedEx Intl.", price: "₹1,980", time: "3-5 days", best: false },
+        { carrier: "Aramex", price: "₹1,640", time: "5-7 days", best: false },
+      ].map((r) => (
+        <div key={r.carrier} className="flex items-center justify-between py-1.5 border-t border-gray-200 first:border-0">
+          <div>
+            <span className="text-xs font-semibold text-brand-black">{r.carrier}</span>
+            {r.best && (
+              <span className="ml-1.5 text-[10px] bg-green-muted text-green-deep font-semibold px-1.5 py-0.5 rounded">
+                Best
+              </span>
+            )}
+            <p className="text-[10px] text-gray-500">{r.time}</p>
+          </div>
+          <span className="text-xs font-bold text-brand-black">{r.price}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
-const HeroSection = () => {
-  const [activeTab, setActiveTab] = useState<"quote" | "track">("quote");
-  const [trackingNumber, setTrackingNumber] = useState("");
+const BookingScreen = () => (
+  <div className="p-5 flex flex-col items-center justify-center h-full">
+    <div className="w-10 h-10 rounded-full bg-green-primary flex items-center justify-center mb-3">
+      <Check className="w-5 h-5 text-white" />
+    </div>
+    <p className="text-[15px] font-bold text-brand-black mb-3">Booking Confirmed!</p>
+    <div className="w-full bg-gray-100 rounded-lg p-3 space-y-2 text-xs">
+      {[
+        ["Tracking ID", "UNX-2024-00847"],
+        ["Route", "Chennai → New York"],
+        ["Carrier", "DHL Express"],
+        ["Delivery", "Dec 18 – Dec 19"],
+      ].map(([label, value]) => (
+        <div key={label} className="flex justify-between">
+          <span className="text-gray-500">{label}</span>
+          <span className="font-bold text-brand-black">{value}</span>
+        </div>
+      ))}
+    </div>
+    <button className="w-full mt-3 border border-green-primary text-green-primary text-xs font-semibold py-2 rounded-lg">
+      View Tracking →
+    </button>
+  </div>
+);
+
+const TrackingScreen = () => {
+  const steps = [
+    { label: "Picked Up", loc: "Chennai", time: "09:30 AM", done: true },
+    { label: "In Transit", loc: "Delhi Air Hub", time: "04:15 PM", done: true },
+    { label: "Departed", loc: "IGI Airport", time: "11:50 PM", done: true },
+    { label: "Customs", loc: "New York JFK", time: "Pending", done: false },
+    { label: "Out for Del.", loc: "New York", time: "Pending", done: false },
+  ];
 
   return (
-    <section className="bg-light-bg" id="hero">
-      <div className="container py-16 lg:py-24">
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
-          {/* Left */}
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-[13px] font-bold text-brand-black">UNX-2024-00847</span>
+        <span className="text-[10px] bg-green-primary text-white font-semibold px-2 py-0.5 rounded-full">
+          DHL Express
+        </span>
+      </div>
+      <div className="space-y-0">
+        {steps.map((s, i) => (
+          <div key={s.label} className="flex items-start gap-3 relative">
+            {/* Line + dot */}
+            <div className="flex flex-col items-center">
+              <div
+                className={`w-2 h-2 rounded-full mt-1.5 ${
+                  s.done ? "bg-green-primary" : "border-2 border-gray-200 bg-white"
+                }`}
+              />
+              {i < steps.length - 1 && (
+                <div
+                  className={`w-0.5 h-6 ${
+                    s.done && steps[i + 1]?.done ? "bg-green-primary" : "bg-gray-200"
+                  }`}
+                />
+              )}
+            </div>
+            {/* Content */}
+            <div className="flex-1 flex justify-between items-start pb-1">
+              <div>
+                <p className="text-xs font-semibold text-brand-black leading-tight">{s.label}</p>
+                <p className="text-[10px] text-gray-500">{s.loc}</p>
+              </div>
+              <span className="text-[10px] text-gray-500">{s.time}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const screens = [QuoteScreen, BookingScreen, TrackingScreen];
+
+/* ── Hero ── */
+const HeroSection = () => {
+  const [activeScreen, setActiveScreen] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveScreen((p) => (p + 1) % 3);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, []);
+
+  const ActiveComponent = screens[activeScreen];
+
+  return (
+    <section className="bg-white" id="hero">
+      <div className="container py-20 lg:py-24">
+        <div className="grid lg:grid-cols-[55%_45%] gap-12 lg:gap-16 items-center">
+          {/* LEFT */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="pt-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6 }}
           >
-            <div className="inline-flex items-center gap-2 bg-secondary text-primary rounded-full px-4 py-1.5 text-sm font-medium mb-6">
-              <Globe className="w-4 h-4" />
-              Shipping to 220+ Countries
+            {/* Pill */}
+            <div className="inline-flex items-center gap-1.5 bg-green-muted text-green-deep border border-[hsl(var(--green-muted))] rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
+              ✦ Trusted Since 2006 · 220+ Countries
             </div>
 
-            <h1 className="text-4xl lg:text-[56px] font-bold text-dark-text leading-tight mb-6">
-              Fast, Reliable International Courier — From India to the World
+            {/* H1 */}
+            <h1
+              className="text-[40px] lg:text-[64px] font-extrabold text-brand-black leading-[1.1] tracking-[-0.03em] mb-5"
+            >
+              Ship Anything,<br />
+              <span className="underline decoration-green-primary decoration-[3px] underline-offset-[6px]">
+                Anywhere
+              </span>
+              <br />
+              From India.
             </h1>
 
-            <p className="text-base text-body-text max-w-lg mb-8">
-              Uniex Courier has been trusted for 18 years to deliver documents, packages, and cargo worldwide. Powered by DHL, FedEx, Aramex & UPS.
+            {/* Subtext */}
+            <p className="text-[17px] text-gray-500 leading-[1.75] max-w-[480px] mb-8">
+              18 years of trusted international courier service — documents, parcels,
+              and cargo delivered to 220+ countries worldwide. Powered by DHL, FedEx,
+              Aramex, and UPS.
             </p>
 
-            <div className="flex flex-wrap gap-3 mb-8">
+            {/* CTA buttons */}
+            <div className="flex flex-wrap items-center gap-3 mb-10">
               <a
                 href="https://uniex.in/home/get_quote"
-                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg text-[15px] font-medium hover:bg-green-dark transition-colors"
+                className="inline-flex items-center gap-2 bg-green-primary text-white px-7 py-3.5 rounded-lg text-[15px] font-semibold hover:bg-green-dark transition-colors"
               >
-                Get a Quote <ArrowRight className="w-4 h-4" />
+                Get a Free Quote <ArrowRight className="w-4 h-4" />
               </a>
               <a
                 href="#hero"
-                onClick={() => setActiveTab("track")}
-                className="inline-flex items-center gap-2 border border-primary text-primary px-6 py-3 rounded-lg text-[15px] font-medium hover:bg-secondary transition-colors"
+                className="inline-flex items-center gap-2 border-[1.5px] border-gray-200 text-gray-700 px-7 py-3.5 rounded-lg text-[15px] font-semibold hover:border-green-primary hover:text-green-primary transition-colors"
               >
-                Track Shipment
+                Track a Shipment
               </a>
             </div>
 
-            <div className="flex flex-wrap gap-6 text-sm text-body-text">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-primary" />
-                18 Years Experience
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-primary" />
-                220+ Countries
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-primary" />
-                Same Day Pickup
-              </div>
+            {/* Trust strip */}
+            <div className="flex flex-wrap items-center gap-4 text-[13px] font-medium text-gray-700 mb-4">
+              {["18 Yrs Experience", "220+ Countries", "Same Day Pickup"].map((t, i) => (
+                <span key={t} className="flex items-center gap-2">
+                  {i > 0 && <span className="w-px h-4 bg-gray-200 -ml-1 mr-1" />}
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-primary" />
+                  {t}
+                </span>
+              ))}
+            </div>
+            <div className="flex items-center gap-5 text-[11px] text-gray-500">
+              <span>Powered by:</span>
+              {["DHL", "FedEx", "Aramex", "UPS"].map((n) => (
+                <span key={n} className="text-[13px] font-bold text-gray-500/60">{n}</span>
+              ))}
             </div>
           </motion.div>
 
-          {/* Right — Tabbed Widget */}
+          {/* RIGHT — Animated mockup */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative"
           >
-            <div className="bg-card rounded-xl border border-card-border shadow-card">
-              {/* Tabs */}
-              <div className="flex border-b border-card-border">
-                <button
-                  onClick={() => setActiveTab("quote")}
-                  className={`flex-1 py-3.5 text-[15px] font-medium transition-colors ${
-                    activeTab === "quote"
-                      ? "text-primary border-b-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  📦 Get a Quote
-                </button>
-                <button
-                  onClick={() => setActiveTab("track")}
-                  className={`flex-1 py-3.5 text-[15px] font-medium transition-colors ${
-                    activeTab === "track"
-                      ? "text-primary border-b-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  🔍 Track Shipment
-                </button>
+            <div className="animate-float">
+              {/* Browser chrome */}
+              <div className="bg-gray-100 rounded-t-xl px-4 flex items-center gap-2" style={{ height: 32 }}>
+                <div className="flex gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-400" />
+                  <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                  <span className="w-2 h-2 rounded-full bg-green-400" />
+                </div>
+                <div className="flex-1 flex justify-center">
+                  <div className="bg-white rounded-full px-4 py-0.5 text-[10px] text-gray-500 font-medium">
+                    <span className="text-green-primary">uniex.in</span>/app
+                  </div>
+                </div>
               </div>
 
-              <div className="p-6">
-                {activeTab === "quote" ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1.5 block">From</label>
-                        <select className="w-full bg-muted rounded-lg px-3 py-2.5 text-sm text-foreground border border-input outline-none focus:ring-2 focus:ring-ring">
-                          <option>India</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1.5 block">To</label>
-                        <select className="w-full bg-muted rounded-lg px-3 py-2.5 text-sm text-foreground border border-input outline-none focus:ring-2 focus:ring-ring">
-                          {countries.map((c) => (
-                            <option key={c}>{c}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm text-muted-foreground mb-1.5 block">Weight (Kg)</label>
-                      <input
-                        type="number"
-                        placeholder="e.g. 2.5"
-                        className="w-full bg-muted rounded-lg px-3 py-2.5 text-sm text-foreground border border-input outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1.5 block">Mobile Number</label>
-                        <div className="flex">
-                          <span className="bg-muted border border-input border-r-0 rounded-l-lg px-3 py-2.5 text-sm text-muted-foreground">+91</span>
-                          <input
-                            placeholder="Mobile Number"
-                            className="w-full bg-muted rounded-r-lg px-3 py-2.5 text-sm text-foreground border border-input outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1.5 block">Email (Optional)</label>
-                        <input
-                          type="email"
-                          placeholder="you@email.com"
-                          className="w-full bg-muted rounded-lg px-3 py-2.5 text-sm text-foreground border border-input outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
-                        />
-                      </div>
-                    </div>
-                    <button className="w-full bg-primary text-primary-foreground py-3 rounded-lg text-[15px] font-medium hover:bg-green-dark transition-colors">
-                      Calculate Shipping Rate
-                    </button>
-                    <p className="text-xs text-muted-foreground text-center">Free estimate • No signup required</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm text-muted-foreground mb-1.5 block">Enter your tracking number(s)</label>
-                      <input
-                        type="text"
-                        value={trackingNumber}
-                        onChange={(e) => setTrackingNumber(e.target.value)}
-                        placeholder="e.g. UNX2024001, UNX2024002"
-                        className="w-full bg-muted rounded-lg px-4 py-3 text-sm text-foreground border border-input outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1.5">Separate multiple numbers with a comma</p>
-                    </div>
-                    <button className="w-full bg-primary text-primary-foreground py-3 rounded-lg text-[15px] font-medium hover:bg-green-dark transition-colors flex items-center justify-center gap-2">
-                      <Search className="w-4 h-4" />
-                      Track Now
-                    </button>
-                    <p className="text-xs text-muted-foreground text-center">📞 Need help? Call +91 9600879666</p>
-                  </div>
-                )}
+              {/* Content */}
+              <div className="bg-white border border-gray-200 border-t-0 rounded-b-xl min-h-[340px] relative overflow-hidden">
+                <motion.div
+                  key={activeScreen}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ActiveComponent />
+                </motion.div>
               </div>
+            </div>
+
+            {/* Dots */}
+            <div className="flex items-center justify-center gap-1.5 mt-5">
+              {[0, 1, 2].map((i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveScreen(i)}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    activeScreen === i
+                      ? "w-5 bg-green-primary"
+                      : "w-2 bg-gray-200"
+                  }`}
+                />
+              ))}
             </div>
           </motion.div>
         </div>
