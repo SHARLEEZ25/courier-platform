@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { Search, Loader2, Phone, Mail, MessageCircle, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Header from "@/components/Header";
+import TopBar from "@/components/TopBar";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { cn } from "@/lib/utils";
 
 const Track = () => {
@@ -47,7 +49,8 @@ const Track = () => {
 
   return (
     <div className="min-h-screen bg-light-bg flex flex-col">
-      <Header />
+      <TopBar />
+      <Navbar />
 
       <main className="flex-grow container py-20 pb-32">
         <div className="max-w-2xl mx-auto">
