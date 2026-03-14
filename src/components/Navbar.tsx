@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Menu, X, Globe } from "lucide-react";
 
 const navLinks = [
   { label: "Home", href: "/" },
   { label: "About", href: "/about" },
   { label: "Services", href: "/services" },
-  { label: "Quote", href: "/get-quote" },
+  { label: "Track Shipment", href: "/track" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -29,34 +30,27 @@ const Navbar = () => {
       style={{ height: 85 }}
     >
       <div className="container h-full flex items-center justify-between">
-        <a href="/" className="flex items-center">
+        <Link to="/" className="flex items-center">
           <img 
             src="/logos/logoforbrand.png" 
             alt="Uniex Courier" 
             className="h-12 md:h-16 w-auto object-contain"
           />
-        </a>
+        </Link>
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((l) => (
-            <a
+            <Link
               key={l.label}
-              href={l.href}
+              to={l.href}
               className="text-sm font-medium text-gray-700 hover:text-green-primary transition-colors"
             >
               {l.label}
-            </a>
+            </Link>
           ))}
         </div>
 
-        {/* CTA */}
-        <a
-          href="/get-quote"
-          className="hidden md:inline-flex bg-green-primary text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-green-dark transition-colors"
-        >
-          Get a Quote
-        </a>
 
         {/* Mobile toggle */}
         <button onClick={() => setOpen(!open)} className="md:hidden text-brand-black">
@@ -68,21 +62,15 @@ const Navbar = () => {
       {open && (
         <div className="md:hidden bg-white border-t border-gray-200 px-6 pb-5 pt-3 space-y-1">
           {navLinks.map((l) => (
-            <a
+            <Link
               key={l.label}
-              href={l.href}
+              to={l.href}
               className="block text-sm font-medium text-gray-700 py-2.5"
               onClick={() => setOpen(false)}
             >
               {l.label}
-            </a>
+            </Link>
           ))}
-          <a
-            href="/get-quote"
-            className="block bg-green-primary text-white px-5 py-2.5 rounded-lg text-sm font-semibold text-center mt-3"
-          >
-            Get a Quote
-          </a>
         </div>
       )}
     </nav>

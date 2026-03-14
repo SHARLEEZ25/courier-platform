@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { ArrowRight, PhoneCall } from "lucide-react";
 
 const pricingCards = [
   {
@@ -93,15 +92,9 @@ const PricingSection = () => (
             </div>
 
             <div className="mt-auto">
-              <div className="text-[11px] text-gray-400 mb-4 italic">
+              <div className="text-[11px] text-gray-400 italic">
                 Note: Lower rates = longer delivery time
               </div>
-              <a
-                href="/contact"
-                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-gray-200 text-[13px] font-semibold text-gray-700 hover:border-green-primary hover:text-green-primary transition-colors"
-              >
-                <PhoneCall className="w-3.5 h-3.5" /> Call for Quote
-              </a>
             </div>
           </motion.div>
         ))}

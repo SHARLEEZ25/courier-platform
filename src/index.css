@@ -81,14 +81,9 @@
     color: hsl(var(--black));
   }
 
-  /* Remove all blue focus rings globally */
+  /* Global focus styles - removed aggressive !important overrides to allow component-level styling */
   *:focus {
-    outline-color: hsl(var(--green-primary)) !important;
-  }
-
-  input:focus, select:focus, textarea:focus {
-    --tw-ring-color: hsl(var(--green-primary) / 0.4) !important;
-    border-color: hsl(var(--green-primary)) !important;
+    outline: none;
   }
 }
 

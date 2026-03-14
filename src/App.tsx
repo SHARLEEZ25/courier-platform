@@ -9,6 +9,12 @@ import Contact from "./pages/Contact.tsx";
 import About from "./pages/About.tsx";
 import Services from "./pages/Services.tsx";
 import GetQuote from "./pages/GetQuote.tsx";
+import Track from "./pages/Track.tsx";
+import RateBreakdown from "./pages/RateBreakdown.tsx";
+import BookingConfirmation from "./pages/BookingConfirmation.tsx";
+import Membership from "./pages/Membership.tsx";
+import Booking from "./pages/Booking.tsx";
+import MembershipCheckout from "./pages/MembershipCheckout.tsx";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +30,12 @@ const App = () => (
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
           <Route path="/get-quote" element={<GetQuote />} />
+          <Route path="/track" element={<Track />} />
+          <Route path="/rate-breakdown" element={<RateBreakdown />} />
+          <Route path="/booking-confirmation" element={<BookingConfirmation />} />
+          <Route path="/membership" element={<Membership />} />
+          <Route path="/booking" element={<Booking />} />
+          <Route path="/membership-checkout" element={<MembershipCheckout />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

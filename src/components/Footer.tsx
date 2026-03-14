@@ -1,4 +1,5 @@
 import { Mail, Phone, MapPin, Facebook, Instagram, MessageCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Footer = () => (
   <footer className="bg-[#0D0D0D] text-white" style={{ paddingTop: 64, paddingBottom: 32 }}>
@@ -40,15 +41,15 @@ const Footer = () => (
           <h4 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#9CA3AF] mb-4">Services</h4>
           <div className="space-y-2.5 text-sm">
             {[
-              { label: "Students Courier", href: "/services#students-courier" },
-              { label: "Indian Food & Medicines", href: "/services#indian-food-medicines" },
-              { label: "Excess Baggage", href: "/services#excess-baggage" },
-              { label: "On-Board Courier (OBC)", href: "/services#on-board-courier" },
-              { label: "Export & Import", href: "/services#export-import" },
+              { label: "Students Courier" },
+              { label: "Indian Food & Medicines" },
+              { label: "Excess Baggage" },
+              { label: "On-Board Courier (OBC)" },
+              { label: "Export & Import" },
             ].map((s) => (
-              <a key={s.label} href={s.href} className="block text-[#6B7280] hover:text-white transition-colors leading-[2]">
+              <Link key={s.label} to="/services" className="block text-[#6B7280] hover:text-white transition-colors leading-[2]">
                 {s.label}
-              </a>
+              </Link>
             ))}
           </div>
         </div>
@@ -64,9 +65,9 @@ const Footer = () => (
               { label: "Get a Quote", href: "/get-quote" },
               { label: "Contact Us", href: "/contact" },
             ].map((l) => (
-              <a key={l.label} href={l.href} className="block text-[#6B7280] hover:text-white transition-colors leading-[2]">
+              <Link key={l.label} to={l.href} className="block text-[#6B7280] hover:text-white transition-colors leading-[2]">
                 {l.label}
-              </a>
+              </Link>
             ))}
           </div>
         </div>
