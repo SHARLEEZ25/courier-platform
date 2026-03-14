@@ -27,7 +27,7 @@ const Navbar = () => {
           ? "bg-white/90 backdrop-blur-md border-b border-gray-200"
           : "bg-transparent"
       }`}
-      style={{ height: 85 }}
+      style={{ height: 70 }}
     >
       <div className="container h-full flex items-center justify-between">
         <Link to="/" className="flex items-center">
