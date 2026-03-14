@@ -1,33 +1,40 @@
 import { motion } from "framer-motion";
 import { FileText, GraduationCap, Luggage, Plane, ShoppingBag, Package, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const services = [
   {
+    id: "students-courier",
     icon: GraduationCap,
     title: "Students & University Courier",
     desc: "Save more than 50% on student documents, university applications, and parcels worldwide. Specialized courier to UK, USA, Canada, Australia, Europe, and Singapore.",
   },
   {
+    id: "indian-food-medicines", // Combined in Services.tsx
     icon: ShoppingBag,
     title: "Shop & Ship",
     desc: "We shop and ship medicines or products from the USA, UK, Europe, Australia, and Canada directly to your door. We arrange pickup too.",
   },
   {
+    id: "indian-food-medicines",
     icon: Package,
     title: "Indian Food & Medicines",
     desc: "Send sweets, snacks, spices, homemade food items, and life-saving medicines from India to family abroad — safely and reliably.",
   },
   {
+    id: "excess-baggage",
     icon: Luggage,
     title: "Excess Baggage",
     desc: "Save more than 50% on international excess baggage. Ship your unaccompanied baggage worldwide instead of paying airline surcharges.",
   },
   {
+    id: "on-board-courier",
     icon: Plane,
     title: "On-Board Courier (OBC)",
     desc: "For time-critical shipments — a dedicated courier personally carries your package on the next available flight. Ideal for urgent freight, prototypes, and high-value items.",
   },
   {
+    id: "export-import",
     icon: FileText,
     title: "Commercial Cargo & Export",
     desc: "Bulk consignment shipping for businesses. We handle commercial parcels, export cargo, and import shipments with full customs clearance support.",
@@ -73,12 +80,13 @@ const ServicesSection = () => (
             </div>
             <h3 className="text-base font-semibold text-brand-black mb-2">{s.title}</h3>
             <p className="text-sm text-gray-500 leading-relaxed mb-5">{s.desc}</p>
-            <div
+            <Link
+              to={`/services#${s.id}`}
               className="inline-flex items-center gap-1 text-[13px] font-semibold text-green-primary group/link cursor-pointer hover:underline"
             >
               Learn more
               <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-[4px]" />
-            </div>
+            </Link>
           </motion.div>
         ))}
       </div>

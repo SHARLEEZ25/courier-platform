@@ -177,10 +177,17 @@ const Contact = () => {
                 >
                   <div className="text-[12px] font-medium text-[#9CA3AF] mb-[12px]">Follow us</div>
                   <div className="flex items-center gap-[12px]">
-                    {[Facebook, Twitter, Instagram, MessageCircle].map((Icon, i) => (
+                    {[
+                      { Icon: Facebook, href: "https://facebook.com/uniexcourier" },
+                      { Icon: Twitter, href: "https://twitter.com/uniexcourier" },
+                      { Icon: Instagram, href: "https://instagram.com/uniexcourier" },
+                      { Icon: MessageCircle, href: "https://wa.me/919600879666" }
+                    ].map(({ Icon, href }, i) => (
                       <a 
                         key={i} 
-                        href="#" 
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="w-[32px] h-[32px] rounded-[6px] bg-[#F9FAFB] border border-[#E5E7EB] hover:border-[#4CAF50] flex items-center justify-center group transition-colors"
                       >
                         <Icon className="w-[16px] h-[16px] text-[#6B7280] group-hover:text-[#4CAF50] transition-colors" />

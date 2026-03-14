@@ -34,17 +34,17 @@ const Navbar = () => {
           <img 
             src="/logos/logoforbrand.png" 
             alt="Uniex Courier" 
-            className="h-12 md:h-16 w-auto object-contain"
+            className="h-[60px] md:h-[75px] w-auto object-contain"
           />
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-10">
           {navLinks.map((l) => (
             <Link
               key={l.label}
               to={l.href}
-              className="text-sm font-medium text-gray-700 hover:text-green-primary transition-colors"
+              className="text-[14.5px] font-semibold text-[#374151] hover:text-green-primary transition-colors"
             >
               {l.label}
             </Link>

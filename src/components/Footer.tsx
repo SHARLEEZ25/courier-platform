@@ -19,15 +19,15 @@ const Footer = () => (
           </p>
           <div className="flex gap-2">
             {[
-              { Icon: Facebook, href: "#" },
-              { Icon: Instagram, href: "#" },
+              { Icon: Facebook, href: "https://facebook.com/uniexcourier" },
+              { Icon: Instagram, href: "https://instagram.com/uniexcourier" },
               { Icon: MessageCircle, href: "https://wa.me/919600879666" },
             ].map(({ Icon, href }, i) => (
               <a
                 key={i}
                 href={href}
-                target={href.startsWith("http") ? "_blank" : undefined}
-                rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-8 h-8 rounded-md bg-[#1A1A1A] flex items-center justify-center text-[#6B7280] hover:text-[#4CAF50] transition-colors"
               >
                 <Icon className="w-4 h-4" />
@@ -41,13 +41,13 @@ const Footer = () => (
           <h4 className="text-xs font-semibold uppercase tracking-[0.08em] text-[#9CA3AF] mb-4">Services</h4>
           <div className="space-y-2.5 text-sm">
             {[
-              { label: "Students Courier" },
-              { label: "Indian Food & Medicines" },
-              { label: "Excess Baggage" },
-              { label: "On-Board Courier (OBC)" },
-              { label: "Export & Import" },
+              { label: "Students Courier", href: "/services#students-courier" },
+              { label: "Indian Food & Medicines", href: "/services#indian-food-medicines" },
+              { label: "Excess Baggage", href: "/services#excess-baggage" },
+              { label: "On-Board Courier (OBC)", href: "/services#on-board-courier" },
+              { label: "Export & Import", href: "/services#export-import" },
             ].map((s) => (
-              <Link key={s.label} to="/services" className="block text-[#6B7280] hover:text-white transition-colors leading-[2]">
+              <Link key={s.label} to={s.href} className="block text-[#6B7280] hover:text-white transition-colors leading-[2]">
                 {s.label}
               </Link>
             ))}

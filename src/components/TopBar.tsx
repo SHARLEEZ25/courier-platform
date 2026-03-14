@@ -74,43 +74,55 @@ const TopBar = () => {
   };
 
   return (
-    <div className="bg-green-deep text-white transition-all duration-300 overflow-hidden" style={{ height: 40 }}>
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
-        {/* Left Side: Contact Info */}
-        <div className="flex items-center gap-3 md:gap-4 text-[11px] md:text-xs font-medium shrink-0">
-          <a href="mailto:uniexanr@gmail.com" className="flex items-center gap-1.5 opacity-90 hover:opacity-100 transition-opacity">
-            <Mail className="w-3 h-3" />
-            <span className="hidden md:inline">uniexanr@gmail.com</span>
+    <div className="bg-[#2E6B1B] text-white transition-all duration-300" style={{ height: 44 }}>
+      <div className="container h-full flex items-center justify-between text-[11px] md:text-[12.5px] font-medium">
+        
+        {/* Left: Contact Info */}
+        <div className="flex items-center gap-4 shrink-0">
+          <a href="mailto:uniexanr@gmail.com" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+            <Mail className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">uniexanr@gmail.com</span>
           </a>
-          <span className="opacity-40 hidden md:inline">·</span>
-          <a href="tel:+919600879666" className="flex items-center gap-1.5 opacity-90 hover:opacity-100 transition-opacity">
-            <Phone className="w-3 h-3" />
-            <span className="hidden md:inline">+91 9600879666</span>
+          <span className="opacity-30">·</span>
+          <a href="tel:+919600879666" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+            <Phone className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">+91 9600879666</span>
           </a>
         </div>
 
-        {/* Center: Promotional Content (visible on large screens) */}
+        {/* Center: Promo (Hidden on very small mobile) */}
         {showPromo && (
-          <div className="flex-1 hidden xl:flex justify-center items-center px-6 overflow-hidden">
-            {renderPromoContent()}
+          <div className="hidden lg:flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[#86EFAC] shrink-0" />
+              <span>
+                <span className="font-bold">Limited time</span>: Join Silver for ₹299 — free packaging & locked rates.
+              </span>
+            </div>
+            <Link 
+              to="/membership"
+              className="bg-[#66BB6A] hover:bg-[#4CAF50] text-white px-3 py-1 rounded-md text-[11px] font-bold transition-colors flex items-center gap-1"
+            >
+              Get deal <ChevronRight className="w-3 h-3" />
+            </Link>
           </div>
         )}
 
-        {/* Right Side: Links & Close Button */}
-        <div className="flex items-center gap-3 md:gap-4 text-[11px] md:text-xs font-medium shrink-0">
-          <div className="hidden sm:flex items-center gap-3 md:gap-4">
-            <Link to="/get-quote" className="opacity-90 hover:opacity-100 transition-opacity">Get a Quote</Link>
+        {/* Right: Secondary Links & Dismiss */}
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="hidden sm:flex items-center gap-3">
+            <Link to="/get-quote" className="hover:opacity-80 transition-opacity">Get a Quote</Link>
             <span className="opacity-30">|</span>
-            <Link to="/contact" className="opacity-90 hover:opacity-100 transition-opacity">Contact Us</Link>
+            <Link to="/contact" className="hover:opacity-80 transition-opacity">Contact Us</Link>
           </div>
           
           {showPromo && (
             <button 
               onClick={handleDismiss} 
-              className="p-1 hover:bg-white/10 rounded-full transition-colors ml-1"
-              aria-label="Dismiss promotion"
+              className="p-1 hover:bg-white/10 rounded-full transition-colors"
+              aria-label="Dismiss"
             >
-              <X className="w-3.5 h-3.5 text-[#86EFAC]" />
+              <X className="w-4 h-4 text-white/70" />
             </button>
           )}
         </div>

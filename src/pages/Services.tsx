@@ -46,7 +46,7 @@ const anchors = [
   { label: "Excess Baggage", id: "excess-baggage" },
   { label: "On-Board Courier (OBC)", id: "on-board-courier" },
   { label: "Export & Import", id: "export-import" },
-  { label: "Send to UK", id: "on-board-courier" },
+  { label: "UK Delivery", id: "students-courier" }, // Points to relevant section
 ];
 
 const obcCards = [

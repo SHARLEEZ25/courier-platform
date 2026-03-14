@@ -22,22 +22,24 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onCalculate }) => {
         </svg>
       </div>
 
-      <div className="container relative pt-8 pb-16 lg:pt-12 lg:pb-24 flex flex-col items-center text-center">
+      <div className="container relative pt-4 pb-12 lg:pt-6 lg:pb-16 flex flex-col items-center text-center">
         
         {/* Top Badge */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
           className="mb-4"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 border border-green-100 text-[11px] font-bold text-green-primary shadow-sm shadow-green-50/50">
-            <Check className="w-3 h-3" />
-            <span>18 years</span>
-            <span className="opacity-30">·</span>
-            <span>50,000 + shipments delivered</span>
-            <span className="opacity-30">·</span>
-            <div className="flex items-center gap-1.5 ml-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+          <div className="inline-flex items-center gap-4 px-5 py-2.5 rounded-full bg-[#f0f9f1] border border-[#e2f2e5] text-[13px] font-medium text-[#2d6a3e] shadow-sm">
+            <div className="flex items-center gap-1.5 border-r border-[#d4e9d7] pr-4">
+              <Check className="w-3.5 h-3.5 text-[#166534]" />
+              <span>18 years</span>
+            </div>
+            <div className="border-r border-[#d4e9d7] pr-4">
+              <span>50,000 + shipments delivered</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#34d399] animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
               <span>No calls needed</span>
             </div>
           </div>
@@ -48,9 +50,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onCalculate }) => {
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="max-w-[850px] mb-6"
+          className="max-w-[850px] mb-4"
         >
-          <h1 className="text-[38px] lg:text-[56px] font-black text-brand-black leading-[1.05] tracking-[-0.04em] mb-4">
+          <h1 className="text-[38px] lg:text-[52px] font-black text-brand-black leading-[1.05] tracking-[-0.04em] mb-4">
             Global Shipping.<br />
             <span className="text-green-primary">Instant Prices.</span>
           </h1>
@@ -64,7 +66,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onCalculate }) => {
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-wrap items-center justify-center gap-2 mb-4 bg-white p-1.5 rounded-full shadow-sm border border-gray-100"
+          className="flex flex-wrap items-center justify-center gap-2 mb-3 bg-white p-1.5 rounded-full shadow-sm border border-gray-100"
         >
           {[
             { id: 'intl', label: 'International', icon: Plane },
@@ -93,15 +95,15 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onCalculate }) => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="w-full relative z-20 mb-8"
+          className="w-full relative z-20 mb-6"
         >
            <ShippingRateCalculator variant="horizontal" onCalculate={onCalculate} />
         </motion.div>
 
 
         {/* Feature Grid Container */}
-        <div className="w-full max-w-6xl mx-auto mb-12">
-          <div className="bg-white border border-gray-100 rounded-[32px] p-6 lg:p-8 shadow-[0_10px_30px_rgba(0,0,0,0.02)]">
+        <div className="w-full max-w-6xl mx-auto mb-10">
+          <div className="bg-white border border-gray-100 rounded-[32px] p-6 lg:px-8 lg:py-6 shadow-[0_10px_30px_rgba(0,0,0,0.02)]">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4">
               {[
                 { label: "Rates shown instantly — no calls needed", icon: ShieldCheck },
