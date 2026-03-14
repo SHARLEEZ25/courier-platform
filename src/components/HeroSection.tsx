@@ -95,27 +95,27 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onCalculate }) => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="w-full relative z-20 mb-8"
+          className="w-full relative z-20 mb-4 md:mb-6"
         >
            <ShippingRateCalculator variant="horizontal" onCalculate={onCalculate} />
         </motion.div>
 
 
         {/* Feature Grid Container */}
-        <div className="w-full max-w-6xl mx-auto mb-12">
-          <div className="bg-white border border-gray-100 rounded-[32px] p-6 lg:p-8 shadow-[0_10px_30px_rgba(0,0,0,0.02)]">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4">
+        <div className="w-full max-w-6xl mx-auto mb-10">
+          <div className="bg-white border border-gray-100 rounded-[32px] p-8 md:p-10 shadow-[0_10px_30px_rgba(0,0,0,0.02)]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
               {[
                 { label: "Rates shown instantly — no calls needed", icon: ShieldCheck },
                 { label: "Track on WhatsApp — no app needed", icon: MessageSquare },
                 { label: "220+ countries · door-to-door pickup", icon: Globe },
                 { label: "University Express — save 50%+", icon: Zap }
               ].map((item, i) => (
-                <div key={i} className="flex items-center gap-4 group">
-                  <div className="w-10 h-10 rounded-full bg-green-50/50 flex items-center justify-center shrink-0 group-hover:bg-green-100 transition-all">
-                    <item.icon className="w-5 h-5 text-green-primary opacity-70" />
+                <div key={i} className="flex items-center gap-5 group">
+                  <div className="w-12 h-12 rounded-full bg-green-50/50 flex items-center justify-center shrink-0 group-hover:bg-green-100 transition-all">
+                    <item.icon className="w-6 h-6 text-green-primary opacity-70" />
                   </div>
-                  <span className="text-[13px] lg:text-[14px] font-bold text-slate-600 leading-tight text-left">{item.label}</span>
+                  <span className="text-[14px] lg:text-[15px] font-bold text-slate-600 leading-tight text-left">{item.label}</span>
                 </div>
               ))}
             </div>

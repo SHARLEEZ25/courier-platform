@@ -25,16 +25,16 @@ const Navbar = () => {
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled
           ? "bg-white/90 backdrop-blur-md border-b border-gray-200"
-          : "bg-transparent"
+          : "bg-white/50 backdrop-blur-sm"
       }`}
-      style={{ height: 70 }}
+      style={{ height: 85 }}
     >
       <div className="container h-full flex items-center justify-between">
-        <Link to="/" className="flex items-center">
+        <Link to="/" className="flex items-center py-2">
           <img 
             src="/logos/logoforbrand.png" 
             alt="Uniex Courier" 
-            className="h-[60px] md:h-[75px] w-auto object-contain"
+            className="h-[55px] md:h-[70px] w-auto object-contain"
           />
         </Link>
 

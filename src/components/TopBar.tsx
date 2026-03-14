@@ -90,18 +90,18 @@ const TopBar = () => {
           </a>
         </div>
 
-        {/* Center: Promo (Hidden on very small mobile) */}
+        {/* Center: Promo (Visible on md screens and up) */}
         {showPromo && (
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden md:flex flex-1 justify-center items-center gap-3 px-4">
             <div className="flex items-center gap-2">
               <Shield className="w-4 h-4 text-[#86EFAC] shrink-0" />
-              <span>
+              <span className="truncate max-w-[300px] lg:max-w-none">
                 <span className="font-bold">Limited time</span>: Join Silver for ₹299 — free packaging & locked rates.
               </span>
             </div>
             <Link 
               to="/membership"
-              className="bg-[#66BB6A] hover:bg-[#4CAF50] text-white px-3 py-1 rounded-md text-[11px] font-bold transition-colors flex items-center gap-1"
+              className="bg-[#66BB6A] hover:bg-[#4CAF50] text-white px-3 py-1 rounded-md text-[11px] font-bold transition-colors flex items-center gap-1 shrink-0"
             >
               Get deal <ChevronRight className="w-3 h-3" />
             </Link>

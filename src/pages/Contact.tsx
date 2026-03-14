@@ -57,8 +57,7 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-white font-sans text-[#0D0D0D]">
-      <TopBar />
-      <Navbar />
+      <Header />
 
       <main>
         {/* SECTION 1 — PAGE HERO */}
