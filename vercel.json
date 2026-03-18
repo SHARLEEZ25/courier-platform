@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build && npx tsc -p server/tsconfig.json",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
