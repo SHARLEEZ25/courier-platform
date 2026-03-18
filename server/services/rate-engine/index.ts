@@ -11,8 +11,6 @@ import { applyGst } from "./gst.js";
 import { DELIVERY_DAYS } from "./zone-resolver.js";
 
 // ── Module-level cache (persists across warm Vercel invocations) ──────────────
-// FSC rates and item discounts change at most monthly — safe to cache for 1 hour.
-// Zone and rate-card data are cached per route+weight for 30 minutes.
 interface CacheEntry<T> { value: T; expiresAt: number }
 const _cache = new Map<string, CacheEntry<unknown>>();
 
@@ -29,12 +27,10 @@ function cacheSet<T>(key: string, value: T, ttlMs: number): T {
 const TTL_1H  = 60 * 60 * 1000;
 const TTL_30M = 30 * 60 * 1000;
 
-// Explicit row types used in cache generics
 type ZoneCacheRow  = { carrier_id: string; zone_code: string };
 type FscCacheRow   = { carrier_id: string; fsc_percent: number };
 type StepCacheRow  = { carrier_id: string; zone_code: string; price_inr: number };
 type BandCacheRow  = { carrier_id: string; zone_code: string; price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number };
-type RateCardCache = { stepRows: StepCacheRow[]; bandRows: BandCacheRow[] };
 
 const CARRIER_NAMES: Record<CarrierSlug, string> = {
   dhl: "DHL Express",
@@ -58,79 +54,120 @@ const FALLBACK_FSC: Record<CarrierSlug, number> = {
 
 const INSURANCE_FEE = 199;
 
+/** Abort signal — keeps each query within Vercel Hobby's 10 s limit. */
+function querySignal() {
+  return AbortSignal.timeout(8000);
+}
+
 /**
- * Core rate calculation pipeline — batched edition.
+ * Core rate calculation pipeline — single-wave edition.
  *
- * Wave 1 (all in parallel): zones, FSC, item discount, pickup surcharge
- * Wave 2 (all in parallel): rate card steps, rate card bands
- * Wave 3: pure math — no more DB calls
+ * All 6 DB queries fire in ONE parallel batch instead of two sequential waves.
+ * Rate card steps + bands are fetched for all carriers without a zone filter;
+ * zone-based filtering is done in memory after the single round-trip completes.
+ *
+ * This halves Supabase round-trips: 2 sequential HTTP calls → 1,
+ * which is critical on Vercel Hobby (10 s function limit).
  */
 export async function calculateRates(
   input: RateEngineInput
 ): Promise<RateResult[]> {
-  const carriers: CarrierSlug[] = input.carrier
-    ? [input.carrier]
-    : [...CARRIERS];
-
+  // Always query all carriers; filter by input.carrier in memory at the end.
+  const allCarriers = [...CARRIERS];
   const today = new Date().toISOString().split("T")[0];
   const { chargeable, volumetric } = chargeableWeight(input.weightKg, input.dims);
 
-  // ── Wave 1: fetch reference data (cached where safe) ─────────────────────
+  // Cache keys — steps/bands keyed by shipment type + weight only (route-agnostic
+  // so the same rate card data is reused across all origin/destination pairs).
   const zoneKey     = `zones:${input.origin}:${input.destination}`;
   const fscKey      = `fsc:${today}`;
   const discountKey = `discount:${input.itemType}`;
-  const rateKey     = `rates:${input.origin}:${input.destination}:${chargeable}:${input.shipmentType}`;
+  const stepKey     = `steps:${input.shipmentType}:${chargeable}`;
+  const bandKey     = `bands:${input.shipmentType}:${chargeable}`;
 
-  const [zoneRows, fscRows, discountRow, surchargeRow] = await Promise.all([
-    // Zones: cached 30 min (changes quarterly)
+  // ── Single wave: all 6 queries in parallel ────────────────────────────────
+  const [zoneRows, fscRows, discountRow, surchargeRow, stepRows, bandRows] = await Promise.all([
+    // Zones: cached 30 min
     cacheGet<ZoneCacheRow[]>(zoneKey) ??
       supabase
         .from("carrier_zones")
         .select("carrier_id, zone_code")
-        .in("carrier_id", carriers)
+        .in("carrier_id", allCarriers)
         .eq("origin_country", input.origin)
         .eq("destination_country", input.destination)
         .or(`effective_to.is.null,effective_to.gte.${today}`)
         .order("effective_from", { ascending: false })
-        .then((r) => cacheSet<ZoneCacheRow[]>(zoneKey, r.data ?? [], TTL_30M)),
+        .abortSignal(querySignal())
+        .then(r => cacheSet<ZoneCacheRow[]>(zoneKey, r.data ?? [], TTL_30M)),
 
-    // FSC: cached 1 hour (changes monthly)
+    // FSC: cached 1 hour
     cacheGet<FscCacheRow[]>(fscKey) ??
       supabase
         .from("fuel_surcharges")
         .select("carrier_id, fsc_percent")
-        .in("carrier_id", carriers)
+        .in("carrier_id", allCarriers)
         .lte("effective_from", today)
         .or(`effective_to.is.null,effective_to.gte.${today}`)
         .order("effective_from", { ascending: false })
-        .then((r) => cacheSet<FscCacheRow[]>(fscKey, r.data ?? [], TTL_1H)),
+        .abortSignal(querySignal())
+        .then(r => cacheSet<FscCacheRow[]>(fscKey, r.data ?? [], TTL_1H)),
 
-    // Item discount: cached 1 hour (changes rarely)
+    // Item discount: cached 1 hour
     cacheGet<{ discount_pct: number } | null>(discountKey) ??
       supabase
         .from("item_type_discounts")
         .select("discount_pct")
         .eq("item_type_id", input.itemType)
+        .abortSignal(querySignal())
         .maybeSingle()
-        .then((r) => cacheSet(discountKey, r.data, TTL_1H)),
+        .then(r => cacheSet(discountKey, r.data, TTL_1H)),
 
-    // Pickup surcharge: not cached (pincode-specific, skip if absent)
+    // Pickup surcharge: not cached (pincode-specific)
     input.pickupPincode
       ? supabase
           .from("pickup_zones")
           .select("surcharge_inr")
           .eq("pincode", input.pickupPincode)
+          .abortSignal(querySignal())
           .maybeSingle()
-          .then((r) => r.data)
+          .then(r => r.data)
       : Promise.resolve(null),
+
+    // Rate card steps: all carriers, all zones — filter by shipment type + weight.
+    // Zone filtering is done in memory. Cached by shipment type + weight so the
+    // same data serves all origin/destination pairs with the same weight.
+    cacheGet<StepCacheRow[]>(stepKey) ??
+      supabase
+        .from("rate_card_steps")
+        .select("carrier_id, zone_code, price_inr")
+        .in("carrier_id", allCarriers)
+        .eq("shipment_type", input.shipmentType)
+        .eq("weight_kg", chargeable)
+        .or(`effective_to.is.null,effective_to.gte.${today}`)
+        .abortSignal(querySignal())
+        .then(r => cacheSet<StepCacheRow[]>(stepKey, r.data ?? [], TTL_30M)),
+
+    // Rate card bands: all carriers, all zones — filter by weight range.
+    // Zone filtering is done in memory.
+    cacheGet<BandCacheRow[]>(bandKey) ??
+      supabase
+        .from("rate_card_bands")
+        .select("carrier_id, zone_code, price_per_kg, base_price_inr, band_type, weight_min_kg")
+        .in("carrier_id", allCarriers)
+        .eq("shipment_type", input.shipmentType)
+        .lte("weight_min_kg", chargeable)
+        .or(`weight_max_kg.is.null,weight_max_kg.gte.${chargeable}`)
+        .or(`effective_to.is.null,effective_to.gte.${today}`)
+        .order("weight_min_kg", { ascending: false })
+        .abortSignal(querySignal())
+        .then(r => cacheSet<BandCacheRow[]>(bandKey, r.data ?? [], TTL_30M)),
   ]);
 
-  // Build lookup maps from wave 1 results
+  // ── Build lookup maps ─────────────────────────────────────────────────────
   const zoneMap = new Map<CarrierSlug, string>();
-  // Keep only the most recent zone per carrier (rows already ordered desc)
   for (const row of zoneRows) {
     if (!zoneMap.has(row.carrier_id as CarrierSlug)) {
-      zoneMap.set(row.carrier_id as CarrierSlug, row.zone_code as string);
+      zoneMap.set(row.carrier_id as CarrierSlug, row.zone_code);
     }
   }
 
@@ -141,92 +178,56 @@ export async function calculateRates(
     }
   }
 
-  const discountPct = discountRow ? Number(discountRow.discount_pct) : 0;
+  const discountPct    = discountRow  ? Number(discountRow.discount_pct)    : 0;
   const pickupSurcharge = surchargeRow ? Number(surchargeRow.surcharge_inr) : 0;
 
-  // Only proceed with carriers that have a zone for this route
-  const activeCarriers = carriers.filter((c) => zoneMap.has(c));
+  // Respect input.carrier filter; only include carriers that have a zone for this route.
+  const requestedCarriers = input.carrier ? [input.carrier] : allCarriers;
+  const activeCarriers = requestedCarriers.filter(c => zoneMap.has(c));
   if (activeCarriers.length === 0) return [];
 
-  // Build (carrier, zone) pairs for rate card queries
-  const pairs = activeCarriers.map((c) => ({
-    carrier: c,
-    zone: zoneMap.get(c)!,
-  }));
-
-  // ── Wave 2: rate card data (cached 30 min per route+weight) ─────────────
-  const cachedRates = cacheGet<RateCardCache>(rateKey);
-  const zones = pairs.map((p) => p.zone);
-
-  const { stepRows, bandRows } = cachedRates ?? await (async () => {
-    const [s, b] = await Promise.all([
-      supabase
-        .from("rate_card_steps")
-        .select("carrier_id, zone_code, price_inr")
-        .in("carrier_id", activeCarriers)
-        .in("zone_code", zones)
-        .eq("shipment_type", input.shipmentType)
-        .eq("weight_kg", chargeable)
-        .or(`effective_to.is.null,effective_to.gte.${today}`)
-        .then((r) => (r.data ?? []) as StepCacheRow[]),
-
-      supabase
-        .from("rate_card_bands")
-        .select("carrier_id, zone_code, price_per_kg, base_price_inr, band_type, weight_min_kg")
-        .in("carrier_id", activeCarriers)
-        .in("zone_code", zones)
-        .eq("shipment_type", input.shipmentType)
-        .lte("weight_min_kg", chargeable)
-        .or(`weight_max_kg.is.null,weight_max_kg.gte.${chargeable}`)
-        .or(`effective_to.is.null,effective_to.gte.${today}`)
-        .order("weight_min_kg", { ascending: false })
-        .then((r) => (r.data ?? []) as BandCacheRow[]),
-    ]);
-    return cacheSet<RateCardCache>(rateKey, { stepRows: s, bandRows: b }, TTL_30M);
-  })();
-
   // Build step lookup: "carrier:zone" → price_inr
-  const stepKey = (c: string, z: string) => `${c}:${z}`;
+  const pairKey = (c: string, z: string) => `${c}:${z}`;
   const stepLookup = new Map<string, number>();
   for (const row of stepRows) {
-    const k = stepKey(row.carrier_id, row.zone_code);
+    const k = pairKey(row.carrier_id, row.zone_code);
     if (!stepLookup.has(k)) stepLookup.set(k, Number(row.price_inr));
   }
 
-  // Build band lookup: "carrier:zone" → first matching band (already ordered desc by weight_min_kg)
+  // Build band lookup: "carrier:zone" → first matching band (ordered desc by weight_min_kg)
   const bandLookup = new Map<string, BandCacheRow>();
   for (const row of bandRows) {
-    const k = stepKey(row.carrier_id, row.zone_code);
+    const k = pairKey(row.carrier_id, row.zone_code);
     if (!bandLookup.has(k)) bandLookup.set(k, row);
   }
 
-  // ── Wave 3: pure math, no DB ──────────────────────────────────────────────
+  // ── Pure math — no DB calls ───────────────────────────────────────────────
   const results: RateResult[] = [];
 
-  for (const { carrier, zone } of pairs) {
-    const k = stepKey(carrier, zone);
+  for (const carrier of activeCarriers) {
+    const zone = zoneMap.get(carrier)!;
+    const k = pairKey(carrier, zone);
 
-    // Get price: prefer step, fall back to band
     let priceInr: number | null = null;
     if (stepLookup.has(k)) {
       priceInr = stepLookup.get(k)!;
     } else if (bandLookup.has(k)) {
       const band = bandLookup.get(k)!;
       const perKg = Number(band.price_per_kg);
-      const base = Number(band.base_price_inr);
-      const wMin = Number(band.weight_min_kg);
+      const base  = Number(band.base_price_inr);
+      const wMin  = Number(band.weight_min_kg);
       priceInr =
         band.band_type === "additive"
           ? base + (chargeable - wMin) * perKg
           : chargeable * perKg;
     }
 
-    if (priceInr === null) continue; // no rate card entry for this carrier/zone
+    if (priceInr === null) continue;
 
-    const fscPct = fscMap.get(carrier) ?? FALLBACK_FSC[carrier] ?? 27.0;
-    const discountInr = round2(priceInr * discountPct);
+    const fscPct       = fscMap.get(carrier) ?? FALLBACK_FSC[carrier] ?? 27.0;
+    const discountInr  = round2(priceInr * discountPct);
     const discountedBase = round2(priceInr - discountInr);
-    const fscInr = applyFsc(discountedBase, fscPct);
+    const fscInr       = applyFsc(discountedBase, fscPct);
     const packagingInr = PACKAGING_FEES[input.packaging];
     const insuranceInr = input.insurance ? INSURANCE_FEE : 0;
 
