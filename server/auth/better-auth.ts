@@ -25,6 +25,11 @@ export const auth = betterAuth({
       pool: new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
+        // Serverless-safe: don't hold idle connections open
+        min: 0,
+        max: 3,
+        idleTimeoutMillis: 5000,
+        connectionTimeoutMillis: 10000,
       }),
     }),
     type: "postgres",
