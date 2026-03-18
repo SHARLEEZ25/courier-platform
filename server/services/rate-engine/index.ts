@@ -6,9 +6,9 @@ import type {
 } from "../../types/rate-engine.types.js";
 import { CARRIERS } from "../../../shared/schemas/rate-request.schema.js";
 import { chargeableWeight } from "./weight-calc.js";
-import { resolveZone } from "./zone-resolver.js";
-import { getFscPercent, applyFsc } from "./fsc.js";
+import { applyFsc } from "./fsc.js";
 import { applyGst } from "./gst.js";
+import { DELIVERY_DAYS } from "./zone-resolver.js";
 
 const CARRIER_NAMES: Record<CarrierSlug, string> = {
   dhl: "DHL Express",
@@ -23,20 +23,21 @@ const PACKAGING_FEES: Record<"none" | "standard" | "premium", number> = {
   premium: 350,
 };
 
+const FALLBACK_FSC: Record<CarrierSlug, number> = {
+  dhl: 29.5,
+  fedex: 27.0,
+  ups: 26.5,
+  aramex: 24.0,
+};
+
 const INSURANCE_FEE = 199;
 
 /**
- * Core rate calculation pipeline.
+ * Core rate calculation pipeline — batched edition.
  *
- * Steps:
- *  1. Determine chargeable weight (actual vs volumetric)
- *  2. Resolve zone per carrier from Supabase
- *  3. Look up rate card slab from Supabase
- *  4. Apply item-type discount
- *  5. Add fuel surcharge (FSC)
- *  6. Add pickup surcharge (if pincode found)
- *  7. Add packaging + insurance fees
- *  8. Apply 18% GST
+ * Wave 1 (all in parallel): zones, FSC, item discount, pickup surcharge
+ * Wave 2 (all in parallel): rate card steps, rate card bands
+ * Wave 3: pure math — no more DB calls
  */
 export async function calculateRates(
   input: RateEngineInput
@@ -45,191 +46,180 @@ export async function calculateRates(
     ? [input.carrier]
     : [...CARRIERS];
 
-  // 1. Chargeable weight
+  const today = new Date().toISOString().split("T")[0];
   const { chargeable, volumetric } = chargeableWeight(input.weightKg, input.dims);
 
-  // 2. Fetch constants in parallel (item discount, pickup surcharge, all fuel surcharges)
-  const [discountPct, pickupSurcharge, fscMap] = await Promise.all([
-    getItemDiscount(input.itemType),
-    input.pickupPincode ? getPickupSurcharge(input.pickupPincode) : Promise.resolve(0),
-    Promise.all(
-      carriers.map(async (c) => ({ carrier: c, fsc: await getFscPercent(c) }))
-    ).then((list) =>
-      list.reduce((acc, curr) => {
-        acc[curr.carrier] = curr.fsc;
-        return acc;
-      }, {} as Record<CarrierSlug, number>)
-    ),
+  // ── Wave 1: fetch all reference data in parallel ─────────────────────────
+  const [zoneRows, fscRows, discountRow, surchargeRow] = await Promise.all([
+    // All zones for every carrier for this route in one query
+    supabase
+      .from("carrier_zones")
+      .select("carrier_id, zone_code")
+      .in("carrier_id", carriers)
+      .eq("origin_country", input.origin)
+      .eq("destination_country", input.destination)
+      .or(`effective_to.is.null,effective_to.gte.${today}`)
+      .order("effective_from", { ascending: false })
+      .then((r) => r.data ?? []),
+
+    // All FSC rows for every carrier in one query
+    supabase
+      .from("fuel_surcharges")
+      .select("carrier_id, fsc_percent")
+      .in("carrier_id", carriers)
+      .lte("effective_from", today)
+      .or(`effective_to.is.null,effective_to.gte.${today}`)
+      .order("effective_from", { ascending: false })
+      .then((r) => r.data ?? []),
+
+    // Item discount
+    supabase
+      .from("item_type_discounts")
+      .select("discount_pct")
+      .eq("item_type_id", input.itemType)
+      .maybeSingle()
+      .then((r) => r.data),
+
+    // Pickup surcharge (skip if no pincode)
+    input.pickupPincode
+      ? supabase
+          .from("pickup_zones")
+          .select("surcharge_inr")
+          .eq("pincode", input.pickupPincode)
+          .maybeSingle()
+          .then((r) => r.data)
+      : Promise.resolve(null),
   ]);
 
-  // 3. Calculate each carrier in parallel
-  const results = await Promise.all(
-    carriers.map((carrier) =>
-      calculateSingleCarrier({
-        carrier,
-        input,
-        chargeable,
-        volumetric,
-        discountPct,
-        pickupSurcharge,
-        fscPct: fscMap[carrier],
-      })
-    )
-  );
+  // Build lookup maps from wave 1 results
+  const zoneMap = new Map<CarrierSlug, string>();
+  // Keep only the most recent zone per carrier (rows already ordered desc)
+  for (const row of zoneRows) {
+    if (!zoneMap.has(row.carrier_id as CarrierSlug)) {
+      zoneMap.set(row.carrier_id as CarrierSlug, row.zone_code as string);
+    }
+  }
 
-  // Filter out null (carrier not available for route), sort by total
-  return results
-    .filter((r): r is RateResult => r !== null)
-    .sort((a, b) => a.totalInr - b.totalInr);
-}
+  const fscMap = new Map<CarrierSlug, number>();
+  for (const row of fscRows) {
+    if (!fscMap.has(row.carrier_id as CarrierSlug)) {
+      fscMap.set(row.carrier_id as CarrierSlug, Number(row.fsc_percent));
+    }
+  }
 
-async function calculateSingleCarrier(params: {
-  carrier: CarrierSlug;
-  input: RateEngineInput;
-  chargeable: number;
-  volumetric: number | null;
-  discountPct: number;
-  pickupSurcharge: number;
-  fscPct: number;
-}): Promise<RateResult | null> {
-  const { carrier, input, chargeable, volumetric, discountPct, pickupSurcharge, fscPct } =
-    params;
+  const discountPct = discountRow ? Number(discountRow.discount_pct) : 0;
+  const pickupSurcharge = surchargeRow ? Number(surchargeRow.surcharge_inr) : 0;
 
-  // Step A: Resolve zone
-  const zoneResult = await resolveZone(carrier, input.origin, input.destination);
-  if (!zoneResult) return null; // carrier doesn't serve this route
+  // Only proceed with carriers that have a zone for this route
+  const activeCarriers = carriers.filter((c) => zoneMap.has(c));
+  if (activeCarriers.length === 0) return [];
 
-  const { zone, deliveryDays } = zoneResult;
+  // Build (carrier, zone) pairs for rate card queries
+  const pairs = activeCarriers.map((c) => ({
+    carrier: c,
+    zone: zoneMap.get(c)!,
+  }));
 
-  // Step B: Get rate card entry (step or band)
-  const entry = await getRateCardEntry(carrier, zone, chargeable, input.shipmentType);
-  if (!entry) return null;
+  // ── Wave 2: fetch all rate card data in parallel ──────────────────────────
+  const [stepRows, bandRows] = await Promise.all([
+    // All step prices for every active (carrier, zone) at this exact weight
+    supabase
+      .from("rate_card_steps")
+      .select("carrier_id, zone_code, price_inr")
+      .in("carrier_id", activeCarriers)
+      .in("zone_code", pairs.map((p) => p.zone))
+      .eq("shipment_type", input.shipmentType)
+      .eq("weight_kg", chargeable)
+      .or(`effective_to.is.null,effective_to.gte.${today}`)
+      .then((r) => r.data ?? []),
 
-  // Step C: Base rate (already the final INR amount for the weight)
-  const baseRate = entry.price_inr;
+    // All band prices for every active (carrier, zone) covering this weight
+    supabase
+      .from("rate_card_bands")
+      .select("carrier_id, zone_code, price_per_kg, base_price_inr, band_type, weight_min_kg")
+      .in("carrier_id", activeCarriers)
+      .in("zone_code", pairs.map((p) => p.zone))
+      .eq("shipment_type", input.shipmentType)
+      .lte("weight_min_kg", chargeable)
+      .or(`weight_max_kg.is.null,weight_max_kg.gte.${chargeable}`)
+      .or(`effective_to.is.null,effective_to.gte.${today}`)
+      .order("weight_min_kg", { ascending: false })
+      .then((r) => r.data ?? []),
+  ]);
 
-  // Step D: Discount
-  const discountInr = round2(baseRate * discountPct);
-  const discountedBase = round2(baseRate - discountInr);
+  // Build step lookup: "carrier:zone" → price_inr
+  const stepKey = (c: string, z: string) => `${c}:${z}`;
+  const stepLookup = new Map<string, number>();
+  for (const row of stepRows) {
+    const k = stepKey(row.carrier_id, row.zone_code);
+    if (!stepLookup.has(k)) stepLookup.set(k, Number(row.price_inr));
+  }
 
-  // Step E: FSC
-  const fscInr = applyFsc(discountedBase, fscPct);
+  // Build band lookup: "carrier:zone" → first matching band (already ordered desc by weight_min_kg)
+  type BandRow = { carrier_id: string; zone_code: string; price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number };
+  const bandLookup = new Map<string, BandRow>();
+  for (const row of bandRows) {
+    const k = stepKey(row.carrier_id, row.zone_code);
+    if (!bandLookup.has(k)) bandLookup.set(k, row as BandRow);
+  }
 
-  // Step F: Packaging + insurance
-  const packagingInr = PACKAGING_FEES[input.packaging];
-  const insuranceInr = input.insurance ? INSURANCE_FEE : 0;
+  // ── Wave 3: pure math, no DB ──────────────────────────────────────────────
+  const results: RateResult[] = [];
 
-  // Step G: Subtotal before GST
-  const preGst =
-    discountedBase +
-    fscInr +
-    pickupSurcharge +
-    packagingInr +
-    insuranceInr;
+  for (const { carrier, zone } of pairs) {
+    const k = stepKey(carrier, zone);
 
-  // Step H: GST
-  const { subtotal, gst, total } = applyGst(preGst);
+    // Get price: prefer step, fall back to band
+    let priceInr: number | null = null;
+    if (stepLookup.has(k)) {
+      priceInr = stepLookup.get(k)!;
+    } else if (bandLookup.has(k)) {
+      const band = bandLookup.get(k)!;
+      const perKg = Number(band.price_per_kg);
+      const base = Number(band.base_price_inr);
+      const wMin = Number(band.weight_min_kg);
+      priceInr =
+        band.band_type === "additive"
+          ? base + (chargeable - wMin) * perKg
+          : chargeable * perKg;
+    }
 
-  return {
-    carrier,
-    carrierName: CARRIER_NAMES[carrier],
-    zone,
-    chargeableWeightKg: chargeable,
-    actualWeightKg: input.weightKg,
-    volumetricWeightKg: volumetric,
-    baseRateInr: round2(baseRate),
-    discountPct,
-    discountInr,
-    fscPct,
-    fscInr,
-    pickupSurchargeInr: pickupSurcharge,
-    packagingInr,
-    insuranceInr,
-    subtotalInr: subtotal,
-    gstInr: gst,
-    totalInr: total,
-    estimatedDeliveryDays: deliveryDays,
-    itemType: input.itemType,
-  };
-}
+    if (priceInr === null) continue; // no rate card entry for this carrier/zone
 
-/**
- * Look up the total INR price for a given weight.
- * 1. Try an exact match in rate_card_steps (step pricing).
- * 2. If not found (weight exceeds highest step), fall back to rate_card_bands.
- *    - additive band:       base_price_inr + (weight - weight_min_kg) × price_per_kg
- *    - multiplicative band: weight × price_per_kg
- */
-async function getRateCardEntry(
-  carrier: CarrierSlug,
-  zone: string,
-  weightKg: number,
-  shipmentType: "document" | "package"
-): Promise<{ price_inr: number } | null> {
-  const today = new Date().toISOString().split("T")[0];
+    const fscPct = fscMap.get(carrier) ?? FALLBACK_FSC[carrier] ?? 27.0;
+    const discountInr = round2(priceInr * discountPct);
+    const discountedBase = round2(priceInr - discountInr);
+    const fscInr = applyFsc(discountedBase, fscPct);
+    const packagingInr = PACKAGING_FEES[input.packaging];
+    const insuranceInr = input.insurance ? INSURANCE_FEE : 0;
 
-  // ── Step table lookup ───────────────────────────────────────────────────────
-  const { data: step } = await supabase
-    .from("rate_card_steps")
-    .select("price_inr")
-    .eq("carrier_id", carrier)
-    .eq("zone_code", zone)
-    .eq("shipment_type", shipmentType)
-    .eq("weight_kg", weightKg)
-    .or(`effective_to.is.null,effective_to.gte.${today}`)
-    .limit(1)
-    .maybeSingle();
+    const preGst = discountedBase + fscInr + pickupSurcharge + packagingInr + insuranceInr;
+    const { subtotal, gst, total } = applyGst(preGst);
 
-  if (step) return { price_inr: Number(step.price_inr) };
+    results.push({
+      carrier,
+      carrierName: CARRIER_NAMES[carrier],
+      zone,
+      chargeableWeightKg: chargeable,
+      actualWeightKg: input.weightKg,
+      volumetricWeightKg: volumetric,
+      baseRateInr: round2(priceInr),
+      discountPct,
+      discountInr,
+      fscPct,
+      fscInr,
+      pickupSurchargeInr: pickupSurcharge,
+      packagingInr,
+      insuranceInr,
+      subtotalInr: subtotal,
+      gstInr: gst,
+      totalInr: total,
+      estimatedDeliveryDays: DELIVERY_DAYS[carrier]?.[zone] ?? "5-7",
+      itemType: input.itemType,
+    });
+  }
 
-  // ── Band fallback ───────────────────────────────────────────────────────────
-  const { data: band } = await supabase
-    .from("rate_card_bands")
-    .select("price_per_kg, base_price_inr, band_type, weight_min_kg")
-    .eq("carrier_id", carrier)
-    .eq("zone_code", zone)
-    .eq("shipment_type", shipmentType)
-    .lte("weight_min_kg", weightKg)
-    .or(`weight_max_kg.is.null,weight_max_kg.gte.${weightKg}`)
-    .or(`effective_to.is.null,effective_to.gte.${today}`)
-    .order("weight_min_kg", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!band) return null;
-
-  const perKg = Number(band.price_per_kg);
-  const base = Number(band.base_price_inr);
-  const wMin = Number(band.weight_min_kg);
-
-  const price_inr =
-    band.band_type === "additive"
-      ? base + (weightKg - wMin) * perKg
-      : weightKg * perKg; // multiplicative
-
-  return { price_inr };
-}
-
-async function getItemDiscount(itemType: string): Promise<number> {
-  const { data, error } = await supabase
-    .from("item_type_discounts")
-    .select("discount_pct")
-    .eq("item_type_id", itemType)
-    .single();
-
-  if (error || !data) return 0;
-  return Number(data.discount_pct);
-}
-
-async function getPickupSurcharge(pincode: string): Promise<number> {
-  const { data, error } = await supabase
-    .from("pickup_zones")
-    .select("surcharge_inr")
-    .eq("pincode", pincode)
-    .single();
-
-  if (error || !data) return 0;
-  return Number(data.surcharge_inr);
+  return results.sort((a, b) => a.totalInr - b.totalInr);
 }
 
 function round2(n: number): number {

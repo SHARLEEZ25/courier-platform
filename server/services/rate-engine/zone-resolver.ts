@@ -8,7 +8,7 @@ import type { CarrierSlug } from "../../types/rate-engine.types.js";
  * UPS zones  : '1'–'9' + 'USA'|'CANADA'|'AUSTRALIA'|'NEWZEAL'|'SINGAPORE'|'GERMANY'|'POLAND'|'NCL'
  * Aramex     : rough approximation (no real zone data yet)
  */
-const DELIVERY_DAYS: Record<CarrierSlug, Record<string, string>> = {
+export const DELIVERY_DAYS: Record<CarrierSlug, Record<string, string>> = {
   dhl: {
     '1': '1-2',   // UAE, Bangladesh, Nepal, Sri Lanka, Maldives, Bhutan
     '2': '2-3',   // Hong Kong, Malaysia, Singapore, Thailand
