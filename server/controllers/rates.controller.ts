@@ -14,7 +14,10 @@ export async function handleCalculateRates(c: Context) {
       weightKg: input.weight,
       shipmentType: input.shipmentType,
       itemType: input.itemType,
-      dims: input.dims,
+      dims:
+        input.dims?.l != null && input.dims?.w != null && input.dims?.h != null
+          ? { l: input.dims.l, w: input.dims.w, h: input.dims.h }
+          : undefined,
       pickupPincode: input.pickupPincode,
       carrier: input.carrier,
       packaging: input.packaging ?? "none",
