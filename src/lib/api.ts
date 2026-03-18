@@ -1,8 +1,9 @@
 /**
  * Central API client.
- * All paths are relative — Vite dev proxy handles /api → http://localhost:3001.
- * In production, the server serves /api on the same origin.
+ * In development: paths are relative — Vite proxy handles /api → http://localhost:3001.
+ * In production: VITE_API_URL points to the backend (e.g. Render service URL).
  */
+const BASE = import.meta.env.VITE_API_URL ?? "";
 
 export class ApiError extends Error {
   constructor(
@@ -15,7 +16,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${BASE}/api${path}`, {
     headers: {
       "Content-Type": "application/json",
       ...(init?.headers ?? {}),
