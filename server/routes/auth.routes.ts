@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { auth } from "../auth/better-auth.js";
+import { getAuth } from "../auth/better-auth.js";
 import { strictLimiter } from "../middleware/rate-limit.middleware.js";
 
 const authRoutes = new Hono();
@@ -16,7 +16,7 @@ authRoutes.use("/*", strictLimiter);
  *   GET  /api/auth/callback/:provider   (OAuth)
  */
 authRoutes.on(["POST", "GET"], "/*", (c) => {
-  return auth.handler(c.req.raw);
+  return getAuth().handler(c.req.raw);
 });
 
 export default authRoutes;

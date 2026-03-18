@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono";
 import { createMiddleware } from "hono/factory";
-import { auth } from "../auth/better-auth.js";
+import { getAuth } from "../auth/better-auth.js";
 import { err } from "../types/api.types.js";
 import type { User } from "../auth/better-auth.js";
 
@@ -18,7 +18,7 @@ declare module "hono" {
  */
 export const requireAuth = createMiddleware(
   async (c: Context, next: Next) => {
-    const session = await auth.api.getSession({
+    const session = await getAuth().api.getSession({
       headers: c.req.raw.headers,
     });
 
