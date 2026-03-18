@@ -21,7 +21,6 @@ export async function handleCreateBooking(c: Context) {
       weightKg: body.actualWeightKg,
       shipmentType: body.shipmentType,
       itemType: body.itemTypeId,
-      dims: body.dims,
       pickupPincode: body.pickupPincode,
       carrier: body.carrierId,
       packaging: body.packaging,
@@ -60,7 +59,7 @@ export async function handleCreateBooking(c: Context) {
       total_inr: rate.totalInr,
       sender_name: body.senderName,
       sender_mobile: body.senderMobile,
-      sender_email: body.senderEmail,
+      sender_email: body.senderEmail ?? null,
       pickup_pincode: body.pickupPincode,
       pickup_address: body.pickupAddress,
       pickup_city: body.pickupCity ?? "",
@@ -69,7 +68,7 @@ export async function handleCreateBooking(c: Context) {
       pickup_slot: body.pickupSlot,
       receiver_name: body.receiverName,
       receiver_mobile: body.receiverMobile,
-      receiver_email: body.receiverEmail,
+      receiver_email: body.receiverEmail ?? null,
       delivery_address: body.deliveryAddress,
       delivery_city: body.deliveryCity,
       delivery_state: body.deliveryState,
@@ -87,7 +86,7 @@ export async function handleCreateBooking(c: Context) {
 }
 
 export async function handleGetBooking(c: Context) {
-  const id = c.req.param("id");
+  const id = c.req.param("id") ?? "";
 
   try {
     const booking = await getBookingById(id);

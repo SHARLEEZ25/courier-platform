@@ -4,7 +4,7 @@ import { getBookingByRef } from "../db/queries/bookings.queries.js";
 import { ok, err } from "../types/api.types.js";
 
 export async function handleGetTracking(c: Context) {
-  const trackingId = c.req.param("trackingId");
+  const trackingId = c.req.param("trackingId") ?? "";
 
   try {
     // Accept both tracking number and booking reference
