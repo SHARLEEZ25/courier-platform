@@ -10,6 +10,32 @@ import { applyFsc } from "./fsc.js";
 import { applyGst } from "./gst.js";
 import { DELIVERY_DAYS } from "./zone-resolver.js";
 
+// ── Module-level cache (persists across warm Vercel invocations) ──────────────
+// FSC rates and item discounts change at most monthly — safe to cache for 1 hour.
+// Zone and rate-card data are cached per route+weight for 30 minutes.
+interface CacheEntry<T> { value: T; expiresAt: number }
+const _cache = new Map<string, CacheEntry<unknown>>();
+
+function cacheGet<T>(key: string): T | null {
+  const entry = _cache.get(key);
+  if (!entry || Date.now() > entry.expiresAt) return null;
+  return entry.value as T;
+}
+function cacheSet<T>(key: string, value: T, ttlMs: number): T {
+  _cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+  return value;
+}
+
+const TTL_1H  = 60 * 60 * 1000;
+const TTL_30M = 30 * 60 * 1000;
+
+// Explicit row types used in cache generics
+type ZoneCacheRow  = { carrier_id: string; zone_code: string };
+type FscCacheRow   = { carrier_id: string; fsc_percent: number };
+type StepCacheRow  = { carrier_id: string; zone_code: string; price_inr: number };
+type BandCacheRow  = { carrier_id: string; zone_code: string; price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number };
+type RateCardCache = { stepRows: StepCacheRow[]; bandRows: BandCacheRow[] };
+
 const CARRIER_NAMES: Record<CarrierSlug, string> = {
   dhl: "DHL Express",
   fedex: "FedEx International",
@@ -49,38 +75,46 @@ export async function calculateRates(
   const today = new Date().toISOString().split("T")[0];
   const { chargeable, volumetric } = chargeableWeight(input.weightKg, input.dims);
 
-  // ── Wave 1: fetch all reference data in parallel ─────────────────────────
+  // ── Wave 1: fetch reference data (cached where safe) ─────────────────────
+  const zoneKey     = `zones:${input.origin}:${input.destination}`;
+  const fscKey      = `fsc:${today}`;
+  const discountKey = `discount:${input.itemType}`;
+  const rateKey     = `rates:${input.origin}:${input.destination}:${chargeable}:${input.shipmentType}`;
+
   const [zoneRows, fscRows, discountRow, surchargeRow] = await Promise.all([
-    // All zones for every carrier for this route in one query
-    supabase
-      .from("carrier_zones")
-      .select("carrier_id, zone_code")
-      .in("carrier_id", carriers)
-      .eq("origin_country", input.origin)
-      .eq("destination_country", input.destination)
-      .or(`effective_to.is.null,effective_to.gte.${today}`)
-      .order("effective_from", { ascending: false })
-      .then((r) => r.data ?? []),
+    // Zones: cached 30 min (changes quarterly)
+    cacheGet<ZoneCacheRow[]>(zoneKey) ??
+      supabase
+        .from("carrier_zones")
+        .select("carrier_id, zone_code")
+        .in("carrier_id", carriers)
+        .eq("origin_country", input.origin)
+        .eq("destination_country", input.destination)
+        .or(`effective_to.is.null,effective_to.gte.${today}`)
+        .order("effective_from", { ascending: false })
+        .then((r) => cacheSet<ZoneCacheRow[]>(zoneKey, r.data ?? [], TTL_30M)),
 
-    // All FSC rows for every carrier in one query
-    supabase
-      .from("fuel_surcharges")
-      .select("carrier_id, fsc_percent")
-      .in("carrier_id", carriers)
-      .lte("effective_from", today)
-      .or(`effective_to.is.null,effective_to.gte.${today}`)
-      .order("effective_from", { ascending: false })
-      .then((r) => r.data ?? []),
+    // FSC: cached 1 hour (changes monthly)
+    cacheGet<FscCacheRow[]>(fscKey) ??
+      supabase
+        .from("fuel_surcharges")
+        .select("carrier_id, fsc_percent")
+        .in("carrier_id", carriers)
+        .lte("effective_from", today)
+        .or(`effective_to.is.null,effective_to.gte.${today}`)
+        .order("effective_from", { ascending: false })
+        .then((r) => cacheSet<FscCacheRow[]>(fscKey, r.data ?? [], TTL_1H)),
 
-    // Item discount
-    supabase
-      .from("item_type_discounts")
-      .select("discount_pct")
-      .eq("item_type_id", input.itemType)
-      .maybeSingle()
-      .then((r) => r.data),
+    // Item discount: cached 1 hour (changes rarely)
+    cacheGet<{ discount_pct: number } | null>(discountKey) ??
+      supabase
+        .from("item_type_discounts")
+        .select("discount_pct")
+        .eq("item_type_id", input.itemType)
+        .maybeSingle()
+        .then((r) => cacheSet(discountKey, r.data, TTL_1H)),
 
-    // Pickup surcharge (skip if no pincode)
+    // Pickup surcharge: not cached (pincode-specific, skip if absent)
     input.pickupPincode
       ? supabase
           .from("pickup_zones")
@@ -120,32 +154,36 @@ export async function calculateRates(
     zone: zoneMap.get(c)!,
   }));
 
-  // ── Wave 2: fetch all rate card data in parallel ──────────────────────────
-  const [stepRows, bandRows] = await Promise.all([
-    // All step prices for every active (carrier, zone) at this exact weight
-    supabase
-      .from("rate_card_steps")
-      .select("carrier_id, zone_code, price_inr")
-      .in("carrier_id", activeCarriers)
-      .in("zone_code", pairs.map((p) => p.zone))
-      .eq("shipment_type", input.shipmentType)
-      .eq("weight_kg", chargeable)
-      .or(`effective_to.is.null,effective_to.gte.${today}`)
-      .then((r) => r.data ?? []),
+  // ── Wave 2: rate card data (cached 30 min per route+weight) ─────────────
+  const cachedRates = cacheGet<RateCardCache>(rateKey);
+  const zones = pairs.map((p) => p.zone);
 
-    // All band prices for every active (carrier, zone) covering this weight
-    supabase
-      .from("rate_card_bands")
-      .select("carrier_id, zone_code, price_per_kg, base_price_inr, band_type, weight_min_kg")
-      .in("carrier_id", activeCarriers)
-      .in("zone_code", pairs.map((p) => p.zone))
-      .eq("shipment_type", input.shipmentType)
-      .lte("weight_min_kg", chargeable)
-      .or(`weight_max_kg.is.null,weight_max_kg.gte.${chargeable}`)
-      .or(`effective_to.is.null,effective_to.gte.${today}`)
-      .order("weight_min_kg", { ascending: false })
-      .then((r) => r.data ?? []),
-  ]);
+  const { stepRows, bandRows } = cachedRates ?? await (async () => {
+    const [s, b] = await Promise.all([
+      supabase
+        .from("rate_card_steps")
+        .select("carrier_id, zone_code, price_inr")
+        .in("carrier_id", activeCarriers)
+        .in("zone_code", zones)
+        .eq("shipment_type", input.shipmentType)
+        .eq("weight_kg", chargeable)
+        .or(`effective_to.is.null,effective_to.gte.${today}`)
+        .then((r) => (r.data ?? []) as StepCacheRow[]),
+
+      supabase
+        .from("rate_card_bands")
+        .select("carrier_id, zone_code, price_per_kg, base_price_inr, band_type, weight_min_kg")
+        .in("carrier_id", activeCarriers)
+        .in("zone_code", zones)
+        .eq("shipment_type", input.shipmentType)
+        .lte("weight_min_kg", chargeable)
+        .or(`weight_max_kg.is.null,weight_max_kg.gte.${chargeable}`)
+        .or(`effective_to.is.null,effective_to.gte.${today}`)
+        .order("weight_min_kg", { ascending: false })
+        .then((r) => (r.data ?? []) as BandCacheRow[]),
+    ]);
+    return cacheSet<RateCardCache>(rateKey, { stepRows: s, bandRows: b }, TTL_30M);
+  })();
 
   // Build step lookup: "carrier:zone" → price_inr
   const stepKey = (c: string, z: string) => `${c}:${z}`;
@@ -156,11 +194,10 @@ export async function calculateRates(
   }
 
   // Build band lookup: "carrier:zone" → first matching band (already ordered desc by weight_min_kg)
-  type BandRow = { carrier_id: string; zone_code: string; price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number };
-  const bandLookup = new Map<string, BandRow>();
+  const bandLookup = new Map<string, BandCacheRow>();
   for (const row of bandRows) {
     const k = stepKey(row.carrier_id, row.zone_code);
-    if (!bandLookup.has(k)) bandLookup.set(k, row as BandRow);
+    if (!bandLookup.has(k)) bandLookup.set(k, row);
   }
 
   // ── Wave 3: pure math, no DB ──────────────────────────────────────────────
