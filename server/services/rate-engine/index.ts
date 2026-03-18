@@ -48,15 +48,21 @@ export async function calculateRates(
   // 1. Chargeable weight
   const { chargeable, volumetric } = chargeableWeight(input.weightKg, input.dims);
 
-  // 2. Item-type discount
-  const discountPct = await getItemDiscount(input.itemType);
+  // 2. Fetch constants in parallel (item discount, pickup surcharge, all fuel surcharges)
+  const [discountPct, pickupSurcharge, fscMap] = await Promise.all([
+    getItemDiscount(input.itemType),
+    input.pickupPincode ? getPickupSurcharge(input.pickupPincode) : Promise.resolve(0),
+    Promise.all(
+      carriers.map(async (c) => ({ carrier: c, fsc: await getFscPercent(c) }))
+    ).then((list) =>
+      list.reduce((acc, curr) => {
+        acc[curr.carrier] = curr.fsc;
+        return acc;
+      }, {} as Record<CarrierSlug, number>)
+    ),
+  ]);
 
-  // 3. Pickup surcharge
-  const pickupSurcharge = input.pickupPincode
-    ? await getPickupSurcharge(input.pickupPincode)
-    : 0;
-
-  // 4. Calculate each carrier in parallel
+  // 3. Calculate each carrier in parallel
   const results = await Promise.all(
     carriers.map((carrier) =>
       calculateSingleCarrier({
@@ -66,6 +72,7 @@ export async function calculateRates(
         volumetric,
         discountPct,
         pickupSurcharge,
+        fscPct: fscMap[carrier],
       })
     )
   );
@@ -83,8 +90,9 @@ async function calculateSingleCarrier(params: {
   volumetric: number | null;
   discountPct: number;
   pickupSurcharge: number;
+  fscPct: number;
 }): Promise<RateResult | null> {
-  const { carrier, input, chargeable, volumetric, discountPct, pickupSurcharge } =
+  const { carrier, input, chargeable, volumetric, discountPct, pickupSurcharge, fscPct } =
     params;
 
   // Step A: Resolve zone
@@ -105,7 +113,6 @@ async function calculateSingleCarrier(params: {
   const discountedBase = round2(baseRate - discountInr);
 
   // Step E: FSC
-  const fscPct = await getFscPercent(carrier);
   const fscInr = applyFsc(discountedBase, fscPct);
 
   // Step F: Packaging + insurance

@@ -3,7 +3,7 @@ import { createApp } from "../server/app.js";
 
 export const config = {
   runtime: "nodejs",
-  maxDuration: 30,
+  maxDuration: 60,
 };
 
 export default handle(createApp());
