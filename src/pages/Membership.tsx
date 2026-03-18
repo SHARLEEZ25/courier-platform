@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useMembershipPlans } from "@/hooks/useMembership";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Shield, Check, ChevronDown, ChevronRight, Clock, Globe, Users, CheckCircle2, ArrowRight } from "lucide-react";
@@ -12,19 +13,29 @@ const Membership = () => {
   const [numShipments, setNumShipments] = useState(12);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const handleJoin = (planName: string, price: number, savings: number) => {
-    navigate("/membership-checkout", { state: { planName, price, savings } });
+  const { data: plans } = useMembershipPlans();
+  const silverPlan = plans?.find((p) => p.id === "silver");
+  const goldPlan   = plans?.find((p) => p.id === "gold");
+
+  // Fallback to known values while plans are loading
+  const silverPrice    = silverPlan?.price_inr    ?? 299;
+  const goldPrice      = goldPlan?.price_inr      ?? 1499;
+  const silverDiscount = silverPlan?.discount_pct ?? 0.10;
+  const goldDiscount   = goldPlan?.discount_pct   ?? 0.15;
+
+  const handleJoin = (planName: string, price: number, savingsAmt: number) => {
+    navigate("/membership-checkout", { state: { planName, price, savings: savingsAmt } });
   };
 
   const savings = useMemo(() => {
     const avgValue = 1500;
-    const silver = (numShipments * avgValue * 0.10) + (numShipments * 150) - 299;
-    const gold = (numShipments * avgValue * 0.15) + (numShipments * 350) + (numShipments * 199) - 1499;
+    const silver = (numShipments * avgValue * silverDiscount) + (numShipments * 150) - silverPrice;
+    const gold   = (numShipments * avgValue * goldDiscount)   + (numShipments * 350) + (numShipments * 199) - goldPrice;
     return {
       silver: Math.max(0, Math.round(silver)),
-      gold: Math.max(0, Math.round(gold))
+      gold:   Math.max(0, Math.round(gold))
     };
-  }, [numShipments]);
+  }, [numShipments, silverPrice, goldPrice, silverDiscount, goldDiscount]);
 
   const faqs = [
     {
@@ -93,14 +104,14 @@ const Membership = () => {
                 <p className="text-[11px] text-[#6B7280]">Guest price every time</p>
               </div>
               <div className="bg-white p-4 rounded-[12px] shadow-sm">
-                <p className="text-[11px] font-medium uppercase text-[#166634] mb-1">Silver — ₹299/yr</p>
+                <p className="text-[11px] font-medium uppercase text-[#166634] mb-1">Silver — ₹{silverPrice.toLocaleString("en-IN")}/yr</p>
                 <p className="text-[20px] font-medium text-[#15803D]">₹{savings.silver.toLocaleString()} saved</p>
-                <p className="text-[11px] text-[#6B7280]">After ₹299 membership fee</p>
+                <p className="text-[11px] text-[#6B7280]">After ₹{silverPrice.toLocaleString("en-IN")} membership fee</p>
               </div>
               <div className="bg-white p-4 rounded-[12px] shadow-sm border border-transparent">
-                <p className="text-[11px] font-medium uppercase text-[#92400E] mb-1">Gold — ₹1,499/yr</p>
+                <p className="text-[11px] font-medium uppercase text-[#92400E] mb-1">Gold — ₹{goldPrice.toLocaleString("en-IN")}/yr</p>
                 <p className="text-[20px] font-medium text-[#92400E]">₹{savings.gold.toLocaleString()} saved</p>
-                <p className="text-[11px] text-[#6B7280]">After ₹1,499 membership fee</p>
+                <p className="text-[11px] text-[#6B7280]">After ₹{goldPrice.toLocaleString("en-IN")} membership fee</p>
               </div>
             </div>
           </div>
@@ -147,7 +158,7 @@ const Membership = () => {
               <p className="text-[11px] font-medium uppercase text-[#15803D] mb-1">SILVER</p>
               <div className="flex items-baseline gap-1 mb-1">
                 <span className="text-[16px] font-medium text-[#15803D]">₹</span>
-                <span className="text-[32px] font-medium text-[#15803D]">299</span>
+                <span className="text-[32px] font-medium text-[#15803D]">{silverPrice.toLocaleString("en-IN")}</span>
                 <span className="text-[12px] text-[#9CA3AF]">/year</span>
               </div>
               <p className="text-[12px] text-[#9CA3AF] line-through mb-4">was ₹499</p>
@@ -158,7 +169,7 @@ const Membership = () => {
               <ul className="space-y-[9px] mb-8 flex-grow">
                 {[
                   { text: <span>Everything in Member</span>, bold: false },
-                  { text: <span><span className="font-bold">10%</span> off every shipment</span>, bold: true },
+                  { text: <span><span className="font-bold">{Math.round(silverDiscount * 100)}%</span> off every shipment</span>, bold: true },
                   { text: <span>Free standard packaging — saves ₹150 per shipment</span>, bold: false },
                   { text: <span>Priority pickup — guaranteed next-day slot</span>, bold: false },
                   { text: <span>Rates locked for 12 months</span>, bold: false },
@@ -172,11 +183,11 @@ const Membership = () => {
                   </li>
                 ))}
               </ul>
-              <button 
-                onClick={() => handleJoin("Silver", 299, savings.silver)}
+              <button
+                onClick={() => handleJoin("Silver", silverPrice, savings.silver)}
                 className="w-full h-[48px] bg-[#16A34A] text-white rounded-[10px] text-[13px] font-medium hover:bg-[#15803D] transition-colors flex items-center justify-center gap-2"
               >
-                Get Silver — ₹299 <ArrowRight className="w-4 h-4" />
+                Get Silver — ₹{silverPrice.toLocaleString("en-IN")} <ArrowRight className="w-4 h-4" />
               </button>
             </div>
 
@@ -185,7 +196,7 @@ const Membership = () => {
               <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-[#92400E] mb-1">GOLD</p>
               <div className="flex items-baseline gap-1 mb-6">
                 <span className="text-[16px] font-medium text-[#92400E]">₹</span>
-                <span className="text-[32px] font-medium text-[#92400E]">1,499</span>
+                <span className="text-[32px] font-medium text-[#92400E]">{goldPrice.toLocaleString("en-IN")}</span>
                 <span className="text-[12px] text-[#9CA3AF]">/year</span>
               </div>
               <p className="text-[13px] text-[#6B7280] min-h-[40px] mb-6 leading-relaxed">
@@ -195,7 +206,7 @@ const Membership = () => {
               <ul className="space-y-[9px] mb-8 flex-grow">
                 {[
                   { text: <span>Everything in Silver</span>, bold: false },
-                  { text: <span><span className="font-bold">15%</span> off every shipment</span>, bold: true },
+                  { text: <span><span className="font-bold">{Math.round(goldDiscount * 100)}%</span> off every shipment</span>, bold: true },
                   { text: <span>Free premium packaging — saves ₹350 per shipment</span>, bold: false },
                   { text: <span>Free insurance on every shipment — saves ₹199</span>, bold: false },
                   { text: <span>Dedicated account manager</span>, bold: false },
@@ -210,7 +221,7 @@ const Membership = () => {
                 ))}
               </ul>
               <button 
-                onClick={() => handleJoin("Gold", 1499, savings.gold)}
+                onClick={() => handleJoin("Gold", goldPrice, savings.gold)}
                 className="w-full h-[48px] bg-white border-[1.5px] border-[#16A34A] text-[#15803D] rounded-[10px] text-[13px] font-medium hover:bg-[#F0FDF4] transition-colors flex items-center justify-center gap-2"
               >
                 Get Gold — ₹1,499 <ArrowRight className="w-4 h-4" />
@@ -267,7 +278,7 @@ const Membership = () => {
                 <span className="text-[12px] text-[#9CA3AF]">/year</span>
               </div>
               <button 
-                onClick={() => handleJoin("Gold", 1499, savings.gold)}
+                onClick={() => handleJoin("Gold", goldPrice, savings.gold)}
                 className="w-full h-[48px] bg-white border border-[#16A34A] text-[#16A34A] rounded-[10px] font-medium"
               >
                 Get Gold

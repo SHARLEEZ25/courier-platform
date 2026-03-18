@@ -41,16 +41,27 @@ const countries = [
   { label: "Oman", value: "Oman" },
   { label: "Singapore", value: "Singapore" },
   { label: "Malaysia", value: "Malaysia" },
+  { label: "Hong Kong", value: "Hong Kong" },
   { label: "Thailand", value: "Thailand" },
-  { label: "Germany", value: "Germany" },
-  { label: "France", value: "France" },
-  { label: "Italy", value: "Italy" },
-  { label: "Spain", value: "Spain" },
-  { label: "Netherlands", value: "Netherlands" },
   { label: "Japan", value: "Japan" },
   { label: "South Korea", value: "South Korea" },
   { label: "China", value: "China" },
+  { label: "Germany", value: "Germany" },
+  { label: "France", value: "France" },
+  { label: "Netherlands", value: "Netherlands" },
+  { label: "Italy", value: "Italy" },
+  { label: "Spain", value: "Spain" },
+  { label: "Switzerland", value: "Switzerland" },
+  { label: "Belgium", value: "Belgium" },
+  { label: "Austria", value: "Austria" },
+  { label: "Sweden", value: "Sweden" },
+  { label: "Norway", value: "Norway" },
+  { label: "Denmark", value: "Denmark" },
+  { label: "Ireland", value: "Ireland" },
+  { label: "Portugal", value: "Portugal" },
   { label: "South Africa", value: "South Africa" },
+  { label: "Nigeria", value: "Nigeria" },
+  { label: "Kenya", value: "Kenya" },
   { label: "Brazil", value: "Brazil" },
 ];
 
@@ -81,10 +92,9 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
   const isSidebar = variant === "sidebar";
   const isHorizontal = variant === "horizontal";
   const isCompact = variant === "compact";
-  const [openOrigin, setOpenOrigin] = useState(false);
   const [openDest, setOpenDest] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [origin, setOrigin] = useState(initialData?.origin || "India");
+  const origin = "India";
   const [destination, setDestination] = useState(initialData?.destination || "");
   const [weight, setWeight] = useState(initialData?.weight?.toString() || "2.5");
   const [itemType, setItemType] = useState(initialData?.itemType || "");
@@ -93,7 +103,6 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
 
   useEffect(() => {
     if (initialData) {
-      setOrigin(initialData.origin);
       setDestination(initialData.destination);
       setWeight(initialData.weight.toString());
       setItemType(initialData.itemType);
@@ -104,7 +113,6 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!origin) newErrors.origin = "Please select origin";
     if (!destination) newErrors.destination = "Please select destination";
     if (!weight || parseFloat(weight) <= 0) newErrors.weight = "Invalid weight";
     if (!itemType) newErrors.itemType = "Select item type";
@@ -134,58 +142,14 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
       isSidebar ? "p-4 space-y-3" : "p-8 md:p-10 max-w-3xl mx-auto"
     )}>
       <div className={cn("grid", isSidebar ? "grid-cols-1 gap-3" : "grid-cols-1 md:grid-cols-2 gap-5")}>
-        {/* Origin */}
+        {/* Origin — locked to India */}
         <div className="space-y-1">
           <label className={cn("font-bold text-brand-black uppercase tracking-wider", isSidebar ? "text-[10px]" : "text-xs")}>From</label>
-          <Popover open={openOrigin} onOpenChange={setOpenOrigin}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                className={cn("w-full justify-between font-normal", isSidebar ? "h-10 text-xs" : "h-12", errors.origin && "border-red-500")}
-              >
-                {origin ? countries.find(c => c.value === origin)?.label : "Select Origin"}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0 shadow-2xl border-slate-200 rounded-xl overflow-hidden">
-              <Command className="rounded-none border-none">
-                <div className="flex items-center border-b border-slate-100 px-4 bg-white transition-colors">
-                  <SearchIcon className="w-4 h-4 text-slate-400 mr-3 shrink-0" />
-                  <CommandPrimitive.Input
-                    placeholder="Search origin..."
-                    className="flex h-12 w-full bg-transparent py-3 text-[14px] outline-none placeholder:text-slate-400 border-none focus:ring-0"
-                  />
-                </div>
-                <CommandList className="max-h-[300px] w-full scrollbar-thin">
-                  <CommandEmpty className="py-10 text-xs text-slate-400 text-center flex flex-col items-center gap-2">
-                    <MapPin className="w-4 h-4 text-slate-200" />
-                    No country found.
-                  </CommandEmpty>
-                  <CommandGroup className="p-2">
-                    {countries.map((c) => (
-                      <CommandItem
-                        key={c.value}
-                        value={c.label}
-                        onSelect={() => {
-                          setOrigin(c.value);
-                          setOpenOrigin(false);
-                        }}
-                        className="py-2.5 px-4 rounded-lg cursor-pointer data-[selected='true']:!bg-green-50 data-[selected='true']:!text-green-primary transition-all mb-0.5 last:mb-0 group/item flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <MapPin className={cn("w-3.5 h-3.5", origin === c.value ? "text-green-primary" : "text-slate-400")} />
-                          <span className="font-semibold text-[13px]">{c.label}</span>
-                        </div>
-                        {origin === c.value && <Check className="h-3 w-3 text-green-primary" />}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          {errors.origin && <p className="text-[10px] text-red-500">{errors.origin}</p>}
+          <div className={cn("w-full flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 cursor-not-allowed", isSidebar ? "h-10" : "h-12")}>
+            <MapPin className="w-4 h-4 text-green-primary shrink-0" />
+            <span className={cn("font-semibold text-brand-black", isSidebar ? "text-xs" : "text-sm")}>India</span>
+            <span className={cn("ml-auto text-gray-400", isSidebar ? "text-[9px]" : "text-[10px]")}>Outbound only</span>
+          </div>
         </div>
 
         {/* Destination */}
@@ -495,68 +459,14 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
 
         <div className="bg-white p-1 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.05)] border border-gray-100 flex flex-col md:flex-row items-stretch relative z-10">
 
-          {/* From */}
-          <div className="flex-1 min-w-0 px-3 py-2 hover:bg-gray-50/50 transition-colors rounded-l-xl relative group flex flex-col items-center">
+          {/* From — locked to India */}
+          <div className="flex-1 min-w-0 px-3 py-2 rounded-l-xl flex flex-col items-center">
             <label className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] mb-2 block text-center">From</label>
-            <Popover open={openOrigin} onOpenChange={setOpenOrigin}>
-              <PopoverTrigger asChild>
-                <div className="flex items-center justify-center gap-2 cursor-pointer w-full">
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <MapPin className="w-4 h-4 text-green-primary shrink-0" />
-                    <span className="font-extrabold text-[#111827] text-[14px] truncate">
-                      {origin || "Origin"}
-                    </span>
-                  </div>
-                  <ChevronDown className="w-3.5 h-3.5 text-gray-300 transition-colors" />
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-[360px] p-0 shadow-2xl border-slate-200 rounded-xl overflow-hidden" align="start" sideOffset={8}>
-                <Command className="rounded-none w-full border-none">
-                  <div className="flex items-center border-b border-slate-100 px-4 bg-white transition-colors">
-                    <SearchIcon className="w-4 h-4 text-slate-400 mr-3 shrink-0" />
-                    <CommandPrimitive.Input
-                      placeholder="Search origin..."
-                      className="flex h-12 w-full bg-transparent py-3 text-[15px] outline-none placeholder:text-slate-400 border-none focus:ring-0 focus:outline-none"
-                    />
-                  </div>
-                  <CommandList className="max-h-[320px] w-full scrollbar-thin">
-                    <CommandEmpty className="py-10 text-sm text-slate-400 text-center flex flex-col items-center gap-2">
-                      <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-slate-200" />
-                      </div>
-                      No country found
-                    </CommandEmpty>
-                    <CommandGroup className="p-2">
-                      {countries.map((c) => (
-                        <CommandItem
-                          key={c.value}
-                          value={c.label}
-                          onSelect={() => { setOrigin(c.value); setOpenOrigin(false); }}
-                          className="py-3 px-4 rounded-lg cursor-pointer data-[selected='true']:!bg-green-50 data-[selected='true']:!text-green-primary transition-all mb-1 last:mb-0 group/item flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                              origin === c.value ? "bg-green-100 text-green-primary" : "bg-slate-50 text-slate-400 group-hover/item:bg-green-50 group-hover/item:text-green-primary"
-                            )}>
-                              <MapPin className="w-4 h-4" />
-                            </div>
-                            <span className="font-semibold text-[14px] text-slate-700 group-hover/item:text-green-primary transition-colors">
-                              {c.label}
-                            </span>
-                          </div>
-                          {origin === c.value && (
-                            <div className="w-5 h-5 rounded-full bg-green-primary flex items-center justify-center animate-in zoom-in-50">
-                              <Check className="h-3 w-3 text-white" />
-                            </div>
-                          )}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <div className="flex items-center justify-center gap-2">
+              <MapPin className="w-4 h-4 text-green-primary shrink-0" />
+              <span className="font-extrabold text-[#111827] text-[14px]">India</span>
+              <span className="text-[9px] text-gray-300 font-bold uppercase tracking-wider">only</span>
+            </div>
           </div>
 
           <div className="w-[1px] h-10 bg-gray-100 my-auto" />
@@ -695,45 +605,13 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
       <div className="w-full bg-white border-b border-gray-100 shadow-sm sticky top-0 z-[60] py-2">
         <div className="container max-w-7xl">
           <div className="flex flex-row items-center gap-2 md:gap-4 h-11">
-            {/* Minimal Origin */}
+            {/* Minimal Origin — locked to India */}
             <div className="flex-1 min-w-0">
-              <Popover open={openOrigin} onOpenChange={setOpenOrigin}>
-                <PopoverTrigger asChild>
-                  <div className="flex items-center gap-2 cursor-pointer h-9 px-3 rounded-lg border border-gray-100 bg-gray-50/50 hover:bg-white transition-all overflow-hidden group">
-                    <MapPin className="w-3 h-3 text-green-primary shrink-0" />
-                    <span className="font-bold text-[#111827] text-xs truncate">
-                      {origin || "Origin"}
-                    </span>
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0 shadow-2xl border-slate-200 rounded-xl overflow-hidden" align="start" sideOffset={8}>
-                  {/* Reuse existing PopoverContent structure ... but for brevity, keeping it inline if needed or abstracting */}
-                  <Command className="rounded-none w-full border-none">
-                    <div className="flex items-center border-b border-slate-100 px-4 bg-white">
-                      <SearchIcon className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
-                      <CommandPrimitive.Input
-                        placeholder="Search origin..."
-                        className="flex h-10 w-full bg-transparent py-2 text-xs outline-none placeholder:text-slate-400 border-none focus:ring-0"
-                      />
-                    </div>
-                    <CommandList className="max-h-[250px] w-full scrollbar-thin">
-                      <CommandGroup className="p-1">
-                        {countries.map((c) => (
-                          <CommandItem
-                            key={c.value}
-                            value={c.label}
-                            onSelect={() => { setOrigin(c.value); setOpenOrigin(false); }}
-                            className="py-2 px-3 rounded-md cursor-pointer data-[selected='true']:bg-green-50 data-[selected='true']:text-green-primary text-xs flex justify-between"
-                          >
-                            <span>{c.label}</span>
-                            {origin === c.value && <Check className="h-3 w-3 text-green-primary" />}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-gray-100 bg-gray-50/50 overflow-hidden">
+                <MapPin className="w-3 h-3 text-green-primary shrink-0" />
+                <span className="font-bold text-[#111827] text-xs">India</span>
+                <span className="text-[9px] text-gray-300 font-bold uppercase ml-1">only</span>
+              </div>
             </div>
 
             {/* Minimal To */}

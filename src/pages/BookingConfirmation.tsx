@@ -20,17 +20,8 @@ const BookingConfirmation = () => {
   };
 
   useEffect(() => {
-    // Scroll to top
     window.scrollTo(0, 0);
-
-    // Use trackingId from state if provided, otherwise generate one
-    if (state.trackingId) {
-      setTrackingId(state.trackingId);
-    } else {
-      const prefix = state.isMembership ? "MEM" : "UNX";
-      const randomId = prefix + Math.floor(Math.random() * 89999 + 10000);
-      setTrackingId(randomId);
-    }
+    if (state.trackingId) setTrackingId(state.trackingId);
   }, [state.trackingId]);
 
   return (

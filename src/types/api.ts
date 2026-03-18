@@ -1,0 +1,145 @@
+/**
+ * TypeScript types for all API responses.
+ * Mirrors server/types/ and shared/schemas/ — kept in sync manually.
+ */
+
+// ── Carriers ──────────────────────────────────────────────────────────────────
+export type CarrierSlug = "dhl" | "fedex" | "ups" | "aramex";
+export type ItemType =
+  | "university" | "excess" | "docs" | "food" | "clothing"
+  | "medicine" | "jewellery" | "electronics" | "cosmetics" | "gifts"
+  | "sports" | "pooja" | "commercial" | "other";
+
+// ── Rate Calculation ──────────────────────────────────────────────────────────
+export interface RateRequest {
+  origin: string;
+  destination: string;
+  weight: number;
+  shipmentType?: "document" | "package";
+  itemType: ItemType;
+  dims?: { l: number; w: number; h: number };
+  pickupPincode?: string;
+  carrier?: CarrierSlug;
+  packaging?: "none" | "standard" | "premium";
+  insurance?: boolean;
+}
+
+export interface RateResult {
+  carrier: CarrierSlug;
+  carrierName: string;
+  zone: string;
+  chargeableWeightKg: number;
+  actualWeightKg: number;
+  volumetricWeightKg: number | null;
+  baseRateInr: number;
+  discountPct: number;
+  discountInr: number;
+  fscPct: number;
+  fscInr: number;
+  pickupSurchargeInr: number;
+  packagingInr: number;
+  insuranceInr: number;
+  subtotalInr: number;
+  gstInr: number;
+  totalInr: number;
+  estimatedDeliveryDays: string;
+  itemType: ItemType;
+}
+
+// ── Tracking ──────────────────────────────────────────────────────────────────
+export interface TrackingEvent {
+  event_code: string;
+  description: string;
+  location: string | null;
+  event_at: string;
+}
+
+export interface TrackingResponse {
+  trackingId: string;
+  bookingRef?: string;
+  carrier?: string;
+  status?: string;
+  events: TrackingEvent[];
+}
+
+// ── Bookings ──────────────────────────────────────────────────────────────────
+export interface BookingCreate {
+  carrierId: CarrierSlug;
+  originCountry: string;
+  destinationCountry: string;
+  actualWeightKg: number;
+  shipmentType?: "document" | "package";
+  itemTypeId: ItemType;
+  packaging: "none" | "standard" | "premium";
+  insurance: boolean;
+  senderName: string;
+  senderMobile: string;
+  senderEmail?: string | null;
+  pickupPincode: string;
+  pickupAddress: string;
+  pickupCity: string;
+  pickupState: string;
+  pickupDate: string;
+  pickupSlot: string;
+  receiverName: string;
+  receiverMobile: string;
+  receiverEmail?: string | null;
+  deliveryAddress: string;
+  deliveryCity: string;
+  deliveryState: string;
+  deliveryZip: string;
+  numPieces: number;
+  contentsDesc?: string;
+}
+
+export interface BookingResponse {
+  id: string;
+  booking_ref: string;
+  status: string;
+  carrier_id: string;
+  total_inr: number;
+  tracking_number: string | null;
+  created_at: string;
+  // Sender / receiver info echoed back
+  sender_name: string;
+  receiver_name: string;
+  destination_country: string;
+  actual_weight_kg: number;
+  chargeable_weight_kg: number;
+  subtotal_inr: number;
+  gst_inr: number;
+  base_rate_inr: number;
+  fsc_inr: number;
+  discount_inr: number;
+  pickup_surcharge_inr: number;
+  packaging_inr: number;
+  insurance_inr: number;
+}
+
+// ── Membership ────────────────────────────────────────────────────────────────
+export interface MembershipPlan {
+  id: string;
+  name: string;
+  price_inr: number;
+  discount_pct: number;   // e.g. 0.10 = 10%
+  duration_months: number;
+}
+
+export interface MembershipSubscription {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  starts_at: string;
+  expires_at: string;
+  is_active: boolean;
+}
+
+// ── Pincode ───────────────────────────────────────────────────────────────────
+export interface PincodeResult {
+  serviceable: boolean;
+  city?: string;
+  state?: string;
+  surchargeInr?: number;
+  tier?: string;
+  source?: string;
+}

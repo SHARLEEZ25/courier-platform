@@ -1,7 +1,9 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { MoveRight, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { MoveRight, Zap, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useRates } from "@/hooks/useRates";
+import type { RateResult, ItemType } from "@/types/api";
 
 interface QuoteResultsProps {
   origin: string;
@@ -10,160 +12,243 @@ interface QuoteResultsProps {
   itemType: string;
 }
 
-const specializedNotes = {
-  university: "Save more than 50% on university documents worldwide",
-  excess: "Save more than 50% vs airline excess baggage fees",
-  food: "Special rates for parents sending food & essentials to children studying abroad"
-};
+// Tier config — assigned by price rank (cheapest=0, mid=1, most expensive=2)
+const TIERS = [
+  {
+    name: "Basic",
+    badge: null as string | null,
+    highlight: false,
+    // Economy: 7–14 working days (Uniex website)
+    deliveryDays: "7–14 working days",
+    description: "Reliable economy shipping via our trusted carrier network",
+  },
+  {
+    name: "Standard",
+    badge: "Most Popular",
+    highlight: true,
+    // Express: 3–6 working days (Uniex website)
+    deliveryDays: "3–6 working days",
+    description: "Express delivery with full end-to-end tracking and priority handling",
+  },
+  {
+    name: "Premium",
+    badge: null as string | null,
+    highlight: false,
+    // Fastest express: 2–5 business days (Uniex website)
+    deliveryDays: "2–5 business days",
+    description: "Priority express — fastest available route for your shipment",
+  },
+];
 
-const getMultiplier = (dest: string) => {
-  const multipliers: Record<string, number> = {
-    USA: 480,
-    Canada: 480,
-    UK: 460,
-    Australia: 500,
-    "New Zealand": 500,
-    UAE: 320,
-    "Saudi Arabia": 320,
-    Qatar: 320,
-    Kuwait: 320,
-    Bahrain: 320,
-    Oman: 320,
-    Singapore: 280,
-    Malaysia: 280,
-    Thailand: 280,
-  };
-
-  const europe = ["Germany", "France", "Italy", "Spain", "Netherlands"];
-  if (europe.includes(dest)) return 420;
-
-  return multipliers[dest] || 350;
+// Item-specific notes from Uniex website content (client-provided copy)
+const ITEM_NOTE: Partial<Record<string, string>> = {
+  university: "University document specialists — trusted by students shipping to 50+ countries",
+  excess:     "Skip the airline excess baggage counter — ship smarter, arrive lighter",
+  food:       "Special rates for parents sending home food & essentials to children studying abroad",
+  medicine:   "Dedicated medicine courier with full customs support — typically delivered in ~3 days",
 };
 
 const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight, itemType }) => {
-  const multiplier = getMultiplier(destination);
-  const base = Math.max(499, weight * multiplier);
+  const navigate = useNavigate();
 
-  const standardPrice = Math.round(base);
-  const premiumPrice = Math.round(base * 1.6);
-  const expressPrice = Math.round(base * 2.4);
-  const marketAverage = Math.round(base * 1.45);
+  const { data: rates, isLoading, error } = useRates({
+    origin,
+    destination,
+    weight,
+    itemType: itemType as ItemType,
+    shipmentType: "package",
+  });
 
-  const plans = [
-    {
-      id: "standard",
-      label: "Standard",
-      price: standardPrice,
-      delivery: "12–15 business days",
-      note: "Reliable economy shipping via our partner network",
-      highlight: false,
-    },
-    {
-      id: "premium",
-      label: "Premium",
-      price: premiumPrice,
-      delivery: "5–7 business days",
-      note: "Shipped via DHL or FedEx with full end-to-end tracking",
-      highlight: true,
-      badge: "Most Popular",
-    },
-    {
-      id: "express",
-      label: "Express",
-      price: expressPrice,
-      delivery: "2–3 business days",
-      note: "On-board courier — a dedicated person carries your shipment",
-      highlight: false,
-    },
-  ];
+  const handleBook = (result: RateResult) => {
+    navigate("/rate-breakdown", {
+      state: { preselectedCarrier: result.carrier, origin, destination, weight, itemType },
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div id="quote-results" className="py-12 bg-white scroll-mt-24">
+        <div className="container max-w-5xl mx-auto px-4">
+          <div className="text-center mb-10">
+            <div className="h-8 w-56 bg-slate-100 rounded-lg animate-pulse mx-auto mb-3" />
+            <div className="h-4 w-72 bg-slate-100 rounded animate-pulse mx-auto" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[0, 1, 2].map(i => (
+              <div key={i} className={`rounded-2xl p-8 border ${i === 1 ? "border-2 border-slate-200 md:scale-[1.03]" : "border border-slate-200"} space-y-4`}>
+                <div className="h-5 w-20 bg-slate-100 rounded animate-pulse" />
+                <div className="h-10 w-32 bg-slate-100 rounded-lg animate-pulse" />
+                <div className="h-4 w-28 bg-slate-100 rounded animate-pulse" />
+                <div className="space-y-2 flex-grow">
+                  <div className="h-3 w-full bg-slate-100 rounded animate-pulse" />
+                  <div className="h-3 w-4/5 bg-slate-100 rounded animate-pulse" />
+                </div>
+                <div className="h-12 w-full bg-slate-100 rounded-xl animate-pulse mt-4" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !rates?.length) {
+    return (
+      <div className="py-16 bg-white">
+        <div className="container max-w-xl mx-auto text-center">
+          <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-brand-black mb-2">Could not fetch rates</h3>
+          <p className="text-sm text-brand-gray">
+            {error?.message ?? "No rates available for this route."}
+          </p>
+          <p className="text-xs text-brand-gray mt-2">
+            Please check that the backend server is running, or{" "}
+            <a href="/contact" className="text-green-primary underline">contact support</a>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // API already sorts ascending by totalInr — take up to 3
+  const tiers = rates.slice(0, 3);
+  const cheapest = tiers[0];
+
+  // Savings strip: use real discount data from rate engine
+  const savingsPct = cheapest.discountPct > 0 ? Math.round(cheapest.discountPct * 100) : null;
+  const marketAvg  = cheapest.discountPct > 0 ? Math.round(cheapest.totalInr + cheapest.discountInr) : null;
 
   return (
-    <div id="quote-results" className="py-8 bg-white scroll-mt-24">
-      <div className="container">
-        <div className="text-center mb-6">
-          <h3 className="text-xl md:text-2xl font-bold text-brand-black mb-1">Choose Your Shipping Plan</h3>
-          <p className="text-sm text-brand-gray font-medium">All plans include real-time tracking and professional handling.</p>
+    <div id="quote-results" className="py-12 bg-white scroll-mt-24">
+      <div className="container max-w-5xl mx-auto px-4">
+
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h3 className="text-2xl md:text-3xl font-bold text-brand-black mb-2">
+            Choose Your Shipping Plan
+          </h3>
+          <p className="text-sm text-brand-gray font-medium">
+            All plans include real-time tracking and professional handling.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 items-stretch max-w-6xl mx-auto mb-8">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`relative flex flex-col p-8 rounded-2xl bg-white transition-all duration-300 ${
-                plan.highlight
-                  ? "border-2 border-green-primary shadow-lg scale-[1.03] z-10"
-                  : "border border-card-border shadow-sm"
-              }`}
-            >
-              {plan.badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#E8F5E9] text-[#2E7D32] px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">
-                  {plan.badge}
-                </div>
-              )}
-              
-              <div className="mb-4">
-                <h4 className="text-lg font-bold text-brand-black mb-1">{plan.label}</h4>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-brand-black">₹{plan.price.toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div className="space-y-4 mb-8 flex-grow">
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-green-dark">Delivery</span>
-                  <span className="text-sm text-brand-gray">{plan.delivery}</span>
-                </div>
-                <p className="text-sm text-brand-gray leading-relaxed">{plan.note}</p>
-              </div>
-
-              <Link
-                to="/rate-breakdown"
-                state={{ plan: plan.id, origin, destination, weight, price: plan.price, itemType }}
-                className="w-full"
+        {/* Cards — always 3 columns on desktop, stacked on mobile */}
+        <div className={`grid grid-cols-1 gap-6 mb-10 ${tiers.length === 1 ? "md:grid-cols-1 max-w-sm mx-auto" : tiers.length === 2 ? "md:grid-cols-2 max-w-2xl mx-auto" : "md:grid-cols-3"}`}>
+          {tiers.map((result, idx) => {
+            const tier = TIERS[idx];
+            return (
+              <div
+                key={result.carrier}
+                className={`relative flex flex-col rounded-2xl p-8 transition-all duration-300 ${
+                  tier.highlight
+                    ? "border-2 border-green-primary shadow-xl bg-white md:scale-[1.03] z-10"
+                    : "border border-slate-200 shadow-sm bg-white"
+                }`}
               >
+                {/* Most Popular badge */}
+                {tier.badge && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                    <span className="bg-white border border-slate-200 shadow-sm text-slate-700 px-4 py-1.5 rounded-full text-[11px] font-bold tracking-widest uppercase">
+                      {tier.badge}
+                    </span>
+                  </div>
+                )}
+
+                {/* Tier name */}
+                <h4 className="text-xl font-bold text-brand-black mb-3">{tier.name}</h4>
+
+                {/* Price */}
+                <div className="mb-5">
+                  <span className="text-4xl font-black text-brand-black tracking-tight">
+                    ₹{Math.round(result.totalInr).toLocaleString("en-IN")}
+                  </span>
+                  {result.discountPct > 0 && (
+                    <span className="ml-2 text-[11px] font-bold text-green-primary bg-green-50 px-2 py-0.5 rounded-full">
+                      {Math.round(result.discountPct * 100)}% off
+                    </span>
+                  )}
+                </div>
+
+                {/* Delivery — from carrier zone data (PDF-sourced, route-specific) */}
+                <div className="mb-4">
+                  <p className="text-sm font-semibold text-green-primary mb-0.5">Delivery</p>
+                  <p className="text-sm text-slate-600">{result.estimatedDeliveryDays} working days</p>
+                </div>
+
+                {/* Description */}
+                <p className="text-sm text-slate-500 leading-relaxed flex-grow mb-5">
+                  {tier.description}
+                </p>
+
+                {/* Carrier label */}
+                <p className="text-[11px] text-slate-400 font-medium mb-5">
+                  via {result.carrierName}
+                </p>
+
+                {/* CTA */}
                 <Button
-                  variant={plan.highlight ? "default" : "outline"}
-                  className={`w-full justify-between h-12 rounded-xl text-sm font-semibold transition-all group ${
-                    plan.highlight
+                  onClick={() => handleBook(result)}
+                  className={`w-full h-12 rounded-xl font-bold text-sm flex items-center justify-between group ${
+                    tier.highlight
                       ? "bg-green-primary hover:bg-green-dark text-white"
-                      : "border-green-primary text-green-primary hover:bg-green-50"
+                      : "bg-white border border-green-primary text-green-primary hover:bg-green-50"
                   }`}
                 >
                   Book Now
                   <MoveRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
-              </Link>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
 
-        {/* Savings Strip */}
-        {itemType !== "docs" && (
-          <div className="max-w-4xl mx-auto bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl p-4 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4">
+        {/* Bottom strip — discount-based savings if applicable, else item note */}
+        {savingsPct && marketAvg ? (
+          <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-green-primary/10 flex items-center justify-center shrink-0">
                 <Zap className="w-5 h-5 text-green-primary fill-green-primary" />
               </div>
               <div>
                 <p className="text-[14px] font-bold text-[#15803D] leading-tight">
-                  {specializedNotes[itemType as keyof typeof specializedNotes] || "Ship smarter — pay up to 32% less than standard market rates"}
+                  Ship smarter — pay up to {savingsPct}% less than standard market rates
                 </p>
-                <p className="text-[12px] text-slate-400 mt-1">Based on standard market rates for {origin} → {destination}</p>
+                <p className="text-[12px] text-slate-400 mt-0.5">
+                  Based on standard market rates for {origin} → {destination}
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-6">
-               <div className="text-right hidden sm:block">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Market Avg</p>
-                  <p className="text-sm font-bold text-slate-400 line-through">₹{marketAverage.toLocaleString()}</p>
-               </div>
-               <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-               <div className="text-right">
-                  <p className="text-[10px] font-bold text-green-primary uppercase tracking-widest">Uniex Price</p>
-                  <p className="text-xl font-black text-[#111827]">₹{base.toLocaleString()}</p>
-               </div>
+            <div className="flex items-center gap-8 shrink-0">
+              <div className="text-center">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Market Avg</p>
+                <p className="text-lg font-bold text-slate-400 line-through">
+                  ₹{Math.round(marketAvg).toLocaleString("en-IN")}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] font-bold text-green-primary uppercase tracking-widest mb-0.5">Uniex Price</p>
+                <p className="text-xl font-black text-brand-black">
+                  ₹{Math.round(cheapest.totalInr).toLocaleString("en-IN")}
+                </p>
+              </div>
             </div>
           </div>
-        )}
+        ) : ITEM_NOTE[itemType] ? (
+          <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-green-primary/10 flex items-center justify-center shrink-0">
+              <Zap className="w-5 h-5 text-green-primary fill-green-primary" />
+            </div>
+            <div>
+              <p className="text-[14px] font-bold text-[#15803D] leading-tight">
+                {ITEM_NOTE[itemType]}
+              </p>
+              <p className="text-[12px] text-slate-400 mt-0.5">
+                Based on live rates for {origin} → {destination}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
       </div>
     </div>
   );

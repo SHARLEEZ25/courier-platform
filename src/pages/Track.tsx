@@ -1,51 +1,45 @@
-import React, { useState } from "react";
-import { Search, Loader2, Phone, Mail, MessageCircle, CheckCircle2, Clock } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Phone, Mail, MessageCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import TopBar from "@/components/TopBar";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { cn } from "@/lib/utils";
+import { useTracking } from "@/hooks/useTracking";
+import type { TrackingEvent } from "@/types/api";
+
+// Maps booking status to badge colour
+const STATUS_STYLE: Record<string, string> = {
+  pending:    "bg-gray-50 text-gray-700 border border-gray-100",
+  confirmed:  "bg-blue-50 text-blue-700 border border-blue-100",
+  picked_up:  "bg-amber-50 text-amber-700 border border-amber-100",
+  in_transit: "bg-amber-50 text-amber-700 border border-amber-100",
+  delivered:  "bg-green-50 text-green-700 border border-green-100",
+  cancelled:  "bg-red-50 text-red-600 border border-red-100",
+};
 
 const Track = () => {
-  const [trackingId, setTrackingId] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const { data, isLoading, error } = useTracking(activeId);
 
   const handleTrack = () => {
-    if (!trackingId) return;
-    setLoading(true);
-    setError("");
-    setResult(null);
-
-    // Mock API delay
-    setTimeout(() => {
-      setLoading(false);
-      const id = trackingId.toUpperCase().trim();
-      if (id.includes("UNX")) {
-        setResult({
-          id: id.split(",")[0].trim(), // Use first ID if multiple
-          status: "In Transit",
-          statusType: "transit",
-          route: "Chennai, India → London, United Kingdom",
-          carrier: "DHL Express",
-          estDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString("en-GB", {
-            day: "numeric", month: "short", year: "numeric"
-          }),
-          steps: [
-            { label: "Picked up", completed: true, time: "3 days ago, 10:30 AM" },
-            { label: "In transit", completed: true, time: "2 days ago, 03:15 PM" },
-            { label: "Customs cleared", completed: true, time: "1 day ago, 09:45 AM" },
-            { label: "Out for delivery", completed: false, current: true },
-            { label: "Delivered", completed: false },
-          ]
-        });
-      } else {
-        setError("No shipment found for this tracking number. Please check and try again.");
-      }
-    }, 800);
+    const id = inputValue.toUpperCase().trim().split(",")[0].trim();
+    if (!id) return;
+    setActiveId(id);
   };
+
+  // Derive a simple ordered step list from tracking events
+  const steps = data
+    ? buildSteps(data.events, data.status)
+    : [];
+
+  const statusKey = data?.status ?? (data?.events?.[data.events.length - 1]?.event_code?.toLowerCase() ?? "");
+  const statusLabel = data?.status
+    ? data.status.replace("_", " ")
+    : (data?.events?.[data.events.length - 1]?.description ?? "");
 
   return (
     <div className="min-h-screen bg-light-bg flex flex-col">
@@ -59,23 +53,24 @@ const Track = () => {
             <p className="text-brand-gray">Enter your Uniex tracking number to get live updates</p>
           </div>
 
+          {/* Search bar */}
           <div className="bg-white p-2 rounded-2xl shadow-lg border border-card-border mb-12">
             <div className="flex flex-col md:flex-row gap-2">
               <div className="flex-grow">
                 <Input
-                  placeholder="e.g. UNX2025001, UNX2025002"
+                  placeholder="e.g. UNX-2026-123456"
                   className="h-14 border-none text-lg px-6 focus-visible:ring-0"
-                  value={trackingId}
-                  onChange={(e) => setTrackingId(e.target.value)}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleTrack()}
                 />
               </div>
-              <Button 
+              <Button
                 onClick={handleTrack}
-                disabled={loading}
+                disabled={isLoading}
                 className="h-14 md:w-40 bg-green-primary hover:bg-green-dark text-white text-lg font-bold rounded-xl shrink-0"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Track Now →"}
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Track Now →"}
               </Button>
             </div>
           </div>
@@ -83,67 +78,58 @@ const Track = () => {
             Separate multiple tracking numbers with a comma
           </p>
 
+          {/* Error */}
           {error && (
             <div className="bg-red-50 border border-red-100 p-6 rounded-2xl text-red-600 text-center animate-in fade-in duration-300">
-              {error}
+              {error.message}
             </div>
           )}
 
-          {result && (
+          {/* Result card */}
+          {data && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-card-border">
-                {/* Header Row */}
+
+                {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-8 border-b border-gray-100">
                   <div>
                     <div className="text-xs font-bold text-brand-gray uppercase tracking-widest mb-1">Tracking ID</div>
-                    <div className="text-2xl font-mono font-bold text-brand-black">{result.id}</div>
+                    <div className="text-2xl font-mono font-bold text-brand-black">
+                      {data.bookingRef ?? data.trackingId}
+                    </div>
+                    {data.carrier && (
+                      <div className="text-sm text-brand-gray mt-1 capitalize">{data.carrier}</div>
+                    )}
                   </div>
-                  <div className={cn(
-                    "px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider",
-                    result.statusType === "transit" ? "bg-amber-50 text-amber-700 border border-amber-100" : 
-                    result.statusType === "delivered" ? "bg-green-50 text-green-700 border border-green-100" :
-                    "bg-gray-50 text-gray-700 border border-gray-100"
-                  )}>
-                    {result.status}
-                  </div>
+                  {statusKey && (
+                    <div className={cn(
+                      "px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider",
+                      STATUS_STYLE[statusKey] ?? "bg-gray-50 text-gray-700 border border-gray-100"
+                    )}>
+                      {statusLabel}
+                    </div>
+                  )}
                 </div>
 
-                {/* Info Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                  <div>
-                    <div className="text-xs font-bold text-brand-gray uppercase mb-1">Route</div>
-                    <div className="text-sm font-semibold text-brand-black">{result.route}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-brand-gray uppercase mb-1">Carrier</div>
-                    <div className="text-sm font-semibold text-brand-black">{result.carrier}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-brand-gray uppercase mb-1">Est. Delivery</div>
-                    <div className="text-sm font-semibold text-green-dark">{result.estDelivery}</div>
-                  </div>
-                </div>
-
-                {/* Visual Timeline - Desktop Horizontal */}
+                {/* Desktop horizontal timeline */}
                 <div className="hidden md:block">
                   <div className="relative mb-20 px-4">
-                    {/* Line */}
                     <div className="absolute top-5 left-8 right-8 h-1 bg-gray-100 z-0">
-                      <div 
-                        className="h-full bg-green-primary transition-all duration-1000" 
-                        style={{ width: "65%" }} 
+                      <div
+                        className="h-full bg-green-primary transition-all duration-1000"
+                        style={{ width: `${progressPercent(steps)}%` }}
                       />
                     </div>
-                    
-                    {/* Steps */}
                     <div className="relative z-10 flex justify-between">
-                      {result.steps.map((step: any, idx: number) => (
+                      {steps.map((step, idx) => (
                         <div key={idx} className="flex flex-col items-center w-1/5 text-center px-2">
                           <div className={cn(
                             "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500",
-                            step.completed ? "bg-green-primary border-green-primary shadow-lg shadow-green-100" :
-                            step.current ? "bg-white border-green-primary ring-4 ring-green-50" :
-                            "bg-white border-gray-200"
+                            step.completed
+                              ? "bg-green-primary border-green-primary shadow-lg shadow-green-100"
+                              : step.current
+                              ? "bg-white border-green-primary ring-4 ring-green-50"
+                              : "bg-white border-gray-200"
                           )}>
                             {step.completed ? (
                               <CheckCircle2 className="w-6 h-6 text-white" />
@@ -170,16 +156,18 @@ const Track = () => {
                   </div>
                 </div>
 
-                {/* Visual Timeline - Mobile Vertical */}
+                {/* Mobile vertical timeline */}
                 <div className="md:hidden space-y-8">
-                  {result.steps.map((step: any, idx: number) => (
+                  {steps.map((step, idx) => (
                     <div key={idx} className="flex gap-4">
                       <div className="flex flex-col items-center">
                         <div className={cn(
                           "w-8 h-8 rounded-full flex items-center justify-center border-2 shrink-0",
-                          step.completed ? "bg-green-primary border-green-primary" :
-                          step.current ? "bg-white border-green-primary ring-4 ring-green-50" :
-                          "bg-white border-gray-200"
+                          step.completed
+                            ? "bg-green-primary border-green-primary"
+                            : step.current
+                            ? "bg-white border-green-primary ring-4 ring-green-50"
+                            : "bg-white border-gray-200"
                         )}>
                           {step.completed ? (
                             <CheckCircle2 className="w-5 h-5 text-white" />
@@ -189,7 +177,7 @@ const Track = () => {
                             <div className="w-2 h-2 bg-gray-200 rounded-full" />
                           )}
                         </div>
-                        {idx !== result.steps.length - 1 && (
+                        {idx !== steps.length - 1 && (
                           <div className={cn(
                             "w-0.5 h-12 my-1",
                             step.completed ? "bg-green-primary" : "bg-gray-100"
@@ -212,7 +200,7 @@ const Track = () => {
                 </div>
               </div>
 
-              {/* Help Section */}
+              {/* Help section */}
               <div className="text-center pt-8">
                 <p className="text-brand-gray font-medium mb-8">Need help with your shipment?</p>
                 <div className="flex flex-wrap justify-center gap-4 md:gap-8">
@@ -239,5 +227,59 @@ const Track = () => {
     </div>
   );
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const ORDERED_STATUSES = ["pending", "confirmed", "picked_up", "in_transit", "delivered"];
+
+interface Step {
+  label: string;
+  completed: boolean;
+  current: boolean;
+  time?: string;
+}
+
+function buildSteps(events: TrackingEvent[], currentStatus?: string): Step[] {
+  const statusLabels: Record<string, string> = {
+    pending:    "Booking confirmed",
+    confirmed:  "Pickup scheduled",
+    picked_up:  "Picked up",
+    in_transit: "In transit",
+    delivered:  "Delivered",
+  };
+
+  // Build a map of status → event for timestamps
+  const eventMap: Record<string, TrackingEvent> = {};
+  for (const ev of events) {
+    const key = ev.event_code.toLowerCase();
+    eventMap[key] = ev;
+  }
+
+  const currentIdx = ORDERED_STATUSES.indexOf(currentStatus ?? "");
+
+  return ORDERED_STATUSES.map((status, idx) => {
+    const ev = eventMap[status];
+    return {
+      label: statusLabels[status],
+      completed: idx < currentIdx,
+      current: idx === currentIdx,
+      time: ev ? formatEventTime(ev.event_at) : undefined,
+    };
+  });
+}
+
+function progressPercent(steps: Step[]): number {
+  const completedCount = steps.filter((s) => s.completed).length;
+  return Math.round((completedCount / (steps.length - 1)) * 100);
+}
+
+function formatEventTime(isoString: string): string {
+  return new Date(isoString).toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default Track;

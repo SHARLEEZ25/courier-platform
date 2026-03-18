@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { usePincode } from "@/hooks/usePincode";
+import { useCreateBooking } from "@/hooks/useBooking";
+import type { BookingCreate, CarrierSlug, ItemType } from "@/types/api";
 import { 
   Check, 
   ChevronRight, 
@@ -71,6 +74,24 @@ const Booking = () => {
   };
 
   const [currentStep, setCurrentStep] = useState(1);
+  // Pincode lookup via hook — auto-fires when formData.pickupPincode is 6 digits
+  const { data: pincodeData, isLoading: pincodeLoading, error: pincodeError } =
+    usePincode(formData.pickupPincode);
+
+  const pincodeStatus:
+    | { status: "idle" }
+    | { status: "loading" }
+    | { status: "found"; city: string; surchargeInr: number }
+    | { status: "not_found" } = (() => {
+    if (formData.pickupPincode.length !== 6) return { status: "idle" };
+    if (pincodeLoading) return { status: "loading" };
+    if (pincodeData?.serviceable) return { status: "found", city: pincodeData.city!, surchargeInr: pincodeData.surchargeInr ?? 0 };
+    if (pincodeData || pincodeError) return { status: "not_found" };
+    return { status: "idle" };
+  })();
+
+  const { mutate: createBooking, isPending: isCreatingBooking } = useCreateBooking();
+
   const [formData, setFormData] = useState({
     senderName: "",
     senderMobile: "",
@@ -99,7 +120,7 @@ const Booking = () => {
   const [cardCvv, setCardCvv] = useState("");
   const [cardHolder, setCardHolder] = useState("");
   const [showCvv, setShowCvv] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [qrTimer, setQrTimer] = useState(600); // 10 minutes in seconds
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
@@ -185,20 +206,53 @@ const Booking = () => {
   };
 
   const handleFinalPayment = () => {
-    setIsProcessing(true);
-    // Simulate processing
-    setTimeout(() => {
-      setIsProcessing(false);
-      navigate("/booking-confirmation", { 
-        state: { 
-          ...state, 
-          ...formData, 
-          trackingId: "UNX" + Math.floor(Math.random() * 8999999 + 1000000),
-          estimatedDelivery: state.planDays || "12–15 business days",
-          route: `${state.pickupCity || 'Chennai'} → ${state.destination}`
-        } 
-      });
-    }, 2000);
+    setSubmitError("");
+
+    const payload: BookingCreate = {
+      carrierId: (state.carrier as CarrierSlug),
+      originCountry: state.origin ?? "India",
+      destinationCountry: state.destination,
+      actualWeightKg: Number(state.weight),
+      shipmentType: "package",
+      itemTypeId: (state.itemType as ItemType),
+      packaging: state.packaging ?? "none",
+      insurance: state.insurance ?? false,
+      senderName: formData.senderName,
+      senderMobile: formData.senderMobile,
+      senderEmail: formData.senderEmail,
+      pickupPincode: formData.pickupPincode,
+      pickupAddress: formData.pickupAddress,
+      pickupDate: formData.pickupDate,
+      pickupSlot: formData.pickupSlot,
+      receiverName: formData.receiverName,
+      receiverMobile: formData.receiverMobile,
+      receiverEmail: formData.receiverEmail,
+      deliveryAddress: formData.deliveryAddress,
+      deliveryCity: formData.city,
+      deliveryState: formData.state,
+      deliveryZip: formData.zipCode,
+      numPieces: parseInt(formData.numPieces, 10) || 1,
+      contentsDesc: formData.contents || undefined,
+    };
+
+    createBooking(payload, {
+      onSuccess: (booking) => {
+        navigate("/booking-confirmation", {
+          state: {
+            ...state,
+            ...formData,
+            bookingRef: booking.booking_ref,
+            trackingId: booking.booking_ref,
+            totalPrice: booking.total_inr,
+            estimatedDelivery: state.estimatedDelivery ?? "5–7 business days",
+            route: `${pincodeStatus.status === "found" ? pincodeStatus.city : "India"} → ${state.destination}`,
+          },
+        });
+      },
+      onError: (err) => {
+        setSubmitError(err.message);
+      },
+    });
   };
 
   return (
@@ -279,13 +333,37 @@ const Booking = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[13px] font-bold text-slate-600 uppercase">Pickup Pincode *</label>
-                    <Input 
-                      placeholder="6-digit pincode" 
+                    <Input
+                      placeholder="6-digit pincode"
                       maxLength={6}
-                      value={formData.pickupPincode} 
-                      onChange={e => setFormData({...formData, pickupPincode: e.target.value.replace(/\D/g, "")})}
-                      className={cn(errors.pickupPincode && "border-red-500")}
+                      value={formData.pickupPincode}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        setFormData({...formData, pickupPincode: val});
+                      }}
+                      className={cn(
+                        errors.pickupPincode && "border-red-500",
+                        pincodeStatus.status === "found" && "border-green-500",
+                        pincodeStatus.status === "not_found" && "border-red-500",
+                      )}
                     />
+                    {pincodeStatus.status === "loading" && (
+                      <p className="text-[11px] text-slate-400">Checking pincode...</p>
+                    )}
+                    {pincodeStatus.status === "found" && (
+                      <p className="text-[11px] text-green-600 font-semibold">
+                        {pincodeStatus.city}
+                        {pincodeStatus.surchargeInr > 0
+                          ? ` — Pickup surcharge: ₹${pincodeStatus.surchargeInr}`
+                          : " — Free pickup"}
+                      </p>
+                    )}
+                    {pincodeStatus.status === "not_found" && (
+                      <p className="text-[11px] text-red-500 font-semibold">Pickup not available at this pincode</p>
+                    )}
+                    {errors.pickupPincode && pincodeStatus.status === "idle" && (
+                      <p className="text-[11px] text-red-500">{errors.pickupPincode}</p>
+                    )}
                   </div>
                   <div className="md:col-span-2 space-y-2">
                     <label className="text-[13px] font-bold text-slate-600 uppercase">Pickup Address *</label>
@@ -676,10 +754,10 @@ const Booking = () => {
                                       </div>
                                       <Button 
                                         onClick={handleFinalPayment}
-                                        disabled={!upiId || isProcessing}
+                                        disabled={!upiId || isCreatingBooking}
                                         className="w-full h-[48px] bg-[#16A34A] hover:bg-[#15803D] text-white rounded-[10px] font-medium text-[15px]"
                                       >
-                                         {isProcessing ? <RotateCcw className="w-5 h-5 animate-spin" /> : "Verify & Pay"}
+                                         {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : "Verify & Pay"}
                                       </Button>
                                    </div>
                                  )}
@@ -808,10 +886,10 @@ const Booking = () => {
 
                               <Button 
                                 onClick={handleFinalPayment}
-                                disabled={isProcessing || !cardNumber || !cardExpiry || !cardCvv}
+                                disabled={isCreatingBooking || !cardNumber || !cardExpiry || !cardCvv}
                                 className="w-full h-[48px] bg-[#16A34A] hover:bg-[#15803D] text-white rounded-[10px] font-medium text-[15px]"
                               >
-                                 {isProcessing ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay ₹${state.totalPrice.toLocaleString()} →`}
+                                 {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay ₹${state.totalPrice.toLocaleString()} →`}
                               </Button>
                            </div>
                         )}
@@ -846,10 +924,10 @@ const Booking = () => {
 
                                  <Button 
                                    onClick={handleFinalPayment}
-                                   disabled={isProcessing}
+                                   disabled={isCreatingBooking}
                                    className="w-full h-[48px] bg-[#16A34A] hover:bg-[#15803D] text-white rounded-[10px] font-medium text-[15px]"
                                  >
-                                    {isProcessing ? <RotateCcw className="w-5 h-5 animate-spin" /> : "Proceed to bank →"}
+                                    {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : "Proceed to bank →"}
                                  </Button>
                               </div>
                            </div>
@@ -952,11 +1030,14 @@ const Booking = () => {
         <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 flex gap-4 animate-in slide-in-from-bottom duration-500 z-[100]">
            <Button 
             onClick={handleFinalPayment}
-            disabled={isProcessing}
+            disabled={isCreatingBooking}
             className="flex-1 bg-[#16A34A] hover:bg-[#15803D] text-white h-14 rounded-xl font-bold text-lg shadow-xl shadow-green-primary/20"
            >
-             {isProcessing ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay ₹${state.totalPrice.toLocaleString()}`}
+             {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay ₹${state.totalPrice.toLocaleString()}`}
            </Button>
+           {submitError && (
+             <p className="text-sm text-red-500 text-center mt-3">{submitError}</p>
+           )}
         </div>
       )}
 

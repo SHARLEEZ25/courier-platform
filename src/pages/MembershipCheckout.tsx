@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSubscribe } from "@/hooks/useMembership";
 import { useLocation, useNavigate } from "react-router-dom";
 import { 
   Check, 
@@ -47,7 +48,8 @@ const MembershipCheckout = () => {
   const [cardCvv, setCardCvv] = useState("");
   const [cardHolder, setCardHolder] = useState("");
   const [showCvv, setShowCvv] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const { mutate: subscribe, isPending: isProcessing } = useSubscribe();
   const [qrTimer, setQrTimer] = useState(600);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
@@ -82,29 +84,42 @@ const MembershipCheckout = () => {
   };
 
   const handleFinalPayment = () => {
-    if (!formData.name || !formData.mobile) {
-      setErrors({
-        name: !formData.name ? "Required" : "",
-        mobile: !formData.mobile ? "Required" : ""
-      });
-      return;
-    }
+    const newErrors: Record<string, string> = {};
+    if (!formData.name) newErrors.name = "Required";
+    if (!formData.mobile) newErrors.mobile = "Required";
+    if (Object.keys(newErrors).length) { setErrors(newErrors); return; }
 
-    setIsProcessing(true);
-    // Simulate processing
-    setTimeout(() => {
-      setIsProcessing(false);
-      navigate("/booking-confirmation", { 
-        state: { 
-          membershipType: state.planName,
-          price: state.price,
-          name: formData.name,
-          mobile: formData.mobile,
-          trackingId: "MEM" + Math.floor(Math.random() * 89999 + 10000),
-          isMembership: true
-        } 
-      });
-    }, 2000);
+    setSubmitError("");
+
+    // Map plan name to plan ID
+    const planId = state.planName?.toLowerCase() as "silver" | "gold";
+
+    subscribe(
+      { planId },
+      {
+        onSuccess: (membership) => {
+          navigate("/booking-confirmation", {
+            state: {
+              membershipType: state.planName,
+              price: state.price,
+              name: formData.name,
+              mobile: formData.mobile,
+              trackingId: membership.id,
+              expiresAt: membership.expires_at,
+              isMembership: true,
+            },
+          });
+        },
+        onError: (err) => {
+          // 401 = not signed in; show a helpful message instead of a generic error
+          if (err.message.toLowerCase().includes("unauthori") || err.message.includes("401")) {
+            setSubmitError("Please sign in to activate your membership.");
+          } else {
+            setSubmitError(err.message);
+          }
+        },
+      }
+    );
   };
 
   return (
@@ -328,6 +343,9 @@ const MembershipCheckout = () => {
                    `Pay ₹${state.price.toLocaleString()} Securely`
                  )}
               </Button>
+              {submitError && (
+                <p className="text-sm text-red-500 text-center mt-3">{submitError}</p>
+              )}
             </div>
 
             {/* RIGHT COLUMN: Order Summary */}
