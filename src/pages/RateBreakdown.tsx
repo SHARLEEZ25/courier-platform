@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { useRates } from "@/hooks/useRates";
 import { usePincode } from "@/hooks/usePincode";
 import { useCreateBooking } from "@/hooks/useBooking";
@@ -112,6 +113,16 @@ const ITEM_LABELS: Record<string, string> = {
 const RateBreakdown = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login?redirect=/rate-breakdown", { replace: true, state: location.state });
+    }
+  }, [user, authLoading, navigate, location.state]);
+
+  if (authLoading || !user) return null;
+
   const state = location.state || { preselectedCarrier: null, origin: "Chennai, India", destination: "United Kingdom", weight: 2.5, itemType: "university" };
 
   const [actualWeight, setActualWeight] = useState<number>(Number(state.weight) || 2.5);

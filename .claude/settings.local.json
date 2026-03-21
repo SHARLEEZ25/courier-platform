@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(psql \"postgresql://postgres.puttkuvovljhcnvevaec:%2B7vaP-d%2BW-*ew8Y@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres\" -c \"\\\\dt public.*\")",
+      "Bash(grep -r \"requireAuth\\\\|getAuth\" /d/uniex-refresh-glow/server --include=*.ts)"
     ]
   }
 }

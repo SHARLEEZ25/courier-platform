@@ -20,6 +20,7 @@ bookingsRoutes.use("/*", standardLimiter);
  */
 bookingsRoutes.post(
   "/",
+  requireAuth,
   validateBody(BookingCreateSchema),
   handleCreateBooking
 );

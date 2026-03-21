@@ -56,7 +56,7 @@ const INSURANCE_FEE = 199;
 
 /** Abort signal — keeps each query within Vercel Hobby's 10 s limit. */
 function querySignal() {
-  return AbortSignal.timeout(8000);
+  return AbortSignal.timeout(4000);
 }
 
 /**
@@ -86,6 +86,7 @@ export async function calculateRates(
   const bandKey     = `bands:${input.shipmentType}:${chargeable}`;
 
   // ── Single wave: all 6 queries in parallel ────────────────────────────────
+  const start = Date.now();
   const [zoneRows, fscRows, discountRow, surchargeRow, stepRows, bandRows] = await Promise.all([
     // Zones: cached 30 min
     cacheGet<ZoneCacheRow[]>(zoneKey) ??
@@ -98,7 +99,10 @@ export async function calculateRates(
         .or(`effective_to.is.null,effective_to.gte.${today}`)
         .order("effective_from", { ascending: false })
         .abortSignal(querySignal())
-        .then(r => cacheSet<ZoneCacheRow[]>(zoneKey, r.data ?? [], TTL_30M)),
+        .then(r => {
+          if (r.error) console.error("[rate-engine] zones error:", r.error.message);
+          return cacheSet<ZoneCacheRow[]>(zoneKey, r.data ?? [], TTL_30M);
+        }),
 
     // FSC: cached 1 hour
     cacheGet<FscCacheRow[]>(fscKey) ??
@@ -110,7 +114,10 @@ export async function calculateRates(
         .or(`effective_to.is.null,effective_to.gte.${today}`)
         .order("effective_from", { ascending: false })
         .abortSignal(querySignal())
-        .then(r => cacheSet<FscCacheRow[]>(fscKey, r.data ?? [], TTL_1H)),
+        .then(r => {
+          if (r.error) console.error("[rate-engine] fsc error:", r.error.message);
+          return cacheSet<FscCacheRow[]>(fscKey, r.data ?? [], TTL_1H);
+        }),
 
     // Item discount: cached 1 hour
     cacheGet<{ discount_pct: number } | null>(discountKey) ??
@@ -120,7 +127,10 @@ export async function calculateRates(
         .eq("item_type_id", input.itemType)
         .abortSignal(querySignal())
         .maybeSingle()
-        .then(r => cacheSet(discountKey, r.data, TTL_1H)),
+        .then(r => {
+          if (r.error) console.error("[rate-engine] discount error:", r.error.message);
+          return cacheSet(discountKey, r.data, TTL_1H);
+        }),
 
     // Pickup surcharge: not cached (pincode-specific)
     input.pickupPincode
@@ -130,12 +140,13 @@ export async function calculateRates(
           .eq("pincode", input.pickupPincode)
           .abortSignal(querySignal())
           .maybeSingle()
-          .then(r => r.data)
+          .then(r => {
+            if (r.error) console.error("[rate-engine] pickup error:", r.error.message);
+            return r.data;
+          })
       : Promise.resolve(null),
 
-    // Rate card steps: all carriers, all zones — filter by shipment type + weight.
-    // Zone filtering is done in memory. Cached by shipment type + weight so the
-    // same data serves all origin/destination pairs with the same weight.
+    // Rate card steps: all carriers, all zones
     cacheGet<StepCacheRow[]>(stepKey) ??
       supabase
         .from("rate_card_steps")
@@ -145,10 +156,12 @@ export async function calculateRates(
         .eq("weight_kg", chargeable)
         .or(`effective_to.is.null,effective_to.gte.${today}`)
         .abortSignal(querySignal())
-        .then(r => cacheSet<StepCacheRow[]>(stepKey, r.data ?? [], TTL_30M)),
+        .then(r => {
+          if (r.error) console.error("[rate-engine] steps error:", r.error.message);
+          return cacheSet<StepCacheRow[]>(stepKey, r.data ?? [], TTL_30M);
+        }),
 
-    // Rate card bands: all carriers, all zones — filter by weight range.
-    // Zone filtering is done in memory.
+    // Rate card bands: heavy shipments
     cacheGet<BandCacheRow[]>(bandKey) ??
       supabase
         .from("rate_card_bands")
@@ -160,8 +173,15 @@ export async function calculateRates(
         .or(`effective_to.is.null,effective_to.gte.${today}`)
         .order("weight_min_kg", { ascending: false })
         .abortSignal(querySignal())
-        .then(r => cacheSet<BandCacheRow[]>(bandKey, r.data ?? [], TTL_30M)),
+        .then(r => {
+          if (r.error) console.error("[rate-engine] bands error:", r.error.message);
+          return cacheSet<BandCacheRow[]>(bandKey, r.data ?? [], TTL_30M);
+        }),
   ]);
+  const duration = Date.now() - start;
+  if (duration > 1500) {
+    console.warn(`[rate-engine] DB queries took ${duration}ms (slow batch)`);
+  }
 
   // ── Build lookup maps ─────────────────────────────────────────────────────
   const zoneMap = new Map<CarrierSlug, string>();

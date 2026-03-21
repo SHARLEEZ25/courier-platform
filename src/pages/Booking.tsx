@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePincode } from "@/hooks/usePincode";
 import { useCreateBooking } from "@/hooks/useBooking";
+import { useAuth } from "@/context/AuthContext";
 import type { BookingCreate, CarrierSlug, ItemType } from "@/types/api";
 import { 
   Check, 
@@ -58,6 +59,16 @@ const POPULAR_BANKS = [
 const Booking = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  // Redirect to login if not signed in, return here after
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login?redirect=/booking", { replace: true, state: location.state });
+    }
+  }, [user, authLoading, navigate, location.state]);
+
+  if (authLoading || !user) return null;
   const state = location.state || { 
     origin: "India", 
     destination: "USA", 
