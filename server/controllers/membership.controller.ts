@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { supabase } from "../config/supabase.js";
+import { sql } from "../config/db.js";
 import { getMembershipPlans } from "../db/queries/rates.queries.js";
 import { ok, err } from "../types/api.types.js";
 
@@ -22,46 +22,36 @@ export async function handleSubscribe(c: Context) {
   }
 
   try {
-    // Check plan exists
-    const { data: plan, error: planError } = await supabase
-      .from("membership_plans")
-      .select("*")
-      .eq("id", planId)
-      .single();
-
-    if (planError || !plan) {
-      return c.json(err("Invalid membership plan."), 400);
-    }
+    const plans = await sql`
+      SELECT * FROM membership_plans WHERE id = ${planId} LIMIT 1
+    `;
+    const plan = plans[0];
+    if (!plan) return c.json(err("Invalid membership plan."), 400);
 
     // Deactivate any existing membership
-    await supabase
-      .from("user_memberships")
-      .update({ is_active: false })
-      .eq("user_id", user.id)
-      .eq("is_active", true);
+    await sql`
+      UPDATE user_memberships
+      SET is_active = false
+      WHERE user_id = ${user.id} AND is_active = true
+    `;
 
-    // Create new membership
     const startsAt = new Date();
     const expiresAt = new Date(startsAt);
     expiresAt.setMonth(expiresAt.getMonth() + plan.duration_months);
 
-    const { data: membership, error: insertError } = await supabase
-      .from("user_memberships")
-      .insert({
-        user_id: user.id,
-        plan_id: planId,
-        starts_at: startsAt.toISOString().split("T")[0],
-        expires_at: expiresAt.toISOString().split("T")[0],
-        is_active: true,
-      })
-      .select()
-      .single();
+    const rows = await sql`
+      INSERT INTO user_memberships (user_id, plan_id, starts_at, expires_at, is_active)
+      VALUES (
+        ${user.id},
+        ${planId},
+        ${startsAt.toISOString().split("T")[0]},
+        ${expiresAt.toISOString().split("T")[0]},
+        true
+      )
+      RETURNING *
+    `;
 
-    if (insertError) {
-      throw new Error(insertError.message);
-    }
-
-    return c.json(ok(membership), 201);
+    return c.json(ok(rows[0]), 201);
   } catch (e) {
     console.error("[membership.controller] subscribe error:", e);
     return c.json(err("Failed to process membership. Please try again."), 500);
@@ -74,21 +64,19 @@ export async function handleGetMembershipStatus(c: Context) {
   try {
     const today = new Date().toISOString().split("T")[0];
 
-    const { data, error } = await supabase
-      .from("user_memberships")
-      .select("*, membership_plans(*)")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .gte("expires_at", today)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+    const rows = await sql`
+      SELECT um.*, row_to_json(mp.*) AS membership_plans
+      FROM user_memberships um
+      JOIN membership_plans mp ON mp.id = um.plan_id
+      WHERE um.user_id = ${user.id}
+        AND um.is_active = true
+        AND um.expires_at >= ${today}::date
+      ORDER BY um.created_at DESC
+      LIMIT 1
+    `;
 
-    if (error || !data) {
-      return c.json(ok({ active: false, plan: null }));
-    }
-
-    return c.json(ok({ active: true, plan: data }));
+    if (!rows[0]) return c.json(ok({ active: false, plan: null }));
+    return c.json(ok({ active: true, plan: rows[0] }));
   } catch (e) {
     console.error("[membership.controller] getStatus error:", e);
     return c.json(err("Failed to fetch membership status."), 500);

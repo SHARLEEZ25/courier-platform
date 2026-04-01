@@ -6,9 +6,12 @@ Uniex is an **international courier aggregator** based in India. Customers visit
 ## Tech Stack
 - **Frontend:** React + Vite + TypeScript + Tailwind + shadcn/ui + TanStack Query
 - **Backend:** Hono (Node.js) — deployed on Render
-- **Database:** Supabase (Postgres)
-- **Auth:** BetterAuth
-- **Deployment:** Render (frontend + backend as separate services)
+- **Database:** Neon (Postgres 17) — connected via postgres.js (`server/config/db.ts`)
+- **Auth:** Firebase Auth — firebase-admin on backend (`server/config/firebase-admin.ts`), firebase SDK on frontend (`src/lib/firebase.ts`)
+- **Deployment:** Render (frontend + backend as separate Render Web Services)
+- **Tracking integration:** AfterShip (API key obtained, integration not yet built)
+
+> NOTE: Earlier versions of this project used Supabase + BetterAuth. Both have been fully replaced. Ignore any references to Supabase RLS, BetterAuth, or `auth.users` — they are gone.
 
 ## Client's Intended Full Flow (from flowchart)
 1. Visitor enters website
@@ -26,70 +29,98 @@ Uniex is an **international courier aggregator** based in India. Customers visit
 13. Delivered / Delivery attempted / No Delivery (NDR)
 14. Remarketing — 10% off email sent after delivery
 
-## Current Status (as of March 2026)
+## Current Status (as of 1 April 2026)
 
 ### Done & Working
 - Website (Home, About, Services, Contact pages)
-- Rate calculator — live quotes from DHL, FedEx, UPS with GST, FSC, discount
-- Membership plans page (Silver ₹299/yr, Gold ₹1499/yr) — prices from DB
+- Auth — Firebase Auth fully working (login, signup, token verification on backend)
+- Rate calculator — live quotes from DHL, FedEx, UPS with correct pricing pipeline:
+  base rate → item discount → margin → FSC → demand surcharge → carrier extras → GST
+- Margin, demand surcharge, peak surcharge, surge fees all DB-configurable via `surcharge_config`
+- DHL premium delivery windows (9am / 12pm) — customer selects at quote
+- UPS fixed charges (formal clearance, DDP, signature, US inbound) — customer selects at quote
+- UPS 70kg weight block
+- Booking flow — multi-step form, server-side rate recalculation, saved to DB
+- Membership plans page (Silver ₹299/yr, Gold ₹1,499/yr) — prices from DB
 - Chat widget present (no real AI logic yet)
 - Tracking page UI — timeline view, status badges (no real data yet)
 
-### Built but Broken
-- **Auth (login/signup)** — UI done, BetterAuth backend written, returns error on Render. THIS IS THE #1 BLOCKER.
-- **Booking flow** — multi-step form UI complete, backend route exists, blocked by auth
-- **Membership checkout** — UI done (UPI/card/net banking tabs), blocked by auth
-- **Contact form** — UI done, no backend, submissions go nowhere
-- **Tracking backend** — route exists, no real tracking events in DB yet
+### Built but Not Yet Working
+- **Payment gateway (Razorpay)** — UI screens done, no real processor connected. Blocked on Razorpay API credentials from client.
+- **AfterShip tracking** — API key obtained, integration not built. No live tracking events in DB.
+- **Membership checkout** — UI done (UPI/card/net banking tabs), blocked on Razorpay.
+- **Contact form** — UI done, no backend, submissions go nowhere.
+- **Order history page** — backend API exists (`GET /api/bookings`), no frontend screen.
 
 ### Not Built Yet
-- Payment gateway (Razorpay) — UI screens exist, no real processor connected
-- Order history page — backend API exists, no frontend screen
-- Admin / Ops panel — nothing built
-- Email notifications — no booking confirmations, no tracking alerts
-- WhatsApp notifications — no automated messages
+- Admin / Ops panel (use Neon table editor for now — see decision below)
+- Email notifications (no booking confirmations, no tracking alerts)
+- WhatsApp notifications
 - Lead capture system
 - AI chat with real logic
 - NDR handling
 - Remarketing / post-delivery emails
 
 ## API Routes
-- `POST /api/rates` — calculate shipping quotes
-- `GET /api/tracking/:trackingId` — tracking by number or booking ref
-- `POST /api/bookings` — create booking (blocked by auth)
-- `GET /api/pincode/:pincode` — check serviceability
-- `/api/membership/*` — plans + subscribe
-- `/api/auth/*` — BetterAuth routes
+- `POST /api/rates/calculate` — calculate shipping quotes
+- `GET /api/tracking/:trackingId` — tracking by AWB number or booking_ref
+- `POST /api/bookings` — create booking (requires Firebase auth token)
+- `GET /api/bookings` — list user bookings (requires Firebase auth token)
+- `GET /api/pincode/:pincode` — check pickup serviceability
+- `GET /api/membership/plans` — list membership plans
+- `POST /api/membership/subscribe` — subscribe to plan
+- `/api/auth/*` — Firebase Auth pass-through routes
 
 ## Key Decisions Made
 
-### Admin Panel — Use Supabase for Now
-- **Decision:** Do NOT build a custom admin panel yet. Use the Supabase Table Editor directly to manage bookings, update statuses, and insert tracking events during early operations.
-- **Why:** Auth is broken. Booking isn't working. Building admin on a broken foundation wastes time. Early volume will be low — Supabase is enough.
-- **Phase 2 plan:** Once core flow works (auth → booking → payment → tracking), build a minimal `/admin` ops panel inside this same repo. Just 3 screens: bookings list, update status, add tracking event. No separate repo needed.
+### Admin Panel — Use Neon Table Editor for Now
+- **Decision:** Do NOT build a custom admin panel yet. Use the Neon table editor (console.neon.tech) directly to manage bookings, update statuses, and insert tracking events during early operations.
+- **Why:** Volume will be low at launch. Building an admin panel before core payment and tracking are working is wasted effort.
+- **Phase 2 plan:** Once payment + tracking are live, build a minimal `/admin` ops panel inside this same repo. Three screens only: bookings list, update status, add tracking event. No separate repo.
 
-### Build Order (Priority)
-1. Fix Auth (BetterAuth on Render) — unblocks everything
-2. Fix Booking flow (depends on auth)
-3. Connect Razorpay payment gateway (depends on booking)
-4. Email + WhatsApp notifications (depends on booking + payment)
-5. Real tracking events (depends on booking)
-6. Order history page (depends on auth + booking)
-7. Admin / Ops panel (after all above working)
+### Build Order (Remaining)
+1. AfterShip tracking integration (real events) — API key is ready
+2. Order history page (frontend) — backend already exists
+3. Razorpay payment gateway — blocked on API credentials from client
+4. Email + WhatsApp notifications — after payment confirmed
+5. Admin / Ops panel — after all above are working
 
-## Supabase Tables (known)
-- `bookings` — booking_ref, carrier_id, status, tracking_number, sender/receiver info, pricing breakdown
-- `tracking_events` — tracking_number, event_code, description, location, event_at
-- `membership_plans` — id, name, price_inr, discount_pct, duration_months
-- `membership_subscriptions` — user_id, plan_id, starts_at, expires_at, is_active
-- `rate_cards` — carrier rates per zone/weight
-- `serviceable_pincodes` — pincode serviceability + surcharges
+### Rate Engine — Surcharge Config
+- `surcharge_config` table stores per-carrier: margin %, demand surcharge toggle/amount, FedEx peak toggle/amount, UPS surge toggle/amount
+- FSC (fuel surcharge) lives separately in `fuel_surcharges` table — updated monthly
+- **Margin is currently 20% for all carriers** — client has not confirmed final percentages. Do not assume this is final.
+- FedEx IPF zones are currently identical to IP zones — needs updating when client's carrier account manager provides IPF-specific zone PDF
+
+## Neon Database
+- Project: `unix` · ID: `falling-night-64411631` · Region: ap-southeast-1 (Singapore)
+- Connection via `DATABASE_URL` env var (postgres.js, SSL required)
+- Schema file: `server/db/schema.neon.sql`
+- Seeder: `npm run db:seed` — safe to re-run (all ON CONFLICT DO NOTHING)
+- Full schema doc: `docs/DB_SCHEMA_HANDOVER.md`
+
+## Tables (13 total)
+- `carriers` — dhl, fedex, ups, aramex (aramex has no rate cards)
+- `carrier_zones` — 445 rows. DHL/UPS use service_type='standard'. FedEx has IP and IPF rows.
+- `rate_card_steps` — 2,910 rows. Exact price per weight breakpoint per zone.
+- `rate_card_bands` — 210 rows. Per-kg pricing for heavy shipments (DHL + UPS).
+- `rate_card_slabs` — legacy table, unused, ignore it
+- `fuel_surcharges` — monthly FSC per carrier. Update every month.
+- `surcharge_config` — margin, demand, peak, surge flags per carrier. Admin-editable.
+- `item_type_discounts` — 14 item types with discount percentages
+- `pickup_zones` — 190 Indian pincodes with pickup surcharges (TN free, metros ₹200–250)
+- `bookings` — one row per customer booking, full pricing snapshot locked at booking time
+- `tracking_events` — one row per tracking milestone per booking
+- `membership_plans` — Silver ₹299, Gold ₹1,499
+- `user_memberships` — active member records per Firebase UID
 
 ## Booking Status Flow
 `pending` → `confirmed` → `picked_up` → `in_transit` → `delivered` (or `cancelled`)
 
-## Notes
-- Carriers supported: DHL, FedEx, UPS (Aramex type exists in code but not in rate cards)
-- Item types: university, excess, docs, food, clothing, medicine, jewellery, electronics, cosmetics, gifts, sports, pooja, commercial, other
-- Membership gives discount_pct off base rate
-- Rate engine does a single Supabase round-trip (optimized in recent commit)
+## Notes & Gotchas
+- `rate_card_slabs` table exists in DB but is unused by the rate engine — ignore it
+- Aramex is in the `carriers` table but has no zone or rate data — will never appear in quotes
+- Volumetric weight divisor is 5000 (industry standard assumed) — not confirmed by carrier account managers yet
+- UPS max 70 kg per package — system blocks UPS quotes above this at engine level
+- `margin_inr` in bookings is internal — never display to customer
+- Membership discount stacks on top of item type discount (both applied before margin)
+- `tracking_events` has CASCADE DELETE from bookings — deleting a booking deletes all its events

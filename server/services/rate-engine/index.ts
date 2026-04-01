@@ -1,4 +1,4 @@
-import { supabase } from "../../config/supabase.js";
+import { sql } from "../../config/db.js";
 import type {
   RateEngineInput,
   RateResult,
@@ -10,7 +10,7 @@ import { applyFsc } from "./fsc.js";
 import { applyGst } from "./gst.js";
 import { DELIVERY_DAYS } from "./zone-resolver.js";
 
-// ── Module-level cache (persists across warm Vercel invocations) ──────────────
+// ── Module-level cache (persists across warm invocations) ─────────────────────
 interface CacheEntry<T> { value: T; expiresAt: number }
 const _cache = new Map<string, CacheEntry<unknown>>();
 
@@ -23,14 +23,20 @@ function cacheSet<T>(key: string, value: T, ttlMs: number): T {
   _cache.set(key, { value, expiresAt: Date.now() + ttlMs });
   return value;
 }
+async function withCache<T>(key: string, ttlMs: number, fetch: () => Promise<T>): Promise<T> {
+  const cached = cacheGet<T>(key);
+  if (cached !== null) return cached;
+  return fetch().then(v => cacheSet(key, v, ttlMs));
+}
 
 const TTL_1H  = 60 * 60 * 1000;
 const TTL_30M = 30 * 60 * 1000;
 
-type ZoneCacheRow  = { carrier_id: string; zone_code: string };
-type FscCacheRow   = { carrier_id: string; fsc_percent: number };
-type StepCacheRow  = { carrier_id: string; zone_code: string; price_inr: number };
-type BandCacheRow  = { carrier_id: string; zone_code: string; price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number };
+type ZoneCacheRow      = { carrier_id: string; zone_code: string };
+type FscCacheRow       = { carrier_id: string; fsc_percent: number };
+type SurchargeRow      = { carrier_id: string; key: string; value_num: string | null; value_bool: boolean | null };
+type StepCacheRow      = { carrier_id: string; zone_code: string; price_inr: number };
+type BandCacheRow      = { carrier_id: string; zone_code: string; price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number };
 
 const CARRIER_NAMES: Record<CarrierSlug, string> = {
   dhl: "DHL Express",
@@ -54,130 +60,157 @@ const FALLBACK_FSC: Record<CarrierSlug, number> = {
 
 const INSURANCE_FEE = 199;
 
-/** Abort signal — keeps each query within Vercel Hobby's 10 s limit. */
-function querySignal() {
-  return AbortSignal.timeout(4000);
+// DHL premium service flat adds (hardcoded per PDF)
+const DHL_PREMIUM_FEES: Record<string, number> = {
+  standard:      0,
+  premium_900:   3000,
+  premium_1200:  1000,
+};
+
+// UPS fixed surcharges (hardcoded per PDF)
+const UPS_FORMAL_CLEARANCE = 3150;
+const UPS_DDP              = 1050;
+const UPS_SIGNATURE        = 368;
+const UPS_US_INBOUND       = 230;
+const UPS_REMOTE_PER_KG    = 57;
+const UPS_REMOTE_MIN       = 3150;
+
+/**
+ * Parses a surcharge_config result set into a per-carrier key/value map.
+ * Returns: { dhl: { margin_pct: 20, demand_active: false, ... }, ... }
+ */
+function parseSurchargeConfig(
+  rows: SurchargeRow[]
+): Record<string, Record<string, number | boolean>> {
+  const out: Record<string, Record<string, number | boolean>> = {};
+  for (const row of rows) {
+    if (!out[row.carrier_id]) out[row.carrier_id] = {};
+    if (row.value_bool !== null) {
+      out[row.carrier_id][row.key] = row.value_bool;
+    } else if (row.value_num !== null) {
+      out[row.carrier_id][row.key] = Number(row.value_num);
+    }
+  }
+  return out;
 }
 
 /**
- * Core rate calculation pipeline — single-wave edition.
+ * Core rate calculation pipeline.
  *
- * All 6 DB queries fire in ONE parallel batch instead of two sequential waves.
- * Rate card steps + bands are fetched for all carriers without a zone filter;
- * zone-based filtering is done in memory after the single round-trip completes.
+ * Computation order per PDF spec:
+ *   base → item discount → margin → FSC → demand surcharge
+ *   → carrier-specific extras → GST
  *
- * This halves Supabase round-trips: 2 sequential HTTP calls → 1,
- * which is critical on Vercel Hobby (10 s function limit).
+ * All DB queries fire in ONE parallel batch.
  */
 export async function calculateRates(
   input: RateEngineInput
 ): Promise<RateResult[]> {
-  // Always query all carriers; filter by input.carrier in memory at the end.
+  // UPS hard limit from PDF
+  if (input.carrier === 'ups' || !input.carrier) {
+    if (input.weightKg > 70) {
+      // If specifically requesting UPS, return empty (caller shows error).
+      // If requesting all carriers, UPS simply won't appear.
+      if (input.carrier === 'ups') return [];
+    }
+  }
+
   const allCarriers = [...CARRIERS];
   const today = new Date().toISOString().split("T")[0];
   const { chargeable, volumetric } = chargeableWeight(input.weightKg, input.dims);
 
-  // Cache keys — steps/bands keyed by shipment type + weight only (route-agnostic
-  // so the same rate card data is reused across all origin/destination pairs).
-  const zoneKey     = `zones:${input.origin}:${input.destination}`;
-  const fscKey      = `fsc:${today}`;
-  const discountKey = `discount:${input.itemType}`;
-  const stepKey     = `steps:${input.shipmentType}:${chargeable}`;
-  const bandKey     = `bands:${input.shipmentType}:${chargeable}`;
+  // FedEx zone lookup needs service_type column
+  const fedexService = input.fedexService ?? 'IP';
 
-  // ── Single wave: all 6 queries in parallel ────────────────────────────────
+  const zoneKey      = `zones:${input.origin}:${input.destination}:${fedexService}`;
+  const fscKey       = `fsc:${today}`;
+  const discountKey  = `discount:${input.itemType}`;
+  const surchargeKey = `surcharge_cfg:all`;
+  const stepKey      = `steps:${input.shipmentType}:${chargeable}`;
+  const bandKey      = `bands:${input.shipmentType}:${chargeable}`;
+
+  // ── Single wave: all 7 queries in parallel ────────────────────────────────
   const start = Date.now();
-  const [zoneRows, fscRows, discountRow, surchargeRow, stepRows, bandRows] = await Promise.all([
-    // Zones: cached 30 min
-    cacheGet<ZoneCacheRow[]>(zoneKey) ??
-      supabase
-        .from("carrier_zones")
-        .select("carrier_id, zone_code")
-        .in("carrier_id", allCarriers)
-        .eq("origin_country", input.origin)
-        .eq("destination_country", input.destination)
-        .or(`effective_to.is.null,effective_to.gte.${today}`)
-        .order("effective_from", { ascending: false })
-        .abortSignal(querySignal())
-        .then(r => {
-          if (r.error) console.error("[rate-engine] zones error:", r.error.message);
-          return cacheSet<ZoneCacheRow[]>(zoneKey, r.data ?? [], TTL_30M);
-        }),
+  const [zoneRows, fscRows, discountRow, surchargeRow, surchargeConfigRows, stepRows, bandRows] = await Promise.all([
 
-    // FSC: cached 1 hour
-    cacheGet<FscCacheRow[]>(fscKey) ??
-      supabase
-        .from("fuel_surcharges")
-        .select("carrier_id, fsc_percent")
-        .in("carrier_id", allCarriers)
-        .lte("effective_from", today)
-        .or(`effective_to.is.null,effective_to.gte.${today}`)
-        .order("effective_from", { ascending: false })
-        .abortSignal(querySignal())
-        .then(r => {
-          if (r.error) console.error("[rate-engine] fsc error:", r.error.message);
-          return cacheSet<FscCacheRow[]>(fscKey, r.data ?? [], TTL_1H);
-        }),
+    withCache<ZoneCacheRow[]>(zoneKey, TTL_30M, () =>
+      sql<ZoneCacheRow[]>`
+        SELECT carrier_id, zone_code
+        FROM carrier_zones
+        WHERE carrier_id = ANY(${allCarriers}::text[])
+          AND origin_country = ${input.origin}
+          AND destination_country = ${input.destination}
+          AND (
+            service_type = 'standard'
+            OR (carrier_id = 'fedex' AND service_type = ${fedexService})
+          )
+          AND (effective_to IS NULL OR effective_to >= ${today}::date)
+        ORDER BY effective_from DESC
+      `
+    ),
 
-    // Item discount: cached 1 hour
-    cacheGet<{ discount_pct: number } | null>(discountKey) ??
-      supabase
-        .from("item_type_discounts")
-        .select("discount_pct")
-        .eq("item_type_id", input.itemType)
-        .abortSignal(querySignal())
-        .maybeSingle()
-        .then(r => {
-          if (r.error) console.error("[rate-engine] discount error:", r.error.message);
-          return cacheSet(discountKey, r.data, TTL_1H);
-        }),
+    withCache<FscCacheRow[]>(fscKey, TTL_1H, () =>
+      sql<FscCacheRow[]>`
+        SELECT carrier_id, fsc_percent
+        FROM fuel_surcharges
+        WHERE carrier_id = ANY(${allCarriers}::text[])
+          AND effective_from <= ${today}::date
+          AND (effective_to IS NULL OR effective_to >= ${today}::date)
+        ORDER BY effective_from DESC
+      `
+    ),
 
-    // Pickup surcharge: not cached (pincode-specific)
+    withCache<{ discount_pct: number } | null>(discountKey, TTL_1H, () =>
+      sql<{ discount_pct: number }[]>`
+        SELECT discount_pct
+        FROM item_type_discounts
+        WHERE item_type_id = ${input.itemType}
+        LIMIT 1
+      `.then(rows => rows[0] ?? null)
+    ),
+
     input.pickupPincode
-      ? supabase
-          .from("pickup_zones")
-          .select("surcharge_inr")
-          .eq("pincode", input.pickupPincode)
-          .abortSignal(querySignal())
-          .maybeSingle()
-          .then(r => {
-            if (r.error) console.error("[rate-engine] pickup error:", r.error.message);
-            return r.data;
-          })
+      ? sql<{ surcharge_inr: number }[]>`
+          SELECT surcharge_inr
+          FROM pickup_zones
+          WHERE pincode = ${input.pickupPincode}
+          LIMIT 1
+        `.then(rows => rows[0] ?? null)
       : Promise.resolve(null),
 
-    // Rate card steps: all carriers, all zones
-    cacheGet<StepCacheRow[]>(stepKey) ??
-      supabase
-        .from("rate_card_steps")
-        .select("carrier_id, zone_code, price_inr")
-        .in("carrier_id", allCarriers)
-        .eq("shipment_type", input.shipmentType)
-        .eq("weight_kg", chargeable)
-        .or(`effective_to.is.null,effective_to.gte.${today}`)
-        .abortSignal(querySignal())
-        .then(r => {
-          if (r.error) console.error("[rate-engine] steps error:", r.error.message);
-          return cacheSet<StepCacheRow[]>(stepKey, r.data ?? [], TTL_30M);
-        }),
+    withCache<SurchargeRow[]>(surchargeKey, TTL_1H, () =>
+      sql<SurchargeRow[]>`
+        SELECT carrier_id, key, value_num, value_bool
+        FROM surcharge_config
+        WHERE carrier_id = ANY(${allCarriers}::text[])
+      `
+    ),
 
-    // Rate card bands: heavy shipments
-    cacheGet<BandCacheRow[]>(bandKey) ??
-      supabase
-        .from("rate_card_bands")
-        .select("carrier_id, zone_code, price_per_kg, base_price_inr, band_type, weight_min_kg")
-        .in("carrier_id", allCarriers)
-        .eq("shipment_type", input.shipmentType)
-        .lte("weight_min_kg", chargeable)
-        .or(`weight_max_kg.is.null,weight_max_kg.gte.${chargeable}`)
-        .or(`effective_to.is.null,effective_to.gte.${today}`)
-        .order("weight_min_kg", { ascending: false })
-        .abortSignal(querySignal())
-        .then(r => {
-          if (r.error) console.error("[rate-engine] bands error:", r.error.message);
-          return cacheSet<BandCacheRow[]>(bandKey, r.data ?? [], TTL_30M);
-        }),
+    withCache<StepCacheRow[]>(stepKey, TTL_30M, () =>
+      sql<StepCacheRow[]>`
+        SELECT carrier_id, zone_code, price_inr
+        FROM rate_card_steps
+        WHERE carrier_id = ANY(${allCarriers}::text[])
+          AND shipment_type = ${input.shipmentType}
+          AND weight_kg = ${chargeable}
+          AND (effective_to IS NULL OR effective_to >= ${today}::date)
+      `
+    ),
+
+    withCache<BandCacheRow[]>(bandKey, TTL_30M, () =>
+      sql<BandCacheRow[]>`
+        SELECT carrier_id, zone_code, price_per_kg, base_price_inr, band_type, weight_min_kg
+        FROM rate_card_bands
+        WHERE carrier_id = ANY(${allCarriers}::text[])
+          AND shipment_type = ${input.shipmentType}
+          AND weight_min_kg <= ${chargeable}
+          AND (weight_max_kg IS NULL OR weight_max_kg >= ${chargeable})
+          AND (effective_to IS NULL OR effective_to >= ${today}::date)
+        ORDER BY weight_min_kg DESC
+      `
+    ),
   ]);
+
   const duration = Date.now() - start;
   if (duration > 1500) {
     console.warn(`[rate-engine] DB queries took ${duration}ms (slow batch)`);
@@ -198,15 +231,20 @@ export async function calculateRates(
     }
   }
 
-  const discountPct    = discountRow  ? Number(discountRow.discount_pct)    : 0;
+  const cfgMap = parseSurchargeConfig(surchargeConfigRows);
+
+  const discountPct     = discountRow  ? Number(discountRow.discount_pct)   : 0;
   const pickupSurcharge = surchargeRow ? Number(surchargeRow.surcharge_inr) : 0;
 
-  // Respect input.carrier filter; only include carriers that have a zone for this route.
   const requestedCarriers = input.carrier ? [input.carrier] : allCarriers;
-  const activeCarriers = requestedCarriers.filter(c => zoneMap.has(c));
+  // Filter out UPS if weight exceeds limit
+  const activeCarriers = requestedCarriers.filter(c => {
+    if (!zoneMap.has(c)) return false;
+    if (c === 'ups' && input.weightKg > 70) return false;
+    return true;
+  });
   if (activeCarriers.length === 0) return [];
 
-  // Build step lookup: "carrier:zone" → price_inr
   const pairKey = (c: string, z: string) => `${c}:${z}`;
   const stepLookup = new Map<string, number>();
   for (const row of stepRows) {
@@ -214,7 +252,6 @@ export async function calculateRates(
     if (!stepLookup.has(k)) stepLookup.set(k, Number(row.price_inr));
   }
 
-  // Build band lookup: "carrier:zone" → first matching band (ordered desc by weight_min_kg)
   const bandLookup = new Map<string, BandCacheRow>();
   for (const row of bandRows) {
     const k = pairKey(row.carrier_id, row.zone_code);
@@ -227,6 +264,7 @@ export async function calculateRates(
   for (const carrier of activeCarriers) {
     const zone = zoneMap.get(carrier)!;
     const k = pairKey(carrier, zone);
+    const cfg = cfgMap[carrier] ?? {};
 
     let priceInr: number | null = null;
     if (stepLookup.has(k)) {
@@ -244,14 +282,73 @@ export async function calculateRates(
 
     if (priceInr === null) continue;
 
-    const fscPct       = fscMap.get(carrier) ?? FALLBACK_FSC[carrier] ?? 27.0;
-    const discountInr  = round2(priceInr * discountPct);
+    // Step 1: item discount (Uniex discount to customer, e.g. university 50% off)
+    const discountInr    = round2(priceInr * discountPct);
     const discountedBase = round2(priceInr - discountInr);
-    const fscInr       = applyFsc(discountedBase, fscPct);
+
+    // Step 2: margin (Uniex markup on carrier base — internal, never shown to customer)
+    const marginPct = Number(cfg['margin_pct'] ?? 20);
+    const marginInr = round2(discountedBase * (marginPct / 100));
+    const withMargin = round2(discountedBase + marginInr);
+
+    // Step 3: FSC (applied on withMargin per spec)
+    const fscPct = fscMap.get(carrier) ?? FALLBACK_FSC[carrier] ?? 27.0;
+    const fscInr = applyFsc(withMargin, fscPct);
+
+    // Step 4: demand surcharge
+    const demandActive  = cfg['demand_active'] === true;
+    const demandPerKg   = Number(cfg['demand_per_kg'] ?? 0);
+    const demandSurchargeInr = demandActive ? round2(demandPerKg * chargeable) : 0;
+
+    // Step 5: carrier-specific extras
+    let premiumServiceInr = 0;
+    let peakSurchargeInr  = 0;
+    let usInboundInr      = 0;
+    let upsFixedInr       = 0;
+
+    if (carrier === 'dhl') {
+      const svc = input.dhlService ?? 'standard';
+      premiumServiceInr = DHL_PREMIUM_FEES[svc] ?? 0;
+    }
+
+    if (carrier === 'fedex') {
+      const peakActive = cfg['peak_active'] === true;
+      if (peakActive) {
+        peakSurchargeInr = round2(Number(cfg['peak_amount'] ?? 0));
+      }
+    }
+
+    if (carrier === 'ups') {
+      // UPS surge fee (separate from FSC)
+      const surgeActive = cfg['surge_active'] === true;
+      if (surgeActive) {
+        upsFixedInr += round2(Number(cfg['surge_amount'] ?? 0));
+      }
+      // US inbound surcharge — auto
+      if (input.destination === 'US') {
+        usInboundInr = UPS_US_INBOUND;
+      }
+      // Customer-selectable options
+      const opts = input.upsOptions ?? {};
+      if (opts.formalClearance) upsFixedInr += UPS_FORMAL_CLEARANCE;
+      if (opts.ddp)             upsFixedInr += UPS_DDP;
+      if (opts.signature)       upsFixedInr += UPS_SIGNATURE;
+      // Remote area (staff-flagged, not in customer quote by default)
+      if (opts.remoteArea) {
+        upsFixedInr += Math.max(UPS_REMOTE_PER_KG * chargeable, UPS_REMOTE_MIN);
+      }
+    }
+
+    // Step 6: packaging + insurance
     const packagingInr = PACKAGING_FEES[input.packaging];
     const insuranceInr = input.insurance ? INSURANCE_FEE : 0;
 
-    const preGst = discountedBase + fscInr + pickupSurcharge + packagingInr + insuranceInr;
+    // Step 7: GST on full subtotal
+    const preGst = withMargin + fscInr + demandSurchargeInr
+      + premiumServiceInr + peakSurchargeInr
+      + usInboundInr + upsFixedInr
+      + pickupSurcharge + packagingInr + insuranceInr;
+
     const { subtotal, gst, total } = applyGst(preGst);
 
     results.push({
@@ -264,8 +361,15 @@ export async function calculateRates(
       baseRateInr: round2(priceInr),
       discountPct,
       discountInr,
+      marginPct,
+      marginInr,
       fscPct,
       fscInr,
+      demandSurchargeInr,
+      premiumServiceInr,
+      peakSurchargeInr,
+      usInboundInr,
+      upsFixedInr,
       pickupSurchargeInr: pickupSurcharge,
       packagingInr,
       insuranceInr,

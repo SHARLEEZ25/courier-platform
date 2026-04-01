@@ -7,6 +7,7 @@ import {
   handleGetBooking,
   handleListBookings,
 } from "../controllers/bookings.controller.js";
+import { handleAssignTracking } from "../controllers/tracking.controller.js";
 import { BookingCreateSchema } from "../../shared/schemas/booking.schema.js";
 
 const bookingsRoutes = new Hono();
@@ -36,5 +37,12 @@ bookingsRoutes.get("/", requireAuth, handleListBookings);
  * Auth required — returns a single booking by ID.
  */
 bookingsRoutes.get("/:id", requireAuth, handleGetBooking);
+
+/**
+ * PATCH /api/bookings/:id/tracking
+ * Auth required — staff assigns a carrier tracking number to a booking.
+ * Also registers the tracking number with AfterShip.
+ */
+bookingsRoutes.patch("/:id/tracking", requireAuth, handleAssignTracking);
 
 export default bookingsRoutes;

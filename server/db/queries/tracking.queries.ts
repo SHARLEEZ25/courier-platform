@@ -1,28 +1,23 @@
-import { supabase } from "../../config/supabase.js";
+import { sql } from "../../config/db.js";
 import type { DbTrackingEvent } from "../../types/db.types.js";
 
 export async function getTrackingEvents(
   trackingNumber: string
 ): Promise<DbTrackingEvent[]> {
-  const { data, error } = await supabase
-    .from("tracking_events")
-    .select("*")
-    .eq("tracking_number", trackingNumber)
-    .order("event_at", { ascending: true });
-
-  if (error) throw new Error(`Failed to fetch tracking events: ${error.message}`);
-  return (data ?? []) as DbTrackingEvent[];
+  return sql<DbTrackingEvent[]>`
+    SELECT * FROM tracking_events
+    WHERE tracking_number = ${trackingNumber}
+    ORDER BY event_at ASC
+  `;
 }
 
 export async function addTrackingEvent(
   event: Omit<DbTrackingEvent, "id" | "created_at">
-): Promise<DbTrackingEvent> {
-  const { data, error } = await supabase
-    .from("tracking_events")
-    .insert(event)
-    .select()
-    .single();
-
-  if (error) throw new Error(`Failed to add tracking event: ${error.message}`);
-  return data as DbTrackingEvent;
+): Promise<DbTrackingEvent | null> {
+  const rows = await sql<DbTrackingEvent[]>`
+    INSERT INTO tracking_events ${sql(event)}
+    ON CONFLICT (tracking_number, event_code, event_at) DO NOTHING
+    RETURNING *
+  `;
+  return rows[0] ?? null;
 }

@@ -1,3 +1,6 @@
+# Rate cards (client documents — not for version control)
+rate-cards/
+
 # Logs
 logs
 *.log

@@ -1,7 +1,7 @@
-import { supabase } from "../../config/supabase.js";
+import { sql } from "../../config/db.js";
 import type { CarrierSlug } from "../../types/rate-engine.types.js";
 
-/** Fallback FSC percentages if Supabase has no current row. */
+/** Fallback FSC percentages if DB has no current row. */
 const FALLBACK_FSC: Record<CarrierSlug, number> = {
   dhl: 29.5,
   fedex: 27.0,
@@ -16,21 +16,18 @@ const FALLBACK_FSC: Record<CarrierSlug, number> = {
 export async function getFscPercent(carrier: CarrierSlug): Promise<number> {
   const today = new Date().toISOString().split("T")[0];
 
-  const { data, error } = await supabase
-    .from("fuel_surcharges")
-    .select("fsc_percent")
-    .eq("carrier_id", carrier)
-    .lte("effective_from", today)
-    .or(`effective_to.is.null,effective_to.gte.${today}`)
-    .order("effective_from", { ascending: false })
-    .limit(1)
-    .single();
+  const rows = await sql<{ fsc_percent: number }[]>`
+    SELECT fsc_percent
+    FROM fuel_surcharges
+    WHERE carrier_id = ${carrier}
+      AND effective_from <= ${today}::date
+      AND (effective_to IS NULL OR effective_to >= ${today}::date)
+    ORDER BY effective_from DESC
+    LIMIT 1
+  `;
 
-  if (error || !data) {
-    return FALLBACK_FSC[carrier] ?? 27.0;
-  }
-
-  return Number(data.fsc_percent);
+  if (!rows[0]) return FALLBACK_FSC[carrier] ?? 27.0;
+  return Number(rows[0].fsc_percent);
 }
 
 /**

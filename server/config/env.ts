@@ -3,11 +3,12 @@ import "dotenv/config";
 
 const EnvSchema = z.object({
   PORT: z.coerce.number().default(3001),
-  SUPABASE_URL: z.string().url("SUPABASE_URL must be a valid URL"),
-  SUPABASE_SERVICE_ROLE_KEY: z
-    .string()
-    .min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  FIREBASE_PROJECT_ID: z.string().min(1, "FIREBASE_PROJECT_ID is required"),
+  FIREBASE_CLIENT_EMAIL: z.string().min(1, "FIREBASE_CLIENT_EMAIL is required"),
+  FIREBASE_PRIVATE_KEY: z.string().min(1, "FIREBASE_PRIVATE_KEY is required"),
   FRONTEND_URL: z.string().url().default("http://localhost:8080"),
+  AFTERSHIP_API_KEY: z.string().default(""),
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),

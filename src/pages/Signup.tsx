@@ -8,7 +8,8 @@ import TopBar from "@/components/TopBar";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { firebaseAuth } from "@/lib/firebase";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 function PasswordStrength({ password }: { password: string }) {
   if (!password) return null;
@@ -63,10 +64,15 @@ const Signup = () => {
 
   async function handleGoogle() {
     setGoogleLoading(true);
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
+    try {
+      await signInWithPopup(firebaseAuth, new GoogleAuthProvider());
+      navigate("/");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Google sign-in failed.";
+      setError(msg);
+    } finally {
+      setGoogleLoading(false);
+    }
   }
 
   if (success) {

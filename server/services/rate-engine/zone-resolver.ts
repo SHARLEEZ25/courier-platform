@@ -1,11 +1,11 @@
-import { supabase } from "../../config/supabase.js";
+import { sql } from "../../config/db.js";
 import type { CarrierSlug } from "../../types/rate-engine.types.js";
 
 /**
  * Estimated delivery days per zone per carrier.
  * DHL zones : '1'–'14'  (numeric strings)
  * FedEx zones: 'A'–'Q'  (letter codes)
- * UPS zones  : '1'–'9' + 'USA'|'CANADA'|'AUSTRALIA'|'NEWZEAL'|'SINGAPORE'|'GERMANY'|'POLAND'|'NCL'
+ * UPS zones  : '1'–'8','9','10' + 'USA'|'CANADA'|'AUSTRALIA'|'NEWZEAL'|'SINGAPORE'|'GERMANY'|'POLAND'|'NCL'
  * Aramex     : rough approximation (no real zone data yet)
  */
 export const DELIVERY_DAYS: Record<CarrierSlug, Record<string, string>> = {
@@ -50,19 +50,20 @@ export const DELIVERY_DAYS: Record<CarrierSlug, Record<string, string>> = {
     '4': '4-5',          // Denmark, France, Italy, Luxembourg, Netherlands, Spain, Switzerland, UK
     '5': '5-7',          // Mexico
     '6': '4-6',          // Austria, Finland, Greece, Ireland, Norway, Portugal, Sweden
-    '7': '5-8',          // Eastern Europe, CIS, some Africa
-    '9': '6-10',         // South America, Africa
+    '7': '5-8',          // Rest of World (South America, Africa)
+    '8': '6-9',          // Eastern Europe, CIS, Russia, Ukraine
+    '9': '5-8',          // Zone 9 (South China / generic)
+    '10': '8-12',        // Remote / difficult destinations
     'USA': '4-6',
     'CANADA': '5-7',
-    'AUSTRALIA': '4-6',
-    'NEWZEAL': '4-6',
+    'AUSTRALIA': '5-7',
+    'NEWZEAL': '5-7',
     'SINGAPORE': '2-3',
     'GERMANY': '4-5',
-    'POLAND': '4-6',
-    'NCL': '3-5',        // Maldives, Mauritius
+    'POLAND': '4-6',     // Poland, Czech Rep., Hungary, Romania
+    'NCL': '5-8',        // New Caledonia, Mauritius, Maldives
   },
   aramex: {
-    // Aramex uses its own zone system — approximate until real data is added
     'Z1': '2-3',
     'Z2': '3-4',
     'Z3': '4-6',
@@ -83,23 +84,20 @@ export async function resolveZone(
 ): Promise<{ zone: string; deliveryDays: string } | null> {
   const today = new Date().toISOString().split("T")[0];
 
-  const { data, error } = await supabase
-    .from("carrier_zones")
-    .select("zone_code")
-    .eq("carrier_id", carrier)
-    .eq("origin_country", origin)
-    .eq("destination_country", destination)
-    .or(`effective_to.is.null,effective_to.gte.${today}`)
-    .order("effective_from", { ascending: false })
-    .limit(1)
-    .single();
+  const rows = await sql<{ zone_code: string }[]>`
+    SELECT zone_code
+    FROM carrier_zones
+    WHERE carrier_id = ${carrier}
+      AND origin_country = ${origin}
+      AND destination_country = ${destination}
+      AND (effective_to IS NULL OR effective_to >= ${today}::date)
+    ORDER BY effective_from DESC
+    LIMIT 1
+  `;
 
-  if (error || !data) {
-    // No zone found — route not supported by this carrier
-    return null;
-  }
+  if (!rows[0]) return null;
 
-  const zone = data.zone_code as string;
+  const zone = rows[0].zone_code;
   return {
     zone,
     deliveryDays: DELIVERY_DAYS[carrier]?.[zone] ?? "5-7",

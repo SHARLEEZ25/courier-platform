@@ -4,6 +4,39 @@ import { usePincode } from "@/hooks/usePincode";
 import { useCreateBooking } from "@/hooks/useBooking";
 import { useAuth } from "@/context/AuthContext";
 import type { BookingCreate, CarrierSlug, ItemType } from "@/types/api";
+import { CARRIERS, ITEM_TYPES } from "../../shared/schemas/rate-request.schema";
+
+// Reverse-lookup: display label → slug (for carrier and item type)
+function toCarrierSlug(val: string): CarrierSlug {
+  if ((CARRIERS as readonly string[]).includes(val)) return val as CarrierSlug;
+  const lower = val.toLowerCase();
+  for (const slug of CARRIERS) {
+    if (lower.includes(slug)) return slug;
+  }
+  return val as CarrierSlug;
+}
+
+const ITEM_LABEL_TO_SLUG: Record<string, ItemType> = {
+  "University Express": "university",
+  "Excess Baggage Express": "excess",
+  "Document & Parcels": "docs",
+  "Food Products Express": "food",
+  "Medicine Courier": "medicine",
+  "Clothing & Fashion": "clothing",
+  "Electronics": "electronics",
+  "Jewellery": "jewellery",
+  "Cosmetics": "cosmetics",
+  "Gifts": "gifts",
+  "Sports Equipment": "sports",
+  "Pooja Items": "pooja",
+  "Export Express": "commercial",
+  "Other": "other",
+  "Documents": "docs",
+};
+function toItemTypeSlug(val: string): ItemType {
+  if ((ITEM_TYPES as readonly string[]).includes(val)) return val as ItemType;
+  return ITEM_LABEL_TO_SLUG[val] ?? ("other" as ItemType);
+}
 import { 
   Check, 
   ChevronRight, 
@@ -61,53 +94,15 @@ const Booking = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
-  // Redirect to login if not signed in, return here after
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login?redirect=/booking", { replace: true, state: location.state });
-    }
-  }, [user, authLoading, navigate, location.state]);
+  const routeState = location.state || null;
 
-  if (authLoading || !user) return null;
-  const state = location.state || { 
-    origin: "India", 
-    destination: "USA", 
-    weight: 1, 
-    itemType: "Documents", 
-    carrier: "Aramex",
-    plan: "Standard",
-    totalPrice: 1500,
-    packaging: "none",
-    insurance: false,
-    pickupSurcharge: 0,
-    pickupCity: "Chennai",
-    pickupPincode: "600001"
-  };
-
+  // All hooks must be declared before any conditional returns
   const [currentStep, setCurrentStep] = useState(1);
-  // Pincode lookup via hook — auto-fires when formData.pickupPincode is 6 digits
-  const { data: pincodeData, isLoading: pincodeLoading, error: pincodeError } =
-    usePincode(formData.pickupPincode);
-
-  const pincodeStatus:
-    | { status: "idle" }
-    | { status: "loading" }
-    | { status: "found"; city: string; surchargeInr: number }
-    | { status: "not_found" } = (() => {
-    if (formData.pickupPincode.length !== 6) return { status: "idle" };
-    if (pincodeLoading) return { status: "loading" };
-    if (pincodeData?.serviceable) return { status: "found", city: pincodeData.city!, surchargeInr: pincodeData.surchargeInr ?? 0 };
-    if (pincodeData || pincodeError) return { status: "not_found" };
-    return { status: "idle" };
-  })();
-
-  const { mutate: createBooking, isPending: isCreatingBooking } = useCreateBooking();
-
   const [formData, setFormData] = useState({
     senderName: "",
     senderMobile: "",
     senderEmail: "",
-    pickupPincode: state.pickupPincode || "",
+    pickupPincode: routeState?.pickupPincode || "",
     pickupAddress: "",
     pickupDate: "",
     pickupSlot: "",
@@ -134,6 +129,49 @@ const Booking = () => {
   const [submitError, setSubmitError] = useState("");
   const [qrTimer, setQrTimer] = useState(600); // 10 minutes in seconds
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
+
+  // Pincode lookup via hook — auto-fires when formData.pickupPincode is 6 digits
+  const { data: pincodeData, isLoading: pincodeLoading, error: pincodeError } =
+    usePincode(formData.pickupPincode);
+
+  const { mutate: createBooking, isPending: isCreatingBooking } = useCreateBooking();
+
+  // Redirect to login if not signed in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login?redirect=/booking", { replace: true, state: location.state });
+    }
+  }, [user, authLoading, navigate, location.state]);
+
+  if (authLoading || !user) return null;
+
+  // Safe to use routeState after auth guard — fallback uses a valid carrier
+  const state = routeState || {
+    origin: "India",
+    destination: "USA",
+    weight: 1,
+    itemType: "docs",
+    carrier: "dhl",
+    plan: "Standard",
+    totalPrice: 1500,
+    packaging: "none",
+    insurance: false,
+    pickupSurcharge: 0,
+    pickupCity: "",
+    pickupPincode: ""
+  };
+
+  const pincodeStatus:
+    | { status: "idle" }
+    | { status: "loading" }
+    | { status: "found"; city: string; surchargeInr: number }
+    | { status: "not_found" } = (() => {
+    if (formData.pickupPincode.length !== 6) return { status: "idle" };
+    if (pincodeLoading) return { status: "loading" };
+    if (pincodeData?.serviceable) return { status: "found", city: pincodeData.city!, surchargeInr: pincodeData.surchargeInr ?? 0 };
+    if (pincodeData || pincodeError) return { status: "not_found" };
+    return { status: "idle" };
+  })();
 
   // Destination mobile prefix lookup
   const getMobilePrefix = (dest: string) => {
@@ -178,19 +216,31 @@ const Booking = () => {
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
     const required = [
-      'senderName', 'senderMobile', 'pickupPincode', 'pickupAddress', 
-      'pickupDate', 'pickupSlot', 'receiverName', 'receiverMobile', 
-      'deliveryAddress', 'city', 'zipCode', 'numPieces', 'contents'
+      'senderName', 'senderMobile', 'pickupPincode', 'pickupAddress',
+      'pickupDate', 'pickupSlot', 'receiverName', 'receiverMobile',
+      'deliveryAddress', 'city', 'state', 'zipCode', 'numPieces', 'contents'
     ];
-    
+
     required.forEach(field => {
       if (!formData[field as keyof typeof formData]) {
         newErrors[field] = "Field is required";
       }
     });
 
-    if (formData.senderMobile && formData.senderMobile.length < 10) {
-      newErrors.senderMobile = "Enter 10-digit number";
+    if (formData.senderMobile && !/^\d{10}$/.test(formData.senderMobile)) {
+      newErrors.senderMobile = "Enter a valid 10-digit mobile number";
+    }
+
+    if (formData.receiverMobile && !/^\+?\d{7,15}$/.test(formData.receiverMobile)) {
+      newErrors.receiverMobile = "Enter a valid international number (e.g. +14155550100)";
+    }
+
+    if (formData.deliveryAddress && formData.deliveryAddress.length < 5) {
+      newErrors.deliveryAddress = "Address must be at least 5 characters";
+    }
+
+    if (formData.pickupAddress && formData.pickupAddress.length < 5) {
+      newErrors.pickupAddress = "Address must be at least 5 characters";
     }
 
     if (formData.pickupDate) {
@@ -220,12 +270,12 @@ const Booking = () => {
     setSubmitError("");
 
     const payload: BookingCreate = {
-      carrierId: (state.carrier as CarrierSlug),
+      carrierId: toCarrierSlug(state.carrier ?? ""),
       originCountry: state.origin ?? "India",
       destinationCountry: state.destination,
       actualWeightKg: Number(state.weight),
       shipmentType: "package",
-      itemTypeId: (state.itemType as ItemType),
+      itemTypeId: toItemTypeSlug(state.itemType ?? "other"),
       packaging: state.packaging ?? "none",
       insurance: state.insurance ?? false,
       senderName: formData.senderName,
@@ -233,6 +283,8 @@ const Booking = () => {
       senderEmail: formData.senderEmail,
       pickupPincode: formData.pickupPincode,
       pickupAddress: formData.pickupAddress,
+      pickupCity: pincodeStatus.status === "found" ? pincodeStatus.city : (pincodeData?.city ?? ""),
+      pickupState: pincodeData?.state ?? "",
       pickupDate: formData.pickupDate,
       pickupSlot: formData.pickupSlot,
       receiverName: formData.receiverName,
@@ -441,13 +493,14 @@ const Booking = () => {
                       <div className="bg-slate-100 border border-slate-200 rounded-lg px-3 flex items-center text-slate-500 font-medium">
                         {getMobilePrefix(state.destination)}
                       </div>
-                      <Input 
-                        placeholder="Mobile number" 
-                        value={formData.receiverMobile} 
+                      <Input
+                        placeholder="Mobile number"
+                        value={formData.receiverMobile}
                         onChange={e => setFormData({...formData, receiverMobile: e.target.value.replace(/\D/g, "")})}
                         className={cn("flex-1", errors.receiverMobile && "border-red-500")}
                       />
                     </div>
+                    {errors.receiverMobile && <p className="text-xs text-red-500">{errors.receiverMobile}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-[13px] font-bold text-slate-600 uppercase">Email (Optional)</label>
@@ -477,11 +530,13 @@ const Booking = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[13px] font-bold text-slate-600 uppercase">State/Province</label>
-                    <Input 
-                      placeholder="State / Province" 
-                      value={formData.state} 
+                    <Input
+                      placeholder="State / Province"
+                      value={formData.state}
                       onChange={e => setFormData({...formData, state: e.target.value})}
+                      className={cn(errors.state && "border-red-500")}
                     />
+                    {errors.state && <p className="text-xs text-red-500">{errors.state}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-[13px] font-bold text-slate-600 uppercase">Country</label>

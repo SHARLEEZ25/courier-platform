@@ -8,7 +8,8 @@ import TopBar from "@/components/TopBar";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { firebaseAuth } from "@/lib/firebase";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 const Login = () => {
   const { signIn } = useAuth();
@@ -48,10 +49,15 @@ const Login = () => {
 
   async function handleGoogle() {
     setGoogleLoading(true);
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
+    try {
+      await signInWithPopup(firebaseAuth, new GoogleAuthProvider());
+      navigate(redirectTo, { state: location.state });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Google sign-in failed.";
+      setError(msg);
+    } finally {
+      setGoogleLoading(false);
+    }
   }
 
   return (

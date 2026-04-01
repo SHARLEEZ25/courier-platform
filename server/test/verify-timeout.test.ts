@@ -1,5 +1,4 @@
 import { calculateRates } from "../services/rate-engine/index.js";
-import { supabase } from "../config/supabase.js";
 import { vi, describe, it, expect } from "vitest";
 
 // NOTE: This is a conceptual test. Since we can't easily mock the ESM default export 

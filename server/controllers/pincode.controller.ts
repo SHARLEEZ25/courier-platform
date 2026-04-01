@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { supabase } from "../config/supabase.js";
+import { sql } from "../config/db.js";
 import { ok, err } from "../types/api.types.js";
 
 // Surcharge by state for pincodes not in our pickup_zones table
@@ -60,15 +60,17 @@ export async function handlePincodeLookup(c: Context) {
   const { pincode } = c.get("validatedBody") as { pincode: string };
 
   try {
-    // 1. Check our pickup_zones table + India Post in parallel
-    const [{ data }, indiaPost] = await Promise.all([
-      supabase
-        .from("pickup_zones")
-        .select("city_name, surcharge_inr, tier")
-        .eq("pincode", pincode)
-        .single(),
+    const [zoneRows, indiaPost] = await Promise.all([
+      sql`
+        SELECT city_name, surcharge_inr, tier
+        FROM pickup_zones
+        WHERE pincode = ${pincode}
+        LIMIT 1
+      `,
       lookupIndiaPost(pincode),
     ]);
+
+    const data = zoneRows[0];
 
     if (data) {
       return c.json(
@@ -83,7 +85,6 @@ export async function handlePincodeLookup(c: Context) {
       );
     }
 
-    // 2. Fall back to India Post API result for any valid Indian pincode
     if (!indiaPost) {
       return c.json(ok({ serviceable: false }));
     }

@@ -29,6 +29,13 @@ export async function handleCreateBooking(c: Context) {
 
     const rate = rates.find((r) => r.carrier === body.carrierId);
     if (!rate) {
+      console.error("[bookings.controller] carrier not in results:", {
+        requested: body.carrierId,
+        route: `${body.originCountry} → ${body.destinationCountry}`,
+        weight: body.actualWeightKg,
+        shipmentType: body.shipmentType,
+        availableCarriers: rates.map((r) => r.carrier),
+      });
       return c.json(
         err("Selected carrier is not available for this route."),
         400
