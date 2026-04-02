@@ -13,8 +13,15 @@ export interface RateResult {
   baseRateInr: number;
   discountPct: number;
   discountInr: number;
+  marginPct: number;           // internal — do NOT show to customer
+  marginInr: number;           // internal — do NOT show to customer
   fscPct: number;
   fscInr: number;
+  demandSurchargeInr: number;
+  premiumServiceInr: number;   // DHL premium 9am/12pm
+  peakSurchargeInr: number;    // FedEx seasonal
+  usInboundInr: number;        // UPS: auto ₹230 for USA
+  upsFixedInr: number;         // UPS: formal clearance + DDP + signature
   pickupSurchargeInr: number;
   packagingInr: number;
   insuranceInr: number;
@@ -24,6 +31,13 @@ export interface RateResult {
   // Meta
   estimatedDeliveryDays: string;
   itemType: ItemType;
+}
+
+export interface UpsOptions {
+  formalClearance?: boolean;
+  ddp?: boolean;
+  signature?: boolean;
+  remoteArea?: boolean;    // staff-flagged at booking, not customer-facing in quote
 }
 
 export interface RateEngineInput {
@@ -37,6 +51,10 @@ export interface RateEngineInput {
   carrier?: CarrierSlug;
   packaging: "none" | "standard" | "premium";
   insurance: boolean;
+  // Carrier-specific options
+  dhlService?: "standard" | "premium_900" | "premium_1200";
+  fedexService?: "IP" | "IPF";
+  upsOptions?: UpsOptions;
 }
 
 export interface ZoneRow {

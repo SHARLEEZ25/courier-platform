@@ -12,6 +12,7 @@ export interface ZoneRow {
   origin_country: string;
   destination_country: string;
   zone_code: string;
+  service_type: string;  // 'standard' for DHL/UPS; 'IP' or 'IPF' for FedEx
 }
 
 const ORIGIN = 'India';
@@ -146,8 +147,11 @@ const FEDEX_ZONES: [string, string][] = [
   ['Ethiopia',         'Q'], ['Senegal',       'Q'],
 ];
 
-// ─── UPS Zones (from UPS-2026.pdf country list) ──────────────────────────────
+// ─── UPS Zones (from UPS-2026.pdf country list, pages 7-9) ──────────────────
+// Numeric zones 1-8, 10 + named country group codes
 // Named zone codes: 'USA','CANADA','AUSTRALIA','NEWZEAL','SINGAPORE','GERMANY','POLAND','NCL'
+//   POLAND covers: Poland, Czech Rep., Hungary, Romania
+//   NCL covers: New Caledonia, Mauritius, Maldives
 const UPS_ZONES: [string, string][] = [
   // Zone 1 — Bangladesh, Nepal, Sri Lanka, UAE
   ['UAE',              '1'], ['Bangladesh',    '1'], ['Nepal',        '1'],
@@ -159,34 +163,41 @@ const UPS_ZONES: [string, string][] = [
   //           Philippines, Qatar, Saudi Arabia, South Korea, Yemen
   ['Bahrain',          '3'], ['China',         '3'], ['Indonesia',    '3'],
   ['Japan',            '3'], ['Jordan',        '3'], ['Kuwait',       '3'],
-  ['Lebanon',          '3'], ['Oman',          '3'], ['Philippines',  '3'],
-  ['Qatar',            '3'], ['Saudi Arabia',  '3'], ['South Korea',  '3'],
-  ['Yemen',            '3'],
-  // Zone 4 — Andorra, Denmark, France, Italy, Luxembourg, Netherlands, San Marino, Spain, Switzerland, UK
+  ['Lebanon',          '3'], ['Oman',          '3'], ['Pakistan',     '3'],
+  ['Philippines',      '3'], ['Qatar',         '3'], ['Saudi Arabia', '3'],
+  ['South Korea',      '3'], ['Yemen',         '3'],
+  // Zone 4 — Denmark, France, Italy, Luxembourg, Netherlands, Spain, Switzerland, UK
   ['Denmark',          '4'], ['France',        '4'], ['Italy',        '4'],
   ['Luxembourg',       '4'], ['Netherlands',   '4'], ['Spain',        '4'],
   ['Switzerland',      '4'], ['UK',            '4'],
-  // Zone 5 — Mexico, Puerto Rico
+  // Zone 5 — Mexico
   ['Mexico',           '5'],
   // Zone 6 — Austria, Finland, Greece, Ireland, Norway, Portugal, Sweden
   ['Austria',          '6'], ['Finland',       '6'], ['Greece',       '6'],
   ['Ireland',          '6'], ['Norway',        '6'], ['Portugal',     '6'],
   ['Sweden',           '6'],
-  // Zone 7 — Rest of World (Eastern Europe, CIS, some Africa)
-  ['Albania',          '7'], ['Angola',        '7'], ['Armenia',      '7'],
-  ['Azerbaijan',       '7'], ['Belarus',       '7'], ['Croatia',      '7'],
-  ['Czech Republic',   '7'], ['Estonia',       '7'], ['Hungary',      '7'],
-  ['Kazakhstan',       '7'], ['Latvia',        '7'], ['Lithuania',    '7'],
-  ['Moldova',          '7'], ['Montenegro',    '7'], ['Romania',      '7'],
-  ['Russia',           '7'], ['Serbia',        '7'], ['Slovakia',     '7'],
-  ['Slovenia',         '7'], ['Turkey',        '7'], ['Ukraine',      '7'],
-  ['Uzbekistan',       '7'],
-  // Zone 9 — South America + Caribbean
-  ['Argentina',        '9'], ['Bolivia',       '9'], ['Brazil',       '9'],
-  ['Chile',            '9'], ['Colombia',      '9'], ['Ecuador',      '9'],
-  ['Jamaica',          '9'], ['Paraguay',      '9'], ['Peru',         '9'],
-  ['Trinidad and Tobago','9'], ['Uruguay',     '9'], ['Venezuela',    '9'],
-  // Named destination zones
+  // Zone 7 — Rest of World
+  ['Brazil',           '7'], ['Chile',         '7'], ['Colombia',     '7'],
+  ['Ecuador',          '7'], ['Peru',          '7'], ['Venezuela',    '7'],
+  ['South Africa',     '7'], ['Nigeria',       '7'], ['Kenya',        '7'],
+  ['Ghana',            '7'], ['Egypt',         '7'], ['Tanzania',     '7'],
+  ['Uganda',           '7'], ['Ethiopia',      '7'], ['Israel',       '7'],
+  ['Turkey',           '7'], ['Bulgaria',      '7'], ['Cyprus',       '7'],
+  ['Iceland',          '7'], ['Malta',         '7'], ['Slovakia',     '7'],
+  // Zone 8 — Eastern Europe, CIS, difficult destinations
+  ['Albania',          '8'], ['Angola',        '8'], ['Armenia',      '8'],
+  ['Azerbaijan',       '8'], ['Belarus',       '8'], ['Bosnia',       '8'],
+  ['Croatia',          '8'], ['Estonia',       '8'], ['Georgia',      '8'],
+  ['Kazakhstan',       '8'], ['Latvia',        '8'], ['Lithuania',    '8'],
+  ['Moldova',          '8'], ['Montenegro',    '8'], ['Russia',       '8'],
+  ['Serbia',           '8'], ['Slovenia',      '8'], ['Syria',        '8'],
+  ['Ukraine',          '8'], ['Uzbekistan',    '8'],
+  // Zone 10 — Remote / difficult destinations
+  ['Argentina',        '10'], ['Bolivia',      '10'], ['Jamaica',     '10'],
+  ['Paraguay',         '10'], ['Trinidad and Tobago','10'], ['Uruguay','10'],
+  ['Guatemala',        '10'], ['Costa Rica',   '10'], ['Panama',      '10'],
+  ['Cameroon',         '10'], ['Senegal',      '10'],
+  // Named destination zones (each has its own pricing column in the rate card)
   ['USA',              'USA'],
   ['Canada',           'CANADA'],
   ['Australia',        'AUSTRALIA'],
@@ -194,33 +205,33 @@ const UPS_ZONES: [string, string][] = [
   ['Singapore',        'SINGAPORE'],
   ['Germany',          'GERMANY'],
   ['Poland',           'POLAND'],
-  ['Belgium',          'POLAND'],   // grouped with Poland/Czech in UPS rate card
+  ['Czech Republic',   'POLAND'],  // grouped in "Poland, Czech Rep., Hungary, Romania" column
+  ['Hungary',          'POLAND'],
+  ['Romania',          'POLAND'],
+  ['Belgium',          'POLAND'],  // grouped with Poland/Czech in UPS rate card
   ['Maldives',         'NCL'],
   ['Mauritius',        'NCL'],
-  // Africa (Zone 9 for UPS)
-  ['South Africa',     '9'], ['Nigeria',       '9'], ['Kenya',        '9'],
-  ['Ghana',            '9'], ['Egypt',         '9'], ['Tanzania',     '9'],
-  ['Uganda',           '9'], ['Ethiopia',      '9'],
-  // Remaining South Asia
-  ['Pakistan',         '3'], ['Bangladesh',    '1'], ['Nepal',        '1'],
+  ['New Caledonia',    'NCL'],
 ];
 
 // ─── Build ZoneRow array ──────────────────────────────────────────────────────
-function buildRows(carrier: string, pairs: [string, string][]): ZoneRow[] {
-  // Deduplicate by destination
+function buildRows(carrier: string, pairs: [string, string][], serviceType = 'standard'): ZoneRow[] {
   const seen = new Set<string>();
   const rows: ZoneRow[] = [];
   for (const [dest, zone] of pairs) {
-    const key = `${carrier}:${dest}`;
+    const key = `${carrier}:${serviceType}:${dest}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    rows.push({ carrier_id: carrier, origin_country: ORIGIN, destination_country: dest, zone_code: zone });
+    rows.push({ carrier_id: carrier, origin_country: ORIGIN, destination_country: dest, zone_code: zone, service_type: serviceType });
   }
   return rows;
 }
 
 export const ALL_ZONES: ZoneRow[] = [
   ...buildRows('dhl',   DHL_ZONES),
-  ...buildRows('fedex', FEDEX_ZONES),
+  // FedEx: seed both IP and IPF rows.
+  // IPF zones are identical to IP for now — update when IPF-specific zone PDF data is available.
+  ...buildRows('fedex', FEDEX_ZONES, 'IP'),
+  ...buildRows('fedex', FEDEX_ZONES, 'IPF'),
   ...buildRows('ups',   UPS_ZONES),
 ];

@@ -3,21 +3,18 @@ import "dotenv/config";
 
 const EnvSchema = z.object({
   PORT: z.coerce.number().default(3001),
-  SUPABASE_URL: z.string().url("SUPABASE_URL must be a valid URL"),
-  SUPABASE_SERVICE_ROLE_KEY: z
-    .string()
-    .min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
-  BETTER_AUTH_SECRET: z
-    .string()
-    .min(32, "BETTER_AUTH_SECRET must be at least 32 chars"),
-  BETTER_AUTH_URL: z.string().url("BETTER_AUTH_URL must be a valid URL"),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  FIREBASE_PROJECT_ID: z.string().min(1, "FIREBASE_PROJECT_ID is required"),
+  FIREBASE_CLIENT_EMAIL: z.string().min(1, "FIREBASE_CLIENT_EMAIL is required"),
+  FIREBASE_PRIVATE_KEY: z.string().min(1, "FIREBASE_PRIVATE_KEY is required"),
   FRONTEND_URL: z.string().url().default("http://localhost:8080"),
+  AFTERSHIP_API_KEY: z.string().default(""),
+  // Set this in AfterShip dashboard → Settings → Notifications → Webhook → Secret
+  // Used to verify every inbound webhook request is genuinely from AfterShip
+  AFTERSHIP_WEBHOOK_SECRET: z.string().default(""),
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
-  // Optional: Google OAuth
-  GOOGLE_CLIENT_ID: z.string().optional(),
-  GOOGLE_CLIENT_SECRET: z.string().optional(),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

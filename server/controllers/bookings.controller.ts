@@ -29,6 +29,13 @@ export async function handleCreateBooking(c: Context) {
 
     const rate = rates.find((r) => r.carrier === body.carrierId);
     if (!rate) {
+      console.error("[bookings.controller] carrier not in results:", {
+        requested: body.carrierId,
+        route: `${body.originCountry} → ${body.destinationCountry}`,
+        weight: body.actualWeightKg,
+        shipmentType: body.shipmentType,
+        availableCarriers: rates.map((r) => r.carrier),
+      });
       return c.json(
         err("Selected carrier is not available for this route."),
         400
@@ -36,7 +43,7 @@ export async function handleCreateBooking(c: Context) {
     }
 
     const booking = await createBooking({
-      user_id: user?.id ?? null,
+      user_id: user.id,
       booking_ref: generateBookingRef(),
       status: "pending",
       carrier_id: body.carrierId,
@@ -94,7 +101,7 @@ export async function handleGetBooking(c: Context) {
 
     // Only allow the owner or guests with the booking ref to view
     const user = c.get("user");
-    if (booking.user_id && booking.user_id !== user?.id) {
+    if (booking.user_id !== user.id) {
       return c.json(err("Forbidden."), 403);
     }
 

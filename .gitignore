@@ -1,3 +1,12 @@
+# Rate cards (client documents — not for version control)
+rate-cards/
+
+# Claude Code tool internals
+.claude/worktrees/
+.claude/skills/
+.agents/
+skills-lock.json
+
 # Logs
 logs
 *.log
@@ -27,3 +36,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.vercel

@@ -21,7 +21,7 @@ const CTASection = () => (
         </h2>
 
         <p className="text-[15px] text-gray-400 mb-9">
-          No signup required. Just enter your destination and package weight.
+          Get your quote instantly — free account required to book.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-3">

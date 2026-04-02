@@ -11,6 +11,12 @@ export type ItemType =
   | "sports" | "pooja" | "commercial" | "other";
 
 // ── Rate Calculation ──────────────────────────────────────────────────────────
+export interface UpsRateOptions {
+  formalClearance?: boolean;
+  ddp?: boolean;
+  signature?: boolean;
+}
+
 export interface RateRequest {
   origin: string;
   destination: string;
@@ -22,6 +28,9 @@ export interface RateRequest {
   carrier?: CarrierSlug;
   packaging?: "none" | "standard" | "premium";
   insurance?: boolean;
+  dhlService?: "standard" | "premium_900" | "premium_1200";
+  fedexService?: "IP" | "IPF";
+  upsOptions?: UpsRateOptions;
 }
 
 export interface RateResult {
@@ -34,8 +43,15 @@ export interface RateResult {
   baseRateInr: number;
   discountPct: number;
   discountInr: number;
+  marginPct: number;
+  marginInr: number;
   fscPct: number;
   fscInr: number;
+  demandSurchargeInr: number;
+  premiumServiceInr: number;
+  peakSurchargeInr: number;
+  usInboundInr: number;
+  upsFixedInr: number;
   pickupSurchargeInr: number;
   packagingInr: number;
   insuranceInr: number;
@@ -72,6 +88,9 @@ export interface BookingCreate {
   itemTypeId: ItemType;
   packaging: "none" | "standard" | "premium";
   insurance: boolean;
+  dhlService?: "standard" | "premium_900" | "premium_1200";
+  fedexService?: "IP" | "IPF";
+  upsOptions?: UpsRateOptions;
   senderName: string;
   senderMobile: string;
   senderEmail?: string | null;

@@ -27,6 +27,7 @@ export function validateBody<S extends ZodSchema>(schema: S) {
 
     const result = schema.safeParse(body);
     if (!result.success) {
+      console.error("[validate] Validation failed:", JSON.stringify(result.error.flatten(), null, 2));
       return c.json(err("Validation failed", result.error.flatten()), 400);
     }
 

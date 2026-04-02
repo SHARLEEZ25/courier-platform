@@ -3,52 +3,67 @@
  *
  * Run with:  npm run db:seed
  *
- * Requires in .env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- * Does NOT require BetterAuth vars.
+ * Requires in .env: DATABASE_URL (Neon connection string)
  *
- * Safe to re-run: uses upsert (ON CONFLICT DO NOTHING semantics via ignoreDuplicates).
+ * Safe to re-run: uses INSERT ... ON CONFLICT DO NOTHING.
  */
 
 import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
+import postgres from 'postgres';
 import { ALL_ZONES } from './seeds/zones.js';
 import { DHL_STEPS, DHL_BANDS } from './seeds/dhl.js';
 import { FEDEX_STEPS, FEDEX_BANDS } from './seeds/fedex.js';
 import { UPS_STEPS, UPS_BANDS } from './seeds/ups.js';
 
-// ─── Supabase client (service-role, no BetterAuth deps) ───────────────────────
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env');
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  console.error('Missing DATABASE_URL in .env');
   process.exit(1);
 }
 
-const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
-
-// ─── Batch upsert helper ───────────────────────────────────────────────────────
+const sql = postgres(DATABASE_URL, { ssl: 'require' });
 
 const BATCH = 500;
 
-async function upsertBatch<T extends object>(
-  table: string,
-  rows: T[],
-  label: string,
-  onConflict: string,
-): Promise<void> {
-  let inserted = 0;
+// Batch insert using postgres.js unnest-style bulk upsert
+async function upsertZones(rows: typeof ALL_ZONES): Promise<void> {
   for (let i = 0; i < rows.length; i += BATCH) {
     const chunk = rows.slice(i, i + BATCH);
-    const { error } = await db.from(table).upsert(chunk, { onConflict, ignoreDuplicates: true });
-    if (error) throw new Error(`${label} chunk ${i}–${i + chunk.length}: ${error.message}`);
-    inserted += chunk.length;
-    process.stdout.write(`\r  ${label}: ${inserted}/${rows.length}`);
+    for (const row of chunk) {
+      await sql`
+        INSERT INTO carrier_zones (carrier_id, origin_country, destination_country, zone_code, service_type)
+        VALUES (${row.carrier_id}, ${row.origin_country}, ${row.destination_country}, ${row.zone_code}, ${row.service_type})
+        ON CONFLICT (carrier_id, origin_country, destination_country, service_type, effective_from) DO NOTHING
+      `;
+    }
+    process.stdout.write(`\r  carrier_zones: ${Math.min(i + BATCH, rows.length)}/${rows.length}`);
   }
-  console.log(`\r  ${label}: ${rows.length} rows OK`);
+  console.log(`\r  carrier_zones: ${rows.length} rows OK`);
+}
+
+async function upsertSteps(rows: { carrier_id: string; zone_code: string; shipment_type: string; weight_kg: number; price_inr: number }[]): Promise<void> {
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const chunk = rows.slice(i, i + BATCH);
+    // postgres.js bulk insert via values list
+    await sql`
+      INSERT INTO rate_card_steps ${sql(chunk)}
+      ON CONFLICT (carrier_id, zone_code, shipment_type, weight_kg) DO NOTHING
+    `;
+    process.stdout.write(`\r  rate_card_steps: ${Math.min(i + BATCH, rows.length)}/${rows.length}`);
+  }
+  console.log(`\r  rate_card_steps: ${rows.length} rows OK`);
+}
+
+async function upsertBands(rows: { carrier_id: string; zone_code: string; shipment_type: string; weight_min_kg: number; [key: string]: unknown }[]): Promise<void> {
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const chunk = rows.slice(i, i + BATCH);
+    await sql`
+      INSERT INTO rate_card_bands ${sql(chunk)}
+      ON CONFLICT (carrier_id, zone_code, shipment_type, weight_min_kg) DO NOTHING
+    `;
+    process.stdout.write(`\r  rate_card_bands: ${Math.min(i + BATCH, rows.length)}/${rows.length}`);
+  }
+  console.log(`\r  rate_card_bands: ${rows.length} rows OK`);
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -58,34 +73,50 @@ async function main() {
 
   // 1. Carriers (idempotent)
   console.log('Upserting carriers...');
-  const { error: carrierErr } = await db.from('carriers').upsert([
-    { id: 'dhl',   display_name: 'DHL Express' },
-    { id: 'fedex', display_name: 'FedEx International' },
-    { id: 'ups',   display_name: 'UPS Worldwide' },
-  ], { onConflict: 'id', ignoreDuplicates: true });
-  if (carrierErr) throw new Error(`carriers: ${carrierErr.message}`);
+  await sql`
+    INSERT INTO carriers (id, display_name) VALUES
+      ('dhl',   'DHL Express'),
+      ('fedex', 'FedEx International'),
+      ('ups',   'UPS Worldwide')
+    ON CONFLICT (id) DO NOTHING
+  `;
   console.log('  carriers: 3 rows OK');
 
-  // 2. Zone mappings → carrier_zones
+  // 2. Zone mappings
   console.log('\nSeeding carrier_zones...');
-  await upsertBatch('carrier_zones', ALL_ZONES.map(z => ({
-    carrier_id:          z.carrier_id,
-    origin_country:      z.origin_country,
-    destination_country: z.destination_country,
-    zone_code:           z.zone_code,
-  })), 'carrier_zones', 'carrier_id,origin_country,destination_country,effective_from');
+  await upsertZones(ALL_ZONES);
 
-  // 3. Rate card steps → rate_card_steps
-  const allSteps = [...DHL_STEPS, ...FEDEX_STEPS, ...UPS_STEPS];
+  // 3. Rate card steps
   console.log('\nSeeding rate_card_steps...');
-  await upsertBatch('rate_card_steps', allSteps, 'rate_card_steps', 'carrier_id,zone_code,shipment_type,weight_kg');
+  await upsertSteps([...DHL_STEPS, ...FEDEX_STEPS, ...UPS_STEPS] as Parameters<typeof upsertSteps>[0]);
 
-  // 4. Rate card bands → rate_card_bands
-  const allBands = [...DHL_BANDS, ...FEDEX_BANDS, ...UPS_BANDS];
+  // 4. Rate card bands
   console.log('\nSeeding rate_card_bands...');
-  await upsertBatch('rate_card_bands', allBands, 'rate_card_bands', 'carrier_id,zone_code,shipment_type,weight_min_kg');
+  await upsertBands([...DHL_BANDS, ...FEDEX_BANDS, ...UPS_BANDS] as unknown as Parameters<typeof upsertBands>[0]);
+
+  // 5. Surcharge config defaults (margin, demand, peak, surge)
+  console.log('\nSeeding surcharge_config...');
+  await sql`
+    INSERT INTO surcharge_config (carrier_id, key, value_num, value_bool) VALUES
+      ('dhl',   'margin_pct',    20,   NULL),
+      ('dhl',   'demand_active', NULL, false),
+      ('dhl',   'demand_per_kg', 0,    NULL),
+      ('fedex', 'margin_pct',    20,   NULL),
+      ('fedex', 'demand_active', NULL, false),
+      ('fedex', 'demand_per_kg', 0,    NULL),
+      ('fedex', 'peak_active',   NULL, false),
+      ('fedex', 'peak_amount',   0,    NULL),
+      ('ups',   'margin_pct',    20,   NULL),
+      ('ups',   'demand_active', NULL, false),
+      ('ups',   'demand_per_kg', 0,    NULL),
+      ('ups',   'surge_active',  NULL, false),
+      ('ups',   'surge_amount',  0,    NULL)
+    ON CONFLICT (carrier_id, key) DO NOTHING
+  `;
+  console.log('  surcharge_config: 13 rows OK');
 
   console.log('\n=== Seed complete ===\n');
+  await sql.end();
 }
 
 main().catch((err) => {

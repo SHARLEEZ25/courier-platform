@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { useRates } from "@/hooks/useRates";
 import { usePincode } from "@/hooks/usePincode";
 import { useCreateBooking } from "@/hooks/useBooking";
@@ -112,11 +113,23 @@ const ITEM_LABELS: Record<string, string> = {
 const RateBreakdown = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login?redirect=/rate-breakdown", { replace: true, state: location.state });
+    }
+  }, [user, authLoading, navigate, location.state]);
+
+  if (authLoading || !user) return null;
+
   const state = location.state || { preselectedCarrier: null, origin: "Chennai, India", destination: "United Kingdom", weight: 2.5, itemType: "university" };
 
   const [actualWeight, setActualWeight] = useState<number>(Number(state.weight) || 2.5);
   const [packaging, setPackaging] = useState<"none" | "standard" | "premium">("none");
   const [insurance, setInsurance] = useState(false);
+  const [dhlService, setDhlService] = useState<"standard" | "premium_900" | "premium_1200">("standard");
+  const [upsOptions, setUpsOptions] = useState({ formalClearance: false, ddp: false, signature: false });
   const [selectedPlanId, setSelectedPlanId] = useState<CarrierSlug | null>(state.preselectedCarrier ?? null);
   const [currentStep, setCurrentStep] = useState(1);
   const [checkoutSubStep, setCheckoutSubStep] = useState(1); // 1: Sender, 2: Receiver, 3: Customs, 4: Payment
@@ -167,6 +180,8 @@ const RateBreakdown = () => {
       packaging,
       insurance,
       pickupPincode: /^\d{6}$/.test(formData.pickupPincode) ? formData.pickupPincode : undefined,
+      dhlService,
+      upsOptions,
     } : null
   );
 
@@ -216,6 +231,7 @@ const RateBreakdown = () => {
       fields.forEach(f => { if (!formData[f]) newErrors[f] = "Required"; });
       if (formData.receiverMobile && !/^\d{5,15}$/.test(formData.receiverMobile)) newErrors.receiverMobile = "Enter a valid local number";
       if (formData.receiverEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.receiverEmail)) newErrors.receiverEmail = "Enter a valid email address";
+      if (formData.deliveryAddress && formData.deliveryAddress.length < 5) newErrors.deliveryAddress = "Address must be at least 5 characters";
     } else if (step === 3) { // Customs
       const fields: (keyof typeof formData)[] = ['numPieces', 'contents'];
       fields.forEach(f => { if (!formData[f]) newErrors[f] = "Required"; });
@@ -270,6 +286,8 @@ const RateBreakdown = () => {
       itemTypeId: selectedRate.itemType,
       packaging,
       insurance,
+      dhlService: selectedRate.carrier === 'dhl' ? dhlService : undefined,
+      upsOptions: selectedRate.carrier === 'ups' ? upsOptions : undefined,
       senderName: formData.senderName,
       senderMobile: formData.senderMobile,
       senderEmail: formData.senderEmail || null,
@@ -498,6 +516,67 @@ const RateBreakdown = () => {
                     )}
                   </div>
 
+                  {/* DHL Premium Service — only when DHL is selected */}
+                  {selectedPlanId === 'dhl' && (
+                    <div>
+                      <h3 className="text-sm font-bold text-brand-black mb-3">DHL delivery window</h3>
+                      <div className="flex flex-wrap gap-3 mb-2">
+                        {[
+                          { id: "standard",     label: "Standard" },
+                          { id: "premium_1200", label: "By 12:00 +₹1,000" },
+                          { id: "premium_900",  label: "By 9:00 +₹3,000" },
+                        ].map((s) => (
+                          <button
+                            key={s.id}
+                            onClick={() => setDhlService(s.id as typeof dhlService)}
+                            className={cn(
+                              "px-4 py-2 rounded-full border text-sm font-medium transition-colors",
+                              dhlService === s.id
+                                ? "bg-green-primary/10 border-green-primary text-green-primary"
+                                : "bg-transparent border-slate-200 text-slate-500 hover:border-slate-400"
+                            )}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[12px] text-slate-400">Premium time-definite windows guaranteed by DHL.</p>
+                    </div>
+                  )}
+
+                  {/* UPS Add-ons — only when UPS is selected */}
+                  {selectedPlanId === 'ups' && (
+                    <div>
+                      <h3 className="text-sm font-bold text-brand-black mb-3">UPS add-ons</h3>
+                      {actualWeight > 70 && (
+                        <div className="text-[12px] text-red-500 mb-3 flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          UPS does not accept single packages over 70 kg. UPS will not be quoted.
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        {[
+                          { key: "formalClearance", label: "Formal clearance by UPS", sub: "+₹3,150" },
+                          { key: "ddp",             label: "DDP delivery (duties prepaid)", sub: "+₹1,050 · duty & VAT charged at destination" },
+                          { key: "signature",       label: "Signature on delivery", sub: "+₹368" },
+                        ].map(({ key, label, sub }) => (
+                          <label key={key} className="flex items-start gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={upsOptions[key as keyof typeof upsOptions]}
+                              onChange={(e) => setUpsOptions(prev => ({ ...prev, [key]: e.target.checked }))}
+                              className="mt-0.5 accent-green-600"
+                            />
+                            <span>
+                              <span className="text-[13px] font-medium text-brand-black">{label}</span>
+                              <span className="text-[11px] text-slate-400 ml-2">{sub}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Pickup Pincode */}
                   <div>
                       <h3 className="text-sm font-bold text-brand-black mb-3">Your pickup pincode</h3>
@@ -638,9 +717,18 @@ const RateBreakdown = () => {
                     </div>
                    </div>
                   
+                  {/* Per-carrier disclaimer */}
+                  {selectedPlanId && (
+                    <div className="text-[11px] text-slate-400 leading-relaxed border-t border-slate-100 pt-3">
+                      {selectedPlanId === 'ups'
+                        ? "UPS final chargeable weight is confirmed 5–6 days after pickup and may differ from declared weight. Customs duties and taxes at destination are the customer's responsibility. In DDU shipments, if the consignee refuses to pay duties, charges will be billed back to the sender."
+                        : "Final price is indicative. Confirmed after weight verification at our office. Customs duties and taxes at destination are the customer's responsibility."}
+                    </div>
+                  )}
+
                   {/* Action Area */}
                   <div className="pt-4">
-                     <Button 
+                     <Button
                        onClick={handleNext}
                        className="w-full bg-green-primary hover:bg-green-dark text-white h-14 rounded-xl font-bold shadow-lg shadow-green-primary/20 flex items-center justify-center gap-2 group"
                      >
