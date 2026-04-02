@@ -9,6 +9,9 @@ const EnvSchema = z.object({
   FIREBASE_PRIVATE_KEY: z.string().min(1, "FIREBASE_PRIVATE_KEY is required"),
   FRONTEND_URL: z.string().url().default("http://localhost:8080"),
   AFTERSHIP_API_KEY: z.string().default(""),
+  // Set this in AfterShip dashboard → Settings → Notifications → Webhook → Secret
+  // Used to verify every inbound webhook request is genuinely from AfterShip
+  AFTERSHIP_WEBHOOK_SECRET: z.string().default(""),
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),

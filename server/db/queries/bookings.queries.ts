@@ -54,6 +54,38 @@ export async function createBooking(
   return rows[0];
 }
 
+/**
+ * Updates booking status — only moves forward, never backward.
+ * Order: pending(0) → confirmed(1) → picked_up(2) → in_transit(3) → delivered(4)
+ * cancelled can be set from any state.
+ */
+const STATUS_ORDER: Record<string, number> = {
+  pending: 0, confirmed: 1, picked_up: 2, in_transit: 3, delivered: 4, cancelled: 99,
+};
+
+export async function updateBookingStatus(
+  bookingId: string,
+  newStatus: string
+): Promise<DbBooking | null> {
+  // Fetch current status first so we don't regress
+  const current = await getBookingById(bookingId);
+  if (!current) return null;
+
+  const currentOrder = STATUS_ORDER[current.status] ?? 0;
+  const newOrder     = STATUS_ORDER[newStatus] ?? 0;
+
+  // Only update if new status is further along (or cancelled)
+  if (newStatus !== "cancelled" && newOrder <= currentOrder) return current;
+
+  const rows = await sql<DbBooking[]>`
+    UPDATE bookings
+    SET status = ${newStatus}, updated_at = NOW()
+    WHERE id = ${bookingId}
+    RETURNING *
+  `;
+  return rows[0] ?? null;
+}
+
 /** Generates a unique booking reference: UNX-2026-XXXXXX */
 export function generateBookingRef(): string {
   const year = new Date().getFullYear();
