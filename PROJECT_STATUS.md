@@ -1,81 +1,115 @@
 # Uniex — Project Status
-**Last updated:** 1 April 2026
+**Last updated:** 2 April 2026
 **Platform:** uniex-refresh-glow-2.onrender.com (frontend) · uniex-refresh-glow-1.onrender.com (backend)
 
 ---
 
 ## What's Live & Working
 
-### Auth (Login / Signup)
-- Firebase Auth end-to-end — login, signup, token passed as Bearer header
-- Backend: firebase-admin `verifyIdToken`, `requireAuth` middleware
-- Frontend: AuthContext, firebase SDK, protected routes
-
-### Rate Calculator
-- Live quotes from DHL, FedEx, UPS
-- Full pricing pipeline per 2026 carrier PDF specs:
-  `base rate → item discount → margin → FSC → demand surcharge → carrier extras → GST`
-- Margin configurable per carrier via `surcharge_config` table (default 20%)
-- FSC pulled monthly from `fuel_surcharges` table
-- Demand surcharge toggle per carrier (off by default)
-- DHL: premium delivery windows (Standard / 12pm / 9am) — customer selects at quote
-- FedEx: peak surcharge toggle (off by default); IP/IPF service type support
-- UPS: formal clearance, DDP, signature, US inbound surcharge — customer selects at quote
-- UPS 70 kg hard block — system excludes UPS from quotes above this weight
-- Pickup surcharge applied per pincode from `pickup_zones` table
-- Per-carrier legal disclaimers shown on quote page
-
-### Booking Flow
-- Multi-step form: route → sender → receiver → confirm
-- Server-side rate recalculation on submit (price manipulation proof)
-- Booking saved to DB with full pricing snapshot locked at booking time
-- BookingConfirmation page shown after submit
-- Zod validation aligned between frontend and backend
-
-### Membership Plans Page
-- Silver (₹299/yr, 10% off) and Gold (₹1,499/yr, 15% off) pulled live from DB
-
-### Static Pages
-- Home, About, Services, Contact — all live
-- WhatsApp button, chat widget (no AI logic)
+| Feature | Notes |
+|---|---|
+| Firebase Auth (login / signup) | Token verified on backend via firebase-admin |
+| Rate calculator | Full 2026 PDF spec — DHL, FedEx, UPS. Pipeline: base → discount → margin → FSC → demand → carrier extras → GST |
+| DHL premium delivery windows | Standard / 12pm / 9am — customer selects at quote |
+| UPS fixed charges | Formal clearance, DDP, signature, US inbound — customer selects at quote |
+| UPS 70kg block | System excludes UPS from quotes above 70kg |
+| Surcharge config table | Margin %, demand, peak, surge all DB-configurable per carrier |
+| Booking flow | Multi-step form, server-side price recalculation, full pricing snapshot locked to DB |
+| Membership plans page | Silver ₹299/yr · Gold ₹1,499/yr — live from DB |
+| Tracking page UI | Timeline view, status badges — UI complete, no real data yet |
+| Static pages | Home, About, Services, Contact |
+| DB schema | All 13 tables live on Neon, 2,910 rate card rows seeded and verified against 2026 PDFs |
 
 ---
 
 ## What's Built but Not Yet Working
 
-### Tracking Page
-- UI built (timeline view, status badges)
-- Backend route exists (`GET /api/tracking/:id`)
-- **No real data** — AfterShip integration not built. `tracking_events` table is empty.
-
-### Membership Checkout
-- Payment form UI complete (UPI / card / net banking tabs)
-- Backend subscribe route exists
-- **Blocked** — Razorpay not connected (waiting on client credentials)
-
-### Contact Form
-- Form UI complete, **no backend** — submissions go nowhere
-
-### Order History Page
-- Backend API exists (`GET /api/bookings`) and works
-- **No frontend screen** — to be built
+| Feature | Why it's not working |
+|---|---|
+| Tracking — real data | AfterShip webhook not built. Tracking page UI exists but shows no live events. |
+| Payment gateway (Razorpay) | UI screens designed. Blocked — waiting on client's Razorpay credentials. |
+| Membership checkout | UI done (UPI / card / net banking). Blocked — same Razorpay dependency. |
+| Contact form | Form UI done. No backend route — submissions go nowhere. |
+| Order history page | `GET /api/bookings` backend works. No frontend screen built yet. |
 
 ---
 
 ## Not Built Yet
 
-| Feature | Blocked on | Notes |
+### Tier 1 — Unblocked, Build Next
+
+| Feature | What it is | Est. effort |
 |---|---|---|
-| AfterShip tracking integration | Nothing (API key ready) | **Build this next** |
-| Order history page (frontend) | Nothing (backend ready) | After AfterShip |
-| Razorpay payment gateway | Client Razorpay credentials | UI screens already designed |
-| Email notifications | Payment | Booking confirmation + tracking alerts |
-| WhatsApp notifications | Payment | |
-| Admin / Ops panel | Razorpay + tracking working | Minimal: bookings list + status update + add event |
-| AI chat logic | — | Chat widget UI present, no logic |
-| Lead capture | — | |
-| NDR handling | — | |
-| Remarketing emails | — | |
+| Sentry + health check endpoint | `GET /api/health` + Sentry error monitoring. Must-have before go-live. Without this you find out something crashed when a customer complains. | 30 min |
+| AfterShip webhook | `POST /api/tracking/webhook` — AfterShip calls this on every carrier scan. Writes to `tracking_events`, updates `bookings.status`, triggers delivered/NDR logic. | 2–3 hrs |
+| Ops panel — Phase 1 staff form | Internal form for staff to update booking status: pickup assigned → collected → inscan → weight verified → outscan (AWB assigned). This triggers AfterShip registration. Without this, staff edits Neon directly for every booking. | 1 day |
+| Order history page (frontend) | Screen for logged-in customers to see past bookings and click into tracking. Backend already works. | 1 day |
+
+### Tier 2 — Blocked on Client
+
+| Feature | Blocked on |
+|---|---|
+| Razorpay payment gateway | Client Razorpay account + API credentials |
+| FedEx IPF zone chart | Actual IPF zone PDF from FedEx account manager (currently using IP zones as placeholder) |
+| Final margin % per carrier | Client confirmed "10–30% variable" — needs specific % for DHL, FedEx, UPS |
+| Volumetric weight divisor | Currently assumed ÷5000 — needs confirmation from each carrier's account manager |
+
+### Tier 3 — After Payment Works
+
+| Feature | What it is |
+|---|---|
+| Email notifications | Booking confirmation, tracking update alerts, delivered notification |
+| WhatsApp notifications | Same triggers as email — booking confirmed, status updates, delivered |
+| Membership checkout | UI done — just needs Razorpay connected |
+
+### Tier 4 — After Tier 3
+
+| Feature | What it is |
+|---|---|
+| Admin / Ops panel (full) | Three screens: bookings list with search/filter, update status + assign AWB, add manual tracking event. Tier 1 ops form is the stripped-down early version of this. |
+| Contact form backend | Route that emails Uniex or writes submissions to DB |
+| Tracking UI — two-section timeline | Split into "Uniex Processing" (Phase 1) and "Carrier Tracking" (Phase 2 via AfterShip) with visual handoff between them |
+
+### Tier 5 — Not Started, No Timeline
+
+| Feature | Notes |
+|---|---|
+| NDR handling | Detect AfterShip FailedAttempt tag → flag booking → notify staff + customer → coordinate re-delivery |
+| Remarketing email | 10% off email auto-sent when `bookings.status = delivered`. Requires email system from Tier 3 first. |
+| AI chat with real logic | Widget UI is present, no intelligence. Separate project. |
+| Lead capture system | Capture visitor details before they book. Tied to AI chat widget. |
+
+---
+
+## Build Order Right Now
+
+| Priority | Feature | Status |
+|---|---|---|
+| 1 | Sentry + health check endpoint | Build immediately |
+| 2 | AfterShip webhook endpoint | Build immediately |
+| 3 | Ops panel — Phase 1 staff form | Build immediately |
+| 4 | Order history page (frontend) | Build immediately |
+| 5 | Razorpay payment gateway | Waiting on client credentials |
+| 6 | Email + WhatsApp notifications | After payment |
+| 7 | Full admin / ops panel | After email/WhatsApp |
+| 8 | NDR + remarketing | After full ops panel |
+
+---
+
+## How Tracking Works (Once Built)
+
+Two phases — both feed into the same customer-facing timeline:
+
+**Phase 1 — Uniex internal (Steps 7–11 of flowchart)**
+Staff actions written manually to `tracking_events` via the ops panel:
+Pickup assigned → Package collected → Received at office → Weight verified → Handed to carrier (AWB assigned)
+
+**Phase 2 — Carrier tracking via AfterShip (Steps 12–13 of flowchart)**
+Triggered the moment staff assigns the AWB. AfterShip watches the number and pushes every carrier scan to the webhook → written to `tracking_events` automatically.
+Delivered → triggers 10% off remarketing email.
+FailedAttempt → triggers NDR flow.
+
+Customer sees both phases as one unified timeline on the Track page.
 
 ---
 
@@ -86,58 +120,29 @@
 
 | Table | Rows | Notes |
 |---|---|---|
-| carriers | 4 | DHL, FedEx, UPS, Aramex (Aramex has no rate data) |
-| carrier_zones | 445 | DHL 109 + FedEx 230 (IP+IPF) + UPS 106 |
+| carriers | 4 | DHL, FedEx, UPS, Aramex (Aramex has no rate data — never quoted) |
+| carrier_zones | 445 | DHL 109 + FedEx 230 (IP + IPF) + UPS 106 |
 | rate_card_steps | 2,910 | All 3 carriers, doc + package |
 | rate_card_bands | 210 | DHL + UPS heavy brackets |
-| rate_card_slabs | 0 | Legacy, unused |
-| fuel_surcharges | 4 | March 2026 FSC per carrier |
-| surcharge_config | 13 | Margin 20%, all surcharges off |
+| rate_card_slabs | 0 | Legacy, unused — ignore |
+| fuel_surcharges | 4 | March 2026 FSC per carrier — update monthly |
+| surcharge_config | 13 | Margin 20% (unconfirmed), all surcharges off |
 | item_type_discounts | 14 | All item types seeded |
-| pickup_zones | 190 | TN 160 (free) + metro 26 + north 4 |
+| pickup_zones | 190 | TN free · metros ₹200–250 · north ₹300–400 |
 | bookings | 0 | Live operational |
-| tracking_events | 0 | Live operational — no AfterShip yet |
-| membership_plans | 2 | Silver ₹299, Gold ₹1,499 |
+| tracking_events | 0 | Live operational — empty until AfterShip + ops panel built |
+| membership_plans | 2 | Silver ₹299 · Gold ₹1,499 |
 | user_memberships | 0 | Live operational |
-
-Rate card data verified against 2026 PDFs:
-- DHL ✅
-- FedEx ✅
-- UPS ✅ (corrected 28 Mar 2026 — all 18 zones now correct)
-
----
-
-## Build Order (Remaining)
-
-| Priority | Feature | Blocked on | Status |
-|---|---|---|---|
-| ✅ | Auth | — | Done |
-| ✅ | Booking flow | Auth | Done |
-| ✅ | Rate engine (full 2026 spec) | — | Done 1 Apr 2026 |
-| 1 | AfterShip tracking (real events) | API key ready | **Next** |
-| 2 | Order history page (frontend) | Backend ready | After AfterShip |
-| 3 | Razorpay payment gateway | Client credentials | Blocked |
-| 4 | Email + WhatsApp notifications | Razorpay | After payment |
-| 5 | Admin / Ops panel | Tracking + payment | After above |
-
----
-
-## Pending Client Confirmations (do not build until confirmed)
-
-1. **Margin % per carrier** — currently 20% across all. Client said "10–30% variable" — need specific numbers.
-2. **Razorpay API credentials** — account not yet set up by client.
-3. **FedEx IPF zone chart** — IPF zones currently identical to IP. Needs carrier account manager input.
-4. **FSC calculation base** — confirm FSC applies on base+margin (current assumption) or base only.
-5. **Volumetric divisor** — confirm ÷5000 with each carrier's account manager.
-6. **Discount code structure** — client mentioned it, gave no detail.
 
 ---
 
 ## Known Issues / Tech Debt
 
-- Contact form submissions go nowhere (no backend route)
+- Contact form submissions go nowhere (no backend)
 - Membership checkout blocked on Razorpay
-- No booking confirmation email sent to customer
-- Booking status stays `pending` forever until manually updated in Neon table editor
+- No booking confirmation email sent to customer after booking
+- `bookings.status` stays `pending` forever — no way to update without going into Neon directly
 - No automated pickup assignment workflow
-- `rate_card_slabs` table exists but is unused — can be dropped in a future cleanup migration
+- `rate_card_slabs` table exists but unused — can be dropped in a future cleanup migration
+- FedEx IPF zones are a copy of IP zones — placeholder until real IPF zone chart received
+- Margin % (currently 20%) not confirmed by client — do not treat as final
