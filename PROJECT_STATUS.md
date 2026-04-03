@@ -1,6 +1,21 @@
 # Uniex — Project Status
-**Last updated:** 2 April 2026
+**Last updated:** 3 April 2026
 **Platform:** uniex-refresh-glow-2.onrender.com (frontend) · uniex-refresh-glow-1.onrender.com (backend)
+
+---
+
+## Tests Run (2 April 2026)
+
+| Test | Method | Result |
+|---|---|---|
+| AfterShip API key validity | `GET https://api.aftership.com/tracking/2024-04/trackings` with `as-api-key` header | ✅ Returned 200 — key is valid, 2 existing trackings visible |
+| Health check endpoint | `GET /api/health` | ✅ Returns `{"status":"ok","db":"ok","ping_ms":~1300}` |
+| Webhook — InTransit event | `POST /api/tracking/webhook/test` with `tag=InTransit`, `tracking_number=ITD-0-12345678` | ✅ Event written to `tracking_events`, booking status updated to `in_transit` |
+| Webhook — Delivered event | `POST /api/tracking/webhook/test` with `tag=Delivered`, `tracking_number=ITD-0-12345678` | ✅ Event written to `tracking_events`, booking status updated to `delivered` |
+| Forward-only status guard | Ran Delivered after InTransit — confirmed it advanced and did not regress | ✅ Works correctly |
+| DB write confirmation | Queried `tracking_events` after webhook tests | ✅ 2 rows present, joined correctly to `UNX-2026-473925` |
+
+**Test setup:** booking `UNX-2026-473925` (pre-existing from earlier booking flow test) had its `tracking_number` set to `ITD-0-12345678` (AfterShip's built-in testing-courier number) to act as the test target.
 
 ---
 
@@ -16,7 +31,7 @@
 | Surcharge config table | Margin %, demand, peak, surge all DB-configurable per carrier |
 | Booking flow | Multi-step form, server-side price recalculation, full pricing snapshot locked to DB |
 | Membership plans page | Silver ₹299/yr · Gold ₹1,499/yr — live from DB |
-| Tracking page UI | Timeline view, status badges — UI complete, no real data yet |
+| Tracking page UI + AfterShip integration | Timeline view, status badges — UI complete. AfterShip service, webhook, and assign-tracking endpoint all built and tested. Awaiting Render env vars + AfterShip dashboard webhook config to go live. |
 | Static pages | Home, About, Services, Contact |
 | DB schema | All 13 tables live on Neon, 2,910 rate card rows seeded and verified against 2026 PDFs |
 
@@ -26,7 +41,7 @@
 
 | Feature | Why it's not working |
 |---|---|
-| Tracking — real data | AfterShip webhook not built. Tracking page UI exists but shows no live events. |
+| Tracking — live carrier data | AfterShip fully integrated (webhook, polling, assign-tracking). Pending ops config only: set `AFTERSHIP_API_KEY` + `AFTERSHIP_WEBHOOK_SECRET` on Render, register webhook URL in AfterShip dashboard. No code changes needed. |
 | Payment gateway (Razorpay) | UI screens designed. Blocked — waiting on client's Razorpay credentials. |
 | Membership checkout | UI done (UPI / card / net banking). Blocked — same Razorpay dependency. |
 | Contact form | Form UI done. No backend route — submissions go nowhere. |
@@ -40,10 +55,8 @@
 
 | Feature | What it is | Est. effort |
 |---|---|---|
-| Sentry + health check endpoint | `GET /api/health` + Sentry error monitoring. Must-have before go-live. Without this you find out something crashed when a customer complains. | 30 min |
-| AfterShip webhook | `POST /api/tracking/webhook` — AfterShip calls this on every carrier scan. Writes to `tracking_events`, updates `bookings.status`, triggers delivered/NDR logic. | 2–3 hrs |
-| Ops panel — Phase 1 staff form | Internal form for staff to update booking status: pickup assigned → collected → inscan → weight verified → outscan (AWB assigned). This triggers AfterShip registration. Without this, staff edits Neon directly for every booking. | 1 day |
-| Order history page (frontend) | Screen for logged-in customers to see past bookings and click into tracking. Backend already works. | 1 day |
+| Ops panel — Phase 1 staff form | Internal form for staff to update booking status: pickup assigned → collected → inscan → weight verified → outscan (AWB assigned). AWB assign triggers AfterShip registration automatically. Without this, staff edits Neon directly for every booking. | 1 day |
+| Order history page (frontend) | Screen for logged-in customers to see past bookings and click into tracking. Backend (`GET /api/bookings`) already works. | 1 day |
 
 ### Tier 2 — Blocked on Client
 
@@ -85,10 +98,10 @@
 
 | Priority | Feature | Status |
 |---|---|---|
-| 1 | Sentry + health check endpoint | Build immediately |
-| 2 | AfterShip webhook endpoint | Build immediately |
-| 3 | Ops panel — Phase 1 staff form | Build immediately |
-| 4 | Order history page (frontend) | Build immediately |
+| 1 | Health check endpoint | ✅ Done (2 Apr 2026) |
+| 2 | AfterShip tracking integration | ✅ Done (3 Apr 2026) — webhook, polling, assign-tracking all built + tested. Ops config pending (env vars + AfterShip dashboard). |
+| 3 | Ops panel — Phase 1 staff form | Build next |
+| 4 | Order history page (frontend) | Build next |
 | 5 | Razorpay payment gateway | Waiting on client credentials |
 | 6 | Email + WhatsApp notifications | After payment |
 | 7 | Full admin / ops panel | After email/WhatsApp |
@@ -129,8 +142,8 @@ Customer sees both phases as one unified timeline on the Track page.
 | surcharge_config | 13 | Margin 20% (unconfirmed), all surcharges off |
 | item_type_discounts | 14 | All item types seeded |
 | pickup_zones | 190 | TN free · metros ₹200–250 · north ₹300–400 |
-| bookings | 0 | Live operational |
-| tracking_events | 0 | Live operational — empty until AfterShip + ops panel built |
+| bookings | 2 | 1 test booking (UNX-2026-473925, status=delivered) · 1 pending |
+| tracking_events | 2 | Test rows from 2 Apr 2026 webhook test — InTransit + Delivered |
 | membership_plans | 2 | Silver ₹299 · Gold ₹1,499 |
 | user_memberships | 0 | Live operational |
 

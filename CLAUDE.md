@@ -96,7 +96,7 @@ Uniex is an **international courier aggregator** based in India. Customers visit
 - Connection via `DATABASE_URL` env var (postgres.js, SSL required)
 - Schema file: `server/db/schema.neon.sql`
 - Seeder: `npm run db:seed` — safe to re-run (all ON CONFLICT DO NOTHING)
-- Full schema doc: `docs/DB_SCHEMA_HANDOVER.md`
+- Full schema doc: `docs/HANDOVER.md` (Section 8 — Database)
 
 ## Tables (13 total)
 - `carriers` — dhl, fedex, ups, aramex (aramex has no rate cards)

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 type BannerVariant = "default" | "promotional" | "post-delivery";
 
 // This would typically come from a CMS or context
-const CURRENT_BANNER_VARIANT: BannerVariant = "promotional";
+const CURRENT_BANNER_VARIANT = "promotional" as BannerVariant;
 
 const AnnouncementBanner = () => {
   const [isVisible, setIsVisible] = useState(false);

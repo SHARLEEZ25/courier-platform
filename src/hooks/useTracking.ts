@@ -12,6 +12,8 @@ export function useTracking(trackingId: string | null) {
     queryFn: () => api.get<TrackingResponse>(`/tracking/${trackingId}`),
     enabled: !!trackingId && trackingId.length >= 3,
     staleTime: 1000 * 60 * 2, // refresh every 2 min
+    refetchInterval: 15 * 1000, // auto-refresh every 15 seconds while window is focused
+    refetchOnWindowFocus: true,
     retry: false,
   });
 }
