@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Phone, Mail, MessageCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Phone, Mail, MessageCircle, CheckCircle2, MapPin, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import TopBar from "@/components/TopBar";
@@ -199,6 +199,52 @@ const Track = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Detailed event history */}
+              {data.events && data.events.length > 0 && (
+                <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-card-border">
+                  <h2 className="text-lg font-bold text-brand-black mb-6">Tracking History</h2>
+                  <div className="space-y-0">
+                    {[...data.events].reverse().map((ev, idx) => (
+                      <div key={idx} className="flex gap-4 group">
+                        {/* Timeline spine */}
+                        <div className="flex flex-col items-center">
+                          <div className={cn(
+                            "w-3 h-3 rounded-full shrink-0 mt-1.5 border-2",
+                            idx === 0
+                              ? "bg-green-primary border-green-primary"
+                              : "bg-white border-gray-300"
+                          )} />
+                          {idx !== data.events.length - 1 && (
+                            <div className="w-px flex-grow bg-gray-100 my-1" />
+                          )}
+                        </div>
+                        {/* Content */}
+                        <div className="pb-6">
+                          <p className={cn(
+                            "text-sm font-semibold leading-snug",
+                            idx === 0 ? "text-brand-black" : "text-brand-gray"
+                          )}>
+                            {ev.description}
+                          </p>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
+                            {ev.location && (
+                              <span className="flex items-center gap-1 text-xs text-brand-gray">
+                                <MapPin className="w-3 h-3" />
+                                {ev.location}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1 text-xs text-brand-gray">
+                              <Clock className="w-3 h-3" />
+                              {formatEventTime(ev.event_at)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Help section */}
               <div className="text-center pt-8">
