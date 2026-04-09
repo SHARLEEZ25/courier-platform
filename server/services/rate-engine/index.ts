@@ -75,6 +75,7 @@ const UPS_SIGNATURE        = 368;
 const UPS_US_INBOUND       = 230;
 const UPS_REMOTE_PER_KG    = 57;
 const UPS_REMOTE_MIN       = 3150;
+const UPS_OVERSIZE_FEE     = 9450; // girth >400cm per PDF (oversize/overweight fee)
 
 /**
  * Parses a surcharge_config result set into a per-carrier key/value map.
@@ -113,6 +114,10 @@ export async function calculateRates(
       if (input.carrier === 'dhl') return [];
       // else: DHL simply won't appear in all-carrier results
     }
+    if (input.weightKg > 1000) {
+      if (input.carrier === 'dhl') return [];
+      // else: DHL simply won't appear in all-carrier results
+    }
     if (input.dims && input.dims.l > 300) {
       if (input.carrier === 'dhl') return [];
     }
@@ -128,6 +133,9 @@ export async function calculateRates(
   const allCarriers = [...CARRIERS];
   const today = new Date().toISOString().split("T")[0];
   const { chargeable, volumetric } = chargeableWeight(input.weightKg, input.dims);
+
+  // Girth = L + 2W + 2H (UPS PDF rule: >300cm → 40 kg min; >400cm → oversize fee)
+  const girth = input.dims ? (input.dims.l + 2 * input.dims.w + 2 * input.dims.h) : 0;
 
   // FedEx zone lookup needs service_type column
   const fedexService = input.fedexService ?? 'IP';
@@ -311,6 +319,37 @@ export async function calculateRates(
 
     if (priceInr === null) continue;
 
+    // Effective chargeable weight for this carrier (may be overridden by UPS girth rule)
+    let effectiveChargeable = chargeable;
+
+    // UPS girth rule (PDF): if L+2W+2H > 300cm, minimum 40kg chargeable weight.
+    // UPS rate_card_steps only cover up to 20kg; 40kg always falls in a band.
+    if (carrier === 'ups' && girth > 300 && chargeable < 40) {
+      effectiveChargeable = 40;
+      const girthBandRows = await sql<{ price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number }[]>`
+        SELECT price_per_kg, base_price_inr, band_type, weight_min_kg
+        FROM rate_card_bands
+        WHERE carrier_id    = 'ups'
+          AND zone_code     = ${zone}
+          AND shipment_type = ${effectiveType}
+          AND weight_min_kg <= 40
+          AND (weight_max_kg IS NULL OR weight_max_kg >= 40)
+          AND (effective_to IS NULL OR effective_to >= ${today}::date)
+        ORDER BY weight_min_kg DESC
+        LIMIT 1
+      `;
+      const gb = girthBandRows[0];
+      if (gb) {
+        const perKg = Number(gb.price_per_kg);
+        const base  = Number(gb.base_price_inr);
+        const wMin  = Number(gb.weight_min_kg);
+        const rawBand = gb.band_type === 'additive'
+          ? base + (40 - wMin) * perKg
+          : 40 * perKg;
+        priceInr = gb.band_type === 'multiplicative' ? Math.max(rawBand, base) : rawBand;
+      }
+    }
+
     // Step 1: item discount (Uniex discount to customer, e.g. university 50% off)
     const discountInr    = round2(priceInr * discountPct);
     const discountedBase = round2(priceInr - discountInr);
@@ -327,7 +366,7 @@ export async function calculateRates(
     // Step 4: demand surcharge
     const demandActive  = cfg['demand_active'] === true;
     const demandPerKg   = Number(cfg['demand_per_kg'] ?? 0);
-    const demandSurchargeInr = demandActive ? round2(demandPerKg * chargeable) : 0;
+    const demandSurchargeInr = demandActive ? round2(demandPerKg * effectiveChargeable) : 0;
 
     // Step 5: carrier-specific extras
     let premiumServiceInr = 0;
@@ -364,7 +403,11 @@ export async function calculateRates(
       if (opts.signature)       upsFixedInr += UPS_SIGNATURE;
       // Remote area (staff-flagged, not in customer quote by default)
       if (opts.remoteArea) {
-        upsFixedInr += Math.max(UPS_REMOTE_PER_KG * chargeable, UPS_REMOTE_MIN);
+        upsFixedInr += Math.max(UPS_REMOTE_PER_KG * effectiveChargeable, UPS_REMOTE_MIN);
+      }
+      // Oversize fee (PDF: ₹9,450 if girth L+2W+2H >400cm)
+      if (girth > 400) {
+        upsFixedInr += UPS_OVERSIZE_FEE;
       }
     }
 
@@ -384,7 +427,7 @@ export async function calculateRates(
       carrier,
       carrierName: CARRIER_NAMES[carrier],
       zone,
-      chargeableWeightKg: chargeable,
+      chargeableWeightKg: effectiveChargeable,
       actualWeightKg: input.weightKg,
       volumetricWeightKg: volumetric,
       baseRateInr: round2(priceInr),

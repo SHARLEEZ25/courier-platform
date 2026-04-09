@@ -236,4 +236,17 @@ adminRoutes.get("/config/:carrier", async (c) => {
   });
 });
 
+/**
+ * GET /api/admin/item-types
+ *
+ * Returns all item types and their discount percentages.
+ */
+adminRoutes.get("/item-types", async (c) => {
+  const types = await sql`
+    SELECT item_type_id, display_name, discount_pct FROM item_type_discounts
+    ORDER BY display_name ASC
+  `;
+  return c.json({ ok: true, types });
+});
+
 export default adminRoutes;

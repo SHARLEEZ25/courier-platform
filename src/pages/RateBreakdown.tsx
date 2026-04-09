@@ -123,9 +123,12 @@ const RateBreakdown = () => {
 
   if (authLoading || !user) return null;
 
-  const state = location.state || { preselectedCarrier: null, origin: "Chennai, India", destination: "United Kingdom", weight: 2.5, itemType: "university" };
+  const state = location.state || { preselectedCarrier: null, origin: "Chennai, India", destination: "United Kingdom", weight: 2.5, itemType: "university", dims: undefined };
 
   const [actualWeight, setActualWeight] = useState<number>(Number(state.weight) || 2.5);
+  const [dims, setDims] = useState<{l: string, w: string, h: string}>(
+    state.dims ? { l: String(state.dims.l), w: String(state.dims.w), h: String(state.dims.h) } : {l: "", w: "", h: ""}
+  );
   const [packaging, setPackaging] = useState<"none" | "standard" | "premium">("none");
   const [insurance, setInsurance] = useState(false);
   const [dhlService, setDhlService] = useState<"standard" | "premium_900" | "premium_1200">("standard");
@@ -155,7 +158,9 @@ const RateBreakdown = () => {
     state: "",
     zipCode: "",
     numPieces: "1",
-    contents: ""
+    contents: "",
+    declaredValue: "",
+    declaredCurrency: "INR"
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -170,11 +175,16 @@ const RateBreakdown = () => {
   const chargeableWeight = actualWeight;
 
   // ── API hooks ────────────────────────────────────────────────────────────────
+  const parsedDims = dims.l && dims.w && dims.h 
+    ? { l: parseFloat(dims.l), w: parseFloat(dims.w), h: parseFloat(dims.h) } 
+    : undefined;
+
   const { data: rates, isLoading: ratesLoading } = useRates(
     state.destination ? {
       origin: state.origin,
       destination: state.destination,
       weight: actualWeight,
+      dims: parsedDims,
       itemType: (state.itemType as ItemType) ?? "other",
       shipmentType: "package",
       packaging,
@@ -233,9 +243,10 @@ const RateBreakdown = () => {
       if (formData.receiverEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.receiverEmail)) newErrors.receiverEmail = "Enter a valid email address";
       if (formData.deliveryAddress && formData.deliveryAddress.length < 5) newErrors.deliveryAddress = "Address must be at least 5 characters";
     } else if (step === 3) { // Customs
-      const fields: (keyof typeof formData)[] = ['numPieces', 'contents'];
+      const fields: (keyof typeof formData)[] = ['numPieces', 'contents', 'declaredValue'];
       fields.forEach(f => { if (!formData[f]) newErrors[f] = "Required"; });
       if (formData.numPieces && (isNaN(Number(formData.numPieces)) || Number(formData.numPieces) < 1)) newErrors.numPieces = "Must be at least 1";
+      if (formData.declaredValue && (isNaN(Number(formData.declaredValue)) || Number(formData.declaredValue) < 0)) newErrors.declaredValue = "Invalid value";
     }
 
     setFormErrors(newErrors);
@@ -306,6 +317,9 @@ const RateBreakdown = () => {
       deliveryZip: formData.zipCode,
       numPieces: parseInt(formData.numPieces, 10) || 1,
       contentsDesc: formData.contents,
+      declaredValue: Number(formData.declaredValue),
+      declaredCurrency: formData.declaredCurrency,
+      dims: parsedDims,
     }, {
       onSuccess: (booking) => {
         navigate("/booking-confirmation", {
@@ -430,7 +444,7 @@ const RateBreakdown = () => {
                   {/* Weight Section */}
                   <div>
                     <div className="flex justify-between items-end mb-4">
-                      <h3 className="text-base font-bold text-brand-black">Weight</h3>
+                      <h3 className="text-base font-bold text-brand-black">Weight & Dimensions</h3>
                       <div className="text-xl font-bold text-green-primary">{actualWeight}<span className="text-sm font-normal text-slate-400 ml-1">kg</span></div>
                     </div>
                     
@@ -450,10 +464,21 @@ const RateBreakdown = () => {
                       </div>
                     </div>
 
-                      <div className="bg-slate-50 rounded-lg p-4 flex justify-between items-center border border-slate-100 mt-2">
-                        <div className="text-[13px] font-medium text-slate-500">Chargeable weight</div>
-                        <div className="text-[13px] font-medium text-green-primary">{chargeableWeight} kg</div>
+                    {/* Dimensions Input */}
+                    <div className="mb-4">
+                      <label className="text-[12px] font-bold text-slate-500 uppercase mb-2 block">Package Dimensions (cm) — Optional</label>
+                      <div className="flex gap-3">
+                        <Input type="number" placeholder="Length" value={dims.l} onChange={(e) => setDims({...dims, l: e.target.value})} className="h-10 text-center" />
+                        <Input type="number" placeholder="Width" value={dims.w} onChange={(e) => setDims({...dims, w: e.target.value})} className="h-10 text-center" />
+                        <Input type="number" placeholder="Height" value={dims.h} onChange={(e) => setDims({...dims, h: e.target.value})} className="h-10 text-center" />
                       </div>
+                      {parsedDims && parsedDims.l > 300 && <p className="text-[11px] text-red-500 mt-1">Length exceeds 300cm DHL limit</p>}
+                    </div>
+
+                    <div className="bg-slate-50 rounded-lg p-4 flex justify-between items-center border border-slate-100 mt-2">
+                        <div className="text-[13px] font-medium text-slate-500">Chargeable weight</div>
+                        <div className="text-[13px] font-medium text-green-primary">{selectedRate ? selectedRate.chargeableWeightKg : chargeableWeight} kg</div>
+                    </div>
                   </div>
 
                   {/* Packaging Section */}
@@ -1019,6 +1044,29 @@ const RateBreakdown = () => {
                             onChange={e => setFormData({...formData, numPieces: e.target.value})}
                             className={cn(formErrors.numPieces && "border-red-500")}
                           />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Total Declared Value *</label>
+                          <div className="flex gap-2">
+                            <select 
+                              value={formData.declaredCurrency}
+                              onChange={e => setFormData({...formData, declaredCurrency: e.target.value})}
+                              className="w-24 border border-slate-200 rounded-lg px-2 text-sm bg-slate-50 text-slate-600 font-medium focus:outline-none focus:ring-2 focus:ring-green-primary"
+                            >
+                              <option value="INR">INR</option>
+                              <option value="USD">USD</option>
+                              <option value="EUR">EUR</option>
+                              <option value="GBP">GBP</option>
+                            </select>
+                            <Input 
+                              type="number" 
+                              placeholder="e.g. 5000" 
+                              value={formData.declaredValue} 
+                              onChange={e => setFormData({...formData, declaredValue: e.target.value})}
+                              className={cn("flex-1", formErrors.declaredValue && "border-red-500")}
+                            />
+                          </div>
+                          {formErrors.declaredValue && <p className="text-[11px] text-red-500">{formErrors.declaredValue}</p>}
                         </div>
                         <div className="md:col-span-2 space-y-2">
                           <label className="text-[13px] font-bold text-slate-600 uppercase">Contents Description *</label>

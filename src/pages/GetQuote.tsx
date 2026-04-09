@@ -7,7 +7,7 @@ import QuoteResults from "@/components/QuoteResults";
 import Footer from "@/components/Footer";
 
 const GetQuote = () => {
-  const [quoteData, setQuoteData] = useState<{ origin: string; destination: string; weight: number; itemType: string } | null>(null);
+  const [quoteData, setQuoteData] = useState<{ origin: string; destination: string; weight: number; itemType: string; dims?: {l: number, w: number, h: number} } | null>(null);
 
   return (
     <div className="min-h-screen bg-white text-gray-900 flex flex-col">
@@ -96,6 +96,7 @@ const GetQuote = () => {
               destination={quoteData.destination} 
               weight={quoteData.weight} 
               itemType={quoteData.itemType}
+              dims={quoteData.dims}
             />
           </div>
         )}

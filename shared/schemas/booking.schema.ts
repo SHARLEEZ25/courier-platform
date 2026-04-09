@@ -32,6 +32,16 @@ export const BookingCreateSchema = z.object({
   deliveryZip: z.string().min(3).max(20),
   numPieces: z.number().int().positive().max(100).default(1),
   contentsDesc: z.string().max(500).optional(),
+  declaredValue: z.number().positive().optional(),
+  declaredCurrency: z.string().length(3).default("INR"),
+  // Delivery Add-ons
+  dhlService: z.enum(["standard", "premium_900", "premium_1200"]).optional(),
+  upsOptions: z.object({
+    formalClearance: z.boolean().optional(),
+    ddp: z.boolean().optional(),
+    signature: z.boolean().optional(),
+    remoteArea: z.boolean().optional(),
+  }).optional(),
 });
 
 export type BookingCreate = z.infer<typeof BookingCreateSchema>;

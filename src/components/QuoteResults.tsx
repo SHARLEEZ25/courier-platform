@@ -10,6 +10,7 @@ interface QuoteResultsProps {
   destination: string;
   weight: number;
   itemType: string;
+  dims?: {l: number, w: number, h: number};
 }
 
 // Tier config — assigned by price rank (cheapest=0, mid=1, most expensive=2)
@@ -48,20 +49,21 @@ const ITEM_NOTE: Partial<Record<string, string>> = {
   medicine:   "Dedicated medicine courier with full customs support — typically delivered in ~3 days",
 };
 
-const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight, itemType }) => {
+const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight, itemType, dims }) => {
   const navigate = useNavigate();
 
   const { data: rates, isLoading, error } = useRates({
     origin,
     destination,
     weight,
+    dims,
     itemType: itemType as ItemType,
     shipmentType: "package",
   });
 
   const handleBook = (result: RateResult) => {
     navigate("/rate-breakdown", {
-      state: { preselectedCarrier: result.carrier, origin, destination, weight, itemType },
+      state: { preselectedCarrier: result.carrier, origin, destination, weight, itemType, dims },
     });
   };
 

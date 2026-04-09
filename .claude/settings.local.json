@@ -14,7 +14,8 @@
       "WebFetch(domain:www.shiprocket.in)",
       "WebFetch(domain:support.shiprocket.in)",
       "mcp__Neon__get_connection_string",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(surge --version)"
     ]
   }
 }

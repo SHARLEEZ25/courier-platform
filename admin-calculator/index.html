@@ -7,52 +7,15 @@
   <title>Uniex — Admin Rate Calculator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    [x-cloak] {
-      display: none !important;
-    }
-
-    body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-    }
-
-    .step-connector {
-      border-left: 2px dashed #cbd5e1;
-      margin-left: 11px;
-      height: 20px;
-    }
-
-    .fade-in {
-      animation: fadeIn 0.3s ease;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(6px);
-      }
-
-      to {
-        opacity: 1;
-        transform: none;
-      }
-    }
-
-    input[type=number]::-webkit-inner-spin-button {
-      opacity: 0.5;
-    }
-
-    .breakdown-row td {
-      padding: 6px 10px;
-    }
-
-    .breakdown-row:last-child td {
-      font-weight: 700;
-      font-size: 1.1rem;
-    }
+    [x-cloak] { display: none !important; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; }
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    input[type=number]::-webkit-inner-spin-button { opacity: 0.5; }
   </style>
 </head>
 
-<body class="bg-slate-50 min-h-screen" x-data="calc()" x-cloak>
+<body class="bg-slate-50 min-h-screen" x-data="calcApp()" x-init="init()" x-cloak>
 
   <!-- Header -->
   <header class="bg-slate-900 text-white px-6 py-4 shadow-lg">
@@ -75,29 +38,41 @@
     <!-- ── Step 1: Shipment Details ──────────────────────────────────────── -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div class="bg-slate-800 text-white px-5 py-3 flex items-center gap-2">
-        <span
-          class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+        <span class="w-6 h-6 rounded-full bg-blue-500 text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
         <h2 class="font-semibold text-sm">Shipment Details</h2>
       </div>
       <div class="p-5">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
           <!-- Weight -->
           <div>
             <label class="block text-xs font-medium text-slate-500 mb-1">Weight (kg)</label>
             <input x-model.number="form.weight" type="number" min="0.1" step="0.1" placeholder="e.g. 5"
               class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
+
           <!-- Country -->
           <div class="md:col-span-2">
             <label class="block text-xs font-medium text-slate-500 mb-1">Destination Country</label>
             <select x-model="form.country"
               class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
               <option value="">— Select country —</option>
-              <template x-for="c in countries" :key="c">
-                <option :value="c" x-text="c"></option>
+              <template x-for="c in countries" :key="c"><option :value="c" x-text="c"></option></template>
+            </select>
+          </div>
+
+          <!-- Item Type -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Item Type / Service</label>
+            <select x-model="form.itemTypeId"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="">— Standard —</option>
+              <template x-for="t in itemTypes" :key="t.item_type_id">
+                <option :value="t.item_type_id" x-text="t.display_name + (t.discount_pct > 0 ? ' (' + Math.round(t.discount_pct*100) + '% Off)' : '')"></option>
               </template>
             </select>
           </div>
+
           <!-- Carrier -->
           <div>
             <label class="block text-xs font-medium text-slate-500 mb-1">Carrier</label>
@@ -109,10 +84,11 @@
               <option value="ups">UPS Worldwide</option>
             </select>
           </div>
+
           <!-- Shipment Type -->
           <div class="md:col-span-2">
             <label class="block text-xs font-medium text-slate-500 mb-1">Shipment Type</label>
-            <div class="flex gap-3">
+            <div class="flex gap-4 mt-1">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="radio" x-model="form.shipmentType" value="package" class="accent-blue-500" />
                 <span class="text-sm">Package</span>
@@ -123,6 +99,7 @@
               </label>
             </div>
           </div>
+
           <!-- Fetch button -->
           <div class="md:col-span-2 flex items-end">
             <button @click="fetchBaseRate()" :disabled="!canFetch || loading"
@@ -130,8 +107,8 @@
               <span x-show="!loading">Fetch Base Rate from DB</span>
               <span x-show="loading" class="flex items-center justify-center gap-2">
                 <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                 </svg>
                 Fetching...
               </span>
@@ -139,22 +116,44 @@
           </div>
         </div>
 
-        <!-- Error -->
+        <!-- Config status -->
+        <div x-show="form.carrier" class="mt-4 flex items-center gap-2 text-xs">
+          <template x-if="configLoading">
+            <span class="flex items-center gap-1.5 text-slate-500">
+              <svg class="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+              Loading live config from DB…
+            </span>
+          </template>
+          <template x-if="configLoaded && !configLoading">
+            <span class="flex items-center gap-1.5 text-green-600">
+              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              Live config loaded — all surcharge fields pre-filled from DB
+            </span>
+          </template>
+          <template x-if="configError && !configLoading">
+            <span class="text-amber-600" x-text="configError"></span>
+          </template>
+        </div>
+
+        <!-- Fetch error -->
         <div x-show="error" x-transition
           class="mt-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg" x-text="error"></div>
 
-        <!-- Base rate result -->
+        <!-- Base rate result chip -->
         <div x-show="baseResult" x-transition class="mt-4 fade-in">
           <div class="bg-slate-50 border border-slate-200 rounded-lg px-5 py-4 flex flex-wrap gap-6 items-center">
             <div>
               <p class="text-xs text-slate-400 uppercase tracking-wide">Base Rate (DB)</p>
-              <p class="text-2xl font-bold text-slate-900 mt-0.5">₹<span x-text="fmt(baseResult?.base_rate_inr)"></span>
-              </p>
+              <p class="text-2xl font-bold text-slate-900 mt-0.5">₹<span x-text="fmt(baseResult?.base_rate_inr)"></span></p>
             </div>
             <div>
               <p class="text-xs text-slate-400 uppercase tracking-wide">Chargeable Weight</p>
-              <p class="text-lg font-semibold text-slate-700 mt-0.5"><span x-text="baseResult?.chargeable_kg"></span> kg
-              </p>
+              <p class="text-lg font-semibold text-slate-700 mt-0.5"><span x-text="baseResult?.chargeable_kg"></span> kg</p>
             </div>
             <div>
               <p class="text-xs text-slate-400 uppercase tracking-wide">Zone</p>
@@ -165,7 +164,7 @@
               <p class="text-lg font-semibold text-slate-700 mt-0.5" x-text="carrierLabel(baseResult?.carrier)"></p>
             </div>
             <div>
-              <p class="text-xs text-slate-400 uppercase tracking-wide">Shipment Type</p>
+              <p class="text-xs text-slate-400 uppercase tracking-wide">Type</p>
               <p class="text-sm font-medium text-slate-600 mt-0.5 capitalize" x-text="baseResult?.shipment_type"></p>
             </div>
             <div x-show="baseResult?.shipment_type !== form.shipmentType"
@@ -178,91 +177,273 @@
     </div>
 
     <!-- ── Step 2: Surcharges ────────────────────────────────────────────── -->
-    <div x-show="baseResult" x-transition
-      class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in">
+    <div x-show="baseResult" x-transition class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in">
       <div class="bg-slate-800 text-white px-5 py-3 flex items-center gap-2">
-        <span
-          class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
-        <h2 class="font-semibold text-sm">Surcharges &amp; Fees</h2>
-        <span class="ml-2 text-slate-400 text-xs">(all optional — leave blank to skip)</span>
+        <span class="w-6 h-6 rounded-full bg-blue-500 text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+        <h2 class="font-semibold text-sm">Surcharges &amp; Carrier Extras</h2>
+        <span x-show="configLoaded" class="ml-2 px-2 py-0.5 bg-green-500 text-white text-xs rounded-full">auto-loaded from DB</span>
+        <span x-show="!configLoaded" class="ml-2 text-slate-400 text-xs">enter manually</span>
       </div>
-      <div class="p-5">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="p-5 space-y-6">
+
+        <!-- ── Common: Margin + FSC + GST ─────────────────────────────────── -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
 
           <!-- Margin -->
-          <div class="relative">
-            <label class="block text-xs font-medium text-slate-500 mb-1">Margin (%)</label>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">
+              Margin
+              <span x-show="configLoaded" class="ml-1 bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">DB</span>
+            </label>
             <div class="relative">
-              <input x-model.number="surcharges.marginPct" type="number" min="0" max="200" step="0.1"
-                placeholder="e.g. 20"
+              <input x-model.number="surcharges.marginPct" type="number" min="0" max="200" step="0.1" placeholder="e.g. 20"
                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8" />
               <span class="absolute right-3 top-2.5 text-slate-400 text-sm">%</span>
             </div>
             <p class="text-xs text-slate-400 mt-1">Applied on base rate first</p>
           </div>
 
-          <!-- Fuel Surcharge -->
+          <!-- FSC -->
           <div>
-            <label class="block text-xs font-medium text-slate-500 mb-1">Fuel Surcharge (%)</label>
+            <label class="block text-xs font-medium text-slate-500 mb-1">
+              Fuel Surcharge (FSC)
+              <span x-show="configLoaded" class="ml-1 bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">DB</span>
+            </label>
             <div class="relative">
-              <input x-model.number="surcharges.fuelPct" type="number" min="0" max="200" step="0.1"
-                placeholder="e.g. 29.5"
+              <input x-model.number="surcharges.fuelPct" type="number" min="0" max="200" step="0.1" placeholder="e.g. 29.5"
                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8" />
               <span class="absolute right-3 top-2.5 text-slate-400 text-sm">%</span>
             </div>
-            <p class="text-xs text-slate-400 mt-1">Applied after margin</p>
+            <p class="text-xs text-slate-400 mt-1">Applied after margin · updated monthly</p>
           </div>
 
-          <!-- Demand Surcharge -->
+          <!-- GST — locked -->
           <div>
-            <label class="block text-xs font-medium text-slate-500 mb-1">Demand Surcharge (₹/kg)</label>
+            <label class="block text-xs font-medium text-slate-500 mb-1">
+              GST
+              <span class="ml-1 bg-slate-100 text-slate-500 text-xs px-1.5 py-0.5 rounded">PDF · locked 18%</span>
+            </label>
             <div class="relative">
-              <span class="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
-              <input x-model.number="surcharges.demandPerKg" type="number" min="0" step="1" placeholder="e.g. 50"
-                class="w-full border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <p class="text-xs text-slate-400 mt-1">× chargeable kg = <span
-                x-text="surcharges.demandPerKg && baseResult ? '₹' + fmt(surcharges.demandPerKg * baseResult.chargeable_kg) : '—'"></span>
-            </p>
-          </div>
-
-          <!-- Remote Charge -->
-          <div>
-            <label class="block text-xs font-medium text-slate-500 mb-1">Remote Area Charge (₹/shipment)</label>
-            <div class="relative">
-              <span class="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
-              <input x-model.number="surcharges.remoteFlat" type="number" min="0" step="1" placeholder="e.g. 3150"
-                class="w-full border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <p class="text-xs text-slate-400 mt-1">Flat fee per shipment</p>
-          </div>
-
-          <!-- GST -->
-          <div>
-            <label class="block text-xs font-medium text-slate-500 mb-1">GST (%)</label>
-            <div class="relative">
-              <input x-model.number="surcharges.gstPct" type="number" min="0" max="100" step="0.1" placeholder="e.g. 18"
-                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8" />
+              <input value="18" type="number" disabled
+                class="w-full border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-sm text-slate-500 cursor-not-allowed pr-8" />
               <span class="absolute right-3 top-2.5 text-slate-400 text-sm">%</span>
             </div>
-            <p class="text-xs text-slate-400 mt-1">Applied on final subtotal</p>
+            <p class="text-xs text-slate-400 mt-1">All PDFs + GST law — not editable</p>
           </div>
-
         </div>
+
+        <!-- ── Demand Surcharge (all carriers) ────────────────────────────── -->
+        <div class="border-t border-slate-100 pt-5">
+          <div class="flex items-center gap-3 mb-3">
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              Demand Surcharge
+              <span x-show="configLoaded" class="ml-1 bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-normal normal-case">DB</span>
+              <span class="ml-1 bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded font-normal normal-case">all carriers · PDF</span>
+            </p>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" x-model="surcharges.demandActive" class="accent-blue-500 w-4 h-4" />
+              <span class="text-xs font-medium" :class="surcharges.demandActive ? 'text-blue-600' : 'text-slate-400'"
+                x-text="surcharges.demandActive ? 'Active' : 'Inactive'"></span>
+            </label>
+          </div>
+          <div class="flex items-center gap-3" :class="!surcharges.demandActive ? 'opacity-40' : ''">
+            <div class="relative w-44">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
+              <input x-model.number="surcharges.demandPerKg" type="number" min="0" step="1" placeholder="e.g. 150"
+                :disabled="!surcharges.demandActive"
+                class="w-full border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:cursor-not-allowed" />
+            </div>
+            <span class="text-xs text-slate-500">/kg ×
+              <span x-text="baseResult?.chargeable_kg"></span> kg =
+              <strong x-text="surcharges.demandActive && surcharges.demandPerKg > 0 && baseResult ? '₹' + fmt(surcharges.demandPerKg * baseResult.chargeable_kg) : '₹0'"></strong>
+            </span>
+          </div>
+        </div>
+
+        <!-- ── DHL: Premium delivery windows ────────────────────────────── -->
+        <div x-show="form.carrier === 'dhl'" class="border-t border-slate-100 pt-5">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+            DHL Premium Delivery Windows
+            <span class="ml-2 bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded font-normal normal-case">hardcoded from PDF</span>
+          </p>
+          <div class="flex flex-wrap gap-3">
+            <label class="flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+              :class="surcharges.dhlService === 'standard' ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300'">
+              <input type="radio" x-model="surcharges.dhlService" value="standard" class="accent-blue-500" />
+              <div>
+                <p class="text-sm font-medium">Standard</p>
+                <p class="text-xs text-slate-500">No premium fee</p>
+              </div>
+            </label>
+            <label class="flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+              :class="surcharges.dhlService === 'premium_1200' ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300'">
+              <input type="radio" x-model="surcharges.dhlService" value="premium_1200" class="accent-blue-500" />
+              <div>
+                <p class="text-sm font-medium">Premium 12:00pm</p>
+                <p class="text-xs text-slate-500">+₹<span x-text="fmt(pdf.dhlPremium1200)"></span> flat (PDF)</p>
+              </div>
+            </label>
+            <label class="flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+              :class="surcharges.dhlService === 'premium_900' ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300'">
+              <input type="radio" x-model="surcharges.dhlService" value="premium_900" class="accent-blue-500" />
+              <div>
+                <p class="text-sm font-medium">Premium 9:00am</p>
+                <p class="text-xs text-slate-500">+₹<span x-text="fmt(pdf.dhlPremium900)"></span> flat (PDF)</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- ── FedEx: Peak surcharge ──────────────────────────────────────── -->
+        <div x-show="form.carrier === 'fedex'" class="border-t border-slate-100 pt-5">
+          <div class="flex items-center gap-3 mb-3">
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              FedEx Peak Surcharge
+              <span x-show="configLoaded" class="ml-1 bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-normal normal-case">DB</span>
+              <span class="ml-1 bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded font-normal normal-case">PDF</span>
+            </p>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" x-model="surcharges.fedexPeakActive" class="accent-blue-500 w-4 h-4" />
+              <span class="text-xs font-medium" :class="surcharges.fedexPeakActive ? 'text-blue-600' : 'text-slate-400'"
+                x-text="surcharges.fedexPeakActive ? 'Active' : 'Inactive'"></span>
+            </label>
+          </div>
+          <div class="flex items-center gap-3" :class="!surcharges.fedexPeakActive ? 'opacity-40' : ''">
+            <div class="relative w-44">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
+              <input x-model.number="surcharges.fedexPeakAmount" type="number" min="0" step="1" placeholder="e.g. 500"
+                :disabled="!surcharges.fedexPeakActive"
+                class="w-full border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:cursor-not-allowed" />
+            </div>
+            <span class="text-xs text-slate-500">flat per shipment</span>
+          </div>
+        </div>
+
+        <!-- ── UPS: Surge fee + Fixed charges ────────────────────────────── -->
+        <div x-show="form.carrier === 'ups'" class="border-t border-slate-100 pt-5 space-y-5">
+
+          <!-- UPS Surge fee -->
+          <div>
+            <div class="flex items-center gap-3 mb-3">
+              <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                UPS Surge Fee
+                <span x-show="configLoaded" class="ml-1 bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-normal normal-case">DB</span>
+                <span class="ml-1 bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded font-normal normal-case">PDF</span>
+              </p>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" x-model="surcharges.upsSurgeActive" class="accent-blue-500 w-4 h-4" />
+                <span class="text-xs font-medium" :class="surcharges.upsSurgeActive ? 'text-blue-600' : 'text-slate-400'"
+                  x-text="surcharges.upsSurgeActive ? 'Active' : 'Inactive'"></span>
+              </label>
+            </div>
+            <div class="flex items-center gap-3" :class="!surcharges.upsSurgeActive ? 'opacity-40' : ''">
+              <div class="relative w-44">
+                <span class="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
+                <input x-model.number="surcharges.upsSurgeAmount" type="number" min="0" step="1" placeholder="e.g. 200"
+                  :disabled="!surcharges.upsSurgeActive"
+                  class="w-full border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:cursor-not-allowed" />
+              </div>
+              <span class="text-xs text-slate-500">flat per shipment</span>
+            </div>
+          </div>
+
+          <!-- UPS Fixed charges from PDF -->
+          <div>
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+              UPS Add-ons &amp; Fixed Charges
+              <span class="ml-2 bg-orange-100 text-orange-700 text-xs px-1.5 py-0.5 rounded font-normal normal-case">all amounts hardcoded from PDF</span>
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
+              <!-- US Inbound -->
+              <label class="flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+                :class="surcharges.upsUsInbound ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300'">
+                <input type="checkbox" x-model="surcharges.upsUsInbound" class="accent-blue-500 w-4 h-4" />
+                <div>
+                  <p class="text-sm font-medium">US Inbound</p>
+                  <p class="text-xs text-slate-500">+₹<span x-text="fmt(pdf.upsUsInbound)"></span>/shipment · auto if USA</p>
+                </div>
+              </label>
+
+              <!-- Remote Area -->
+              <label class="flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+                :class="surcharges.upsRemoteArea ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300'">
+                <input type="checkbox" x-model="surcharges.upsRemoteArea" class="accent-blue-500 w-4 h-4" />
+                <div>
+                  <p class="text-sm font-medium">Remote Area</p>
+                  <p class="text-xs text-slate-500">₹<span x-text="pdf.upsRemotePerKg"></span>/kg · min ₹<span x-text="fmt(pdf.upsRemoteMin)"></span></p>
+                </div>
+              </label>
+
+              <!-- Formal Clearance -->
+              <label class="flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+                :class="surcharges.upsFormalClearance ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300'">
+                <input type="checkbox" x-model="surcharges.upsFormalClearance" class="accent-blue-500 w-4 h-4" />
+                <div>
+                  <p class="text-sm font-medium">Formal Clearance</p>
+                  <p class="text-xs text-slate-500">+₹<span x-text="fmt(pdf.upsFormalClearance)"></span> flat</p>
+                </div>
+              </label>
+
+              <!-- DDP -->
+              <label class="flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+                :class="surcharges.upsDdp ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300'">
+                <input type="checkbox" x-model="surcharges.upsDdp" class="accent-blue-500 w-4 h-4" />
+                <div>
+                  <p class="text-sm font-medium">DDP Delivery</p>
+                  <p class="text-xs text-slate-500">+₹<span x-text="fmt(pdf.upsDdp)"></span> flat</p>
+                </div>
+              </label>
+
+              <!-- Signature -->
+              <label class="flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+                :class="surcharges.upsSignature ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300'">
+                <input type="checkbox" x-model="surcharges.upsSignature" class="accent-blue-500 w-4 h-4" />
+                <div>
+                  <p class="text-sm font-medium">Signature Required</p>
+                  <p class="text-xs text-slate-500">+₹<span x-text="fmt(pdf.upsSignature)"></span> flat</p>
+                </div>
+              </label>
+
+              <!-- Girth -->
+              <label class="flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-colors"
+                :class="surcharges.upsGirth ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300'">
+                <input type="checkbox" x-model="surcharges.upsGirth" class="accent-blue-500 w-4 h-4" />
+                <div>
+                  <p class="text-sm font-medium">Girth &gt; 400cm</p>
+                  <p class="text-xs text-slate-500">+₹<span x-text="fmt(pdf.upsGirth)"></span> flat</p>
+                </div>
+              </label>
+
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
-    <!-- ── Step 3: Final Breakdown ───────────────────────────────────────── -->
-    <div x-show="baseResult" x-transition
-      class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in">
+    <!-- ── Step 3: Price Breakdown ───────────────────────────────────────── -->
+    <div x-show="baseResult" x-transition class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in">
       <div class="bg-slate-800 text-white px-5 py-3 flex items-center gap-2">
-        <span
-          class="w-6 h-6 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+        <span class="w-6 h-6 rounded-full bg-green-500 text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
         <h2 class="font-semibold text-sm">Price Breakdown</h2>
         <span class="ml-auto text-xs text-slate-400"
-          x-text="form.country + ' · ' + carrierLabel(form.carrier) + ' · ' + baseResult?.chargeable_kg + ' kg'"></span>
+          x-text="form.country + ' · ' + carrierLabel(form.carrier) + ' · ' + (baseResult?.chargeable_kg ?? '—') + ' kg'"></span>
       </div>
       <div class="p-5">
+
+        <!-- Legend -->
+        <div class="flex items-center gap-4 mb-4 text-xs text-slate-500">
+          <span class="flex items-center gap-1.5">
+            <span class="bg-green-100 text-green-700 px-1.5 py-0.5 rounded">DB</span>
+            Value read live from database
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">PDF</span>
+            Hardcoded from carrier rate card PDF
+          </span>
+        </div>
+
         <table class="w-full text-sm">
           <thead>
             <tr class="text-xs text-slate-400 uppercase border-b border-slate-100">
@@ -275,18 +456,19 @@
           <tbody>
             <template x-for="row in breakdown" :key="row.label">
               <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors"
-                :class="row.isTotal ? 'bg-blue-50' : ''">
+                :class="row.isTotal ? 'bg-blue-50' : (row.isSub ? 'bg-slate-50' : '')">
                 <td class="px-2.5 py-2.5"
-                  :class="row.isTotal ? 'font-bold text-slate-800 text-base' : 'text-slate-700'">
+                  :class="row.isTotal ? 'font-bold text-slate-800 text-base' : (row.isSub ? 'font-medium text-slate-600 text-xs uppercase tracking-wide' : 'text-slate-700')">
                   <span x-text="row.label"></span>
-                  <span x-show="row.badge" class="ml-2 text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded"
-                    x-text="row.badge"></span>
+                  <span x-show="row.source" class="ml-2 text-xs px-1.5 py-0.5 rounded"
+                    :class="row.source === 'DB' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'"
+                    x-text="row.source"></span>
                 </td>
-                <td class="px-2.5 py-2.5 text-right text-slate-500 text-xs" x-text="row.calc || '—'"></td>
+                <td class="px-2.5 py-2.5 text-right text-slate-500 text-xs font-mono" x-text="row.calc || '—'"></td>
                 <td class="px-2.5 py-2.5 text-right"
                   :class="row.amount > 0 ? 'text-slate-700' : row.amount < 0 ? 'text-green-600' : 'text-slate-400'">
-                  <span x-show="row.amount > 0">+</span><span
-                    x-text="row.amount !== null ? '₹' + fmt(row.amount) : '—'"></span>
+                  <span x-show="row.amount !== null && row.amount > 0">+</span>
+                  <span x-text="row.amount !== null ? '₹' + fmt(row.amount) : '—'"></span>
                 </td>
                 <td class="px-2.5 py-2.5 text-right font-semibold"
                   :class="row.isTotal ? 'text-blue-700 text-base' : 'text-slate-800'">
@@ -297,79 +479,184 @@
           </tbody>
         </table>
 
-        <!-- Summary pill -->
-        <div
-          class="mt-5 flex flex-wrap gap-4 items-center justify-between bg-slate-50 rounded-lg px-5 py-4 border border-slate-200">
+        <!-- Summary bar -->
+        <div class="mt-5 flex flex-wrap gap-4 items-center justify-between bg-slate-50 rounded-lg px-5 py-4 border border-slate-200">
           <div class="text-sm text-slate-500">
             <span class="font-medium text-slate-700">Customer pays:</span>
-            <span class="ml-2 text-2xl font-bold text-blue-700">₹<span x-text="fmt(calc.total)"></span></span>
-            <span class="ml-1 text-xs text-slate-400">(incl. GST)</span>
+            <span class="ml-2 text-2xl font-bold text-blue-700">₹<span x-text="fmt(finalCalc.total)"></span></span>
+            <span class="ml-1 text-xs text-slate-400">(incl. 18% GST)</span>
           </div>
           <div class="flex gap-6 text-sm text-slate-500">
-            <span>Subtotal: <strong class="text-slate-700">₹<span x-text="fmt(calc.preGst)"></span></strong></span>
-            <span>GST: <strong class="text-slate-700">₹<span x-text="fmt(calc.gstAmt)"></span></strong></span>
+            <span>Subtotal: <strong class="text-slate-700">₹<span x-text="fmt(finalCalc.preGst)"></span></strong></span>
+            <span>GST: <strong class="text-slate-700">₹<span x-text="fmt(finalCalc.gstAmt)"></span></strong></span>
           </div>
-          <button @click="resetAll()"
-            class="text-xs text-slate-400 hover:text-red-500 underline transition-colors">Reset &amp; start
-            over</button>
+          <button @click="resetAll()" class="text-xs text-slate-400 hover:text-red-500 underline transition-colors">
+            Reset &amp; start over
+          </button>
         </div>
 
-        <!-- Incomplete notice -->
-        <div x-show="hasSkippedFields"
-          class="mt-3 text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded px-3 py-2">
-          ℹ Some surcharge fields are empty — calculation shown with those fields treated as zero.
-        </div>
       </div>
     </div>
 
   </main>
 
   <script>
-    function calc() {
+    function calcApp() {
       return {
-        apiBase: '',
+        apiBase: 'https://uniex-refresh-glow-1.onrender.com',
 
-        form: {
-          weight: null,
-          country: '',
-          carrier: '',
-          shipmentType: 'package',
-        },
+        form: { weight: null, country: '', carrier: '', shipmentType: 'package', itemTypeId: '' },
+
+        itemTypes: [],
 
         surcharges: {
           marginPct: null,
           fuelPct: null,
-          demandPerKg: null,
-          remoteFlat: null,
-          gstPct: null,
+          demandActive: false,
+          demandPerKg: 0,
+          // DHL
+          dhlService: 'standard',
+          // FedEx
+          fedexPeakActive: false,
+          fedexPeakAmount: 0,
+          // UPS
+          upsSurgeActive: false,
+          upsSurgeAmount: 0,
+          upsUsInbound: false,
+          upsRemoteArea: false,
+          upsFormalClearance: false,
+          upsDdp: false,
+          upsSignature: false,
+          upsGirth: false,
+        },
+
+        // PDF-hardcoded amounts — populated from backend /config response
+        pdf: {
+          dhlPremium1200: 1000,
+          dhlPremium900: 3000,
+          upsUsInbound: 230,
+          upsRemotePerKg: 57,
+          upsRemoteMin: 3150,
+          upsFormalClearance: 3150,
+          upsDdp: 1050,
+          upsSignature: 368,
+          upsGirth: 9450,
         },
 
         loading: false,
+        configLoading: false,
+        configLoaded: false,
         error: '',
+        configError: '',
         baseResult: null,
 
-        // ── Country list (all countries served by DHL, FedEx, or UPS from India) ──
         countries: [
-          'Afghanistan', 'Albania', 'Algeria', 'Angola', 'Argentina', 'Armenia', 'Australia',
-          'Austria', 'Azerbaijan', 'Bahrain', 'Bangladesh', 'Belarus', 'Belgium', 'Bhutan',
-          'Bolivia', 'Bosnia', 'Brazil', 'Brunei', 'Bulgaria', 'Cambodia', 'Cameroon',
-          'Canada', 'Chile', 'China', 'Colombia', 'Costa Rica', 'Croatia', 'Cyprus',
-          'Czech Republic', 'Denmark', 'Ecuador', 'Egypt', 'Estonia', 'Ethiopia',
-          'Finland', 'France', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Guatemala',
-          'Hong Kong', 'Hungary', 'Iceland', 'Indonesia', 'Iran', 'Iraq', 'Ireland',
-          'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya',
-          'Kuwait', 'Laos', 'Latvia', 'Lebanon', 'Libya', 'Lithuania', 'Luxembourg',
-          'Macau', 'Malaysia', 'Maldives', 'Malta', 'Mauritius', 'Mexico', 'Moldova',
-          'Montenegro', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nepal',
-          'Netherlands', 'New Caledonia', 'New Zealand', 'Nigeria', 'Norway', 'Oman',
-          'Pakistan', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines',
-          'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Saudi Arabia', 'Senegal',
-          'Serbia', 'Singapore', 'Slovakia', 'Slovenia', 'South Africa', 'South Korea',
-          'Spain', 'Sri Lanka', 'Sudan', 'Sweden', 'Switzerland', 'Syria', 'Taiwan',
-          'Tanzania', 'Thailand', 'Trinidad and Tobago', 'Turkey', 'UAE', 'Uganda',
-          'UK', 'Ukraine', 'Uruguay', 'USA', 'Uzbekistan', 'Venezuela', 'Vietnam',
-          'Yemen', 'Zambia', 'Zimbabwe',
+          'Afghanistan','Albania','Algeria','Angola','Argentina','Armenia','Australia',
+          'Austria','Azerbaijan','Bahrain','Bangladesh','Belarus','Belgium','Bhutan',
+          'Bolivia','Bosnia','Brazil','Brunei','Bulgaria','Cambodia','Cameroon',
+          'Canada','Chile','China','Colombia','Costa Rica','Croatia','Cyprus',
+          'Czech Republic','Denmark','Ecuador','Egypt','Estonia','Ethiopia',
+          'Finland','France','Georgia','Germany','Ghana','Greece','Guatemala',
+          'Hong Kong','Hungary','Iceland','Indonesia','Iran','Iraq','Ireland',
+          'Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya',
+          'Kuwait','Laos','Latvia','Lebanon','Libya','Lithuania','Luxembourg',
+          'Macau','Malaysia','Maldives','Malta','Mauritius','Mexico','Moldova',
+          'Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nepal',
+          'Netherlands','New Caledonia','New Zealand','Nigeria','Norway','Oman',
+          'Pakistan','Panama','Papua New Guinea','Paraguay','Peru','Philippines',
+          'Poland','Portugal','Qatar','Romania','Russia','Saudi Arabia','Senegal',
+          'Serbia','Singapore','Slovakia','Slovenia','South Africa','South Korea',
+          'Spain','Sri Lanka','Sudan','Sweden','Switzerland','Syria','Taiwan',
+          'Tanzania','Thailand','Trinidad and Tobago','Turkey','UAE','Uganda',
+          'UK','Ukraine','Uruguay','USA','Uzbekistan','Venezuela','Vietnam',
+          'Yemen','Zambia','Zimbabwe',
         ],
+
+        init() {
+          this.fetchItemTypes();
+          // Auto-load config whenever carrier changes
+          this.$watch('form.carrier', (carrier) => {
+            this.configLoaded = false;
+            this.configError = '';
+            this.resetSurcharges();
+            if (carrier && this.apiBase.trim()) {
+              this.fetchConfig(carrier);
+            }
+          });
+          // Auto-check US inbound when destination is USA (UPS only)
+          this.$watch('form.country', (country) => {
+            if (this.form.carrier === 'ups') {
+              this.surcharges.upsUsInbound = (country === 'USA');
+            }
+          });
+        },
+
+        async fetchItemTypes() {
+          try {
+            const res = await fetch(`${this.apiBase.trim()}/api/admin/item-types`);
+            const data = await res.json();
+            if (data.ok) this.itemTypes = data.types;
+          } catch (e) { console.error("Failed to fetch item types", e); }
+        },
+
+        resetSurcharges() {
+          this.surcharges = {
+            marginPct: null, fuelPct: null, demandActive: false, demandPerKg: 0,
+            dhlService: 'standard',
+            fedexPeakActive: false, fedexPeakAmount: 0,
+            upsSurgeActive: false, upsSurgeAmount: 0,
+            upsUsInbound: (this.form.country === 'USA'),
+            upsRemoteArea: false, upsFormalClearance: false,
+            upsDdp: false, upsSignature: false, upsGirth: false,
+          };
+        },
+
+        async fetchConfig(carrier) {
+          this.configLoading = true;
+          this.configError = '';
+          try {
+            const res = await fetch(`${this.apiBase.trim()}/api/admin/config/${carrier}`);
+            const data = await res.json();
+            if (!data.ok) { this.configError = data.error || 'Failed to load config'; return; }
+
+            // Common (all carriers)
+            this.surcharges.marginPct    = data.margin_pct ?? null;
+            this.surcharges.fuelPct      = data.fsc_pct    ?? null;
+            this.surcharges.demandActive = data.demand_active ?? false;
+            this.surcharges.demandPerKg  = data.demand_per_kg ?? 0;
+
+            // FedEx peak
+            if (carrier === 'fedex') {
+              this.surcharges.fedexPeakActive = data.peak_active ?? false;
+              this.surcharges.fedexPeakAmount = data.peak_amount  ?? 0;
+            }
+
+            // UPS surge + PDF hardcoded amounts
+            if (carrier === 'ups') {
+              this.surcharges.upsSurgeActive = data.surge_active ?? false;
+              this.surcharges.upsSurgeAmount = data.surge_amount ?? 0;
+              this.pdf.upsUsInbound      = data.us_inbound_inr       ?? 230;
+              this.pdf.upsRemotePerKg    = data.remote_per_kg_inr    ?? 57;
+              this.pdf.upsRemoteMin      = data.remote_min_inr       ?? 3150;
+              this.pdf.upsFormalClearance= data.formal_clearance_inr ?? 3150;
+              this.pdf.upsDdp            = data.ddp_inr              ?? 1050;
+              this.pdf.upsSignature      = data.signature_inr        ?? 368;
+              this.pdf.upsGirth          = data.girth_surcharge_inr  ?? 9450;
+            }
+
+            // DHL PDF amounts
+            if (carrier === 'dhl') {
+              this.pdf.dhlPremium1200 = data.premium_1200_inr ?? 1000;
+              this.pdf.dhlPremium900  = data.premium_900_inr  ?? 3000;
+            }
+
+            this.configLoaded = true;
+          } catch {
+            this.configError = 'Could not load carrier config — enter surcharge values manually.';
+          } finally {
+            this.configLoading = false;
+          }
+        },
 
         get canFetch() {
           return this.form.weight > 0 && this.form.country && this.form.carrier && this.apiBase.trim();
@@ -395,138 +682,148 @@
               this.error = data.error || 'Unknown error from server.';
             } else {
               this.baseResult = data;
+              // If config wasn't loaded yet (e.g. API base was set after carrier select), try now
+              if (!this.configLoaded && !this.configLoading && this.form.carrier) {
+                this.fetchConfig(this.form.carrier);
+              }
             }
-          } catch (e) {
-            this.error = 'Could not reach the server. Check the API URL in the header and make sure the backend is running.';
+          } catch {
+            this.error = 'Could not reach the server. Check the API URL in the header.';
           } finally {
             this.loading = false;
           }
         },
 
-        get calc() {
-          if (!this.baseResult) return { preGst: 0, gstAmt: 0, total: 0 };
-
-          const base = this.baseResult.base_rate_inr;
-          const wKg = this.baseResult.chargeable_kg;
-
-          const mPct = this.surcharges.marginPct ?? 0;
-          const fPct = this.surcharges.fuelPct ?? 0;
-          const dPkg = this.surcharges.demandPerKg ?? 0;
-          const remote = this.surcharges.remoteFlat ?? 0;
-          const gPct = this.surcharges.gstPct ?? 0;
-
-          const marginAmt = r2(base * mPct / 100);
-          const afterMargin = r2(base + marginAmt);
-
-          const fuelAmt = r2(afterMargin * fPct / 100);
-          const afterFuel = r2(afterMargin + fuelAmt);
-
-          const demandAmt = r2(dPkg * wKg);
-          const afterDemand = r2(afterFuel + demandAmt);
-
-          const afterRemote = r2(afterDemand + remote);
-
-          const gstAmt = r2(afterRemote * gPct / 100);
-          const total = r2(afterRemote + gstAmt);
-
-          return {
-            base, marginAmt, afterMargin,
-            fuelAmt, afterFuel,
-            demandAmt, afterDemand,
-            remote, afterRemote,
-            gstAmt,
-            preGst: afterRemote,
-            total,
-          };
-        },
-
-        get breakdown() {
+        // Computes all breakdown rows and is the single source of truth for the calc
+        computeRows() {
           if (!this.baseResult) return [];
-          const c = this.calc;
-          const wKg = this.baseResult.chargeable_kg;
-          const rows = [];
 
-          rows.push({
-            label: 'Base Rate (from DB)',
-            calc: `Zone ${this.baseResult.zone} · ${wKg} kg`,
-            amount: null,
-            running: c.base,
-            badge: null, isTotal: false,
-          });
+          const base    = this.baseResult.base_rate_inr;
+          const kg      = this.baseResult.chargeable_kg;
+          const carrier = this.form.carrier;
+          const s       = this.surcharges;
+          const p       = this.pdf;
 
-          if (this.surcharges.marginPct != null && this.surcharges.marginPct !== '') {
-            rows.push({
-              label: 'Margin',
-              calc: `₹${fmt(c.base)} × ${this.surcharges.marginPct}%`,
-              amount: c.marginAmt,
-              running: c.afterMargin,
-              badge: null, isTotal: false,
-            });
+          let running = base;
+          const rows  = [];
+
+          // Base rate
+          rows.push({ label: 'Base Rate (from DB)', calc: `Zone ${this.baseResult.zone} · ${kg} kg`, amount: null, running: r2(running), source: 'DB' });
+
+          // Item Discount
+          const selectedType = this.itemTypes.find(t => t.item_type_id === this.form.itemTypeId);
+          if (selectedType && selectedType.discount_pct > 0) {
+            const discAmt = r2(running * selectedType.discount_pct);
+            running = r2(running - discAmt);
+            rows.push({ label: `${selectedType.display_name} Discount`, calc: `-${Math.round(selectedType.discount_pct * 100)}% off base`, amount: -discAmt, running, source: 'DB' });
           }
 
-          if (this.surcharges.fuelPct != null && this.surcharges.fuelPct !== '') {
-            rows.push({
-              label: 'Fuel Surcharge (FSC)',
-              calc: `₹${fmt(c.afterMargin)} × ${this.surcharges.fuelPct}%`,
-              amount: c.fuelAmt,
-              running: c.afterFuel,
-              badge: null, isTotal: false,
-            });
+          // Margin
+          const mPct = s.marginPct ?? 0;
+          if (mPct > 0) {
+            const beforeMargin = running;
+            const marginAmt    = r2(beforeMargin * mPct / 100);
+            running = r2(running + marginAmt);
+            rows.push({ label: 'Margin', calc: `${mPct}% on ₹${fmt(beforeMargin)}`, amount: marginAmt, running, source: 'DB' });
           }
 
-          if (this.surcharges.demandPerKg != null && this.surcharges.demandPerKg !== '') {
-            rows.push({
-              label: 'Demand Surcharge',
-              calc: `₹${this.surcharges.demandPerKg}/kg × ${wKg} kg`,
-              amount: c.demandAmt,
-              running: c.afterDemand,
-              badge: null, isTotal: false,
-            });
+          // Fuel Surcharge
+          const fPct = s.fuelPct ?? 0;
+          if (fPct > 0) {
+            const beforeFsc = running;
+            const fscAmt    = r2(beforeFsc * fPct / 100);
+            running = r2(running + fscAmt);
+            rows.push({ label: 'Fuel Surcharge (FSC)', calc: `${fPct}% on ₹${fmt(beforeFsc)}`, amount: fscAmt, running, source: 'DB' });
           }
 
-          if (this.surcharges.remoteFlat != null && this.surcharges.remoteFlat !== '') {
-            rows.push({
-              label: 'Remote Area Charge',
-              calc: 'Flat per shipment',
-              amount: c.remote,
-              running: c.afterRemote,
-              badge: null, isTotal: false,
-            });
+          // FedEx peak surcharge
+          if (carrier === 'fedex' && s.fedexPeakActive && (s.fedexPeakAmount ?? 0) > 0) {
+            const peakAmt = r2(s.fedexPeakAmount);
+            running = r2(running + peakAmt);
+            rows.push({ label: 'Peak Surcharge (FedEx)', calc: 'Flat per shipment', amount: peakAmt, running, source: 'DB' });
           }
 
-          rows.push({
-            label: 'Subtotal (pre-GST)',
-            calc: null,
-            amount: null,
-            running: c.preGst,
-            badge: null, isTotal: false,
-          });
-
-          if (this.surcharges.gstPct != null && this.surcharges.gstPct !== '') {
-            rows.push({
-              label: 'GST',
-              calc: `₹${fmt(c.preGst)} × ${this.surcharges.gstPct}%`,
-              amount: c.gstAmt,
-              running: c.total,
-              badge: null, isTotal: false,
-            });
+          // UPS surge fee
+          if (carrier === 'ups' && s.upsSurgeActive && (s.upsSurgeAmount ?? 0) > 0) {
+            const surgeAmt = r2(s.upsSurgeAmount);
+            running = r2(running + surgeAmt);
+            rows.push({ label: 'Surge Fee (UPS)', calc: 'Flat per shipment', amount: surgeAmt, running, source: 'DB' });
           }
 
-          rows.push({
-            label: 'TOTAL',
-            calc: null,
-            amount: null,
-            running: c.total,
-            badge: null, isTotal: true,
-          });
+          // Demand surcharge (all carriers)
+          if (s.demandActive && (s.demandPerKg ?? 0) > 0) {
+            const demandAmt = r2(s.demandPerKg * kg);
+            running = r2(running + demandAmt);
+            rows.push({ label: 'Demand Surcharge', calc: `₹${s.demandPerKg}/kg × ${kg} kg`, amount: demandAmt, running, source: 'DB' });
+          }
+
+          // DHL premium window
+          if (carrier === 'dhl' && s.dhlService !== 'standard') {
+            const premAmt   = s.dhlService === 'premium_900' ? p.dhlPremium900 : p.dhlPremium1200;
+            const premLabel = s.dhlService === 'premium_900' ? 'Premium 9:00am Delivery' : 'Premium 12:00pm Delivery';
+            running = r2(running + premAmt);
+            rows.push({ label: premLabel, calc: 'Flat (PDF)', amount: premAmt, running, source: 'PDF' });
+          }
+
+          // UPS fixed charges
+          if (carrier === 'ups') {
+            if (s.upsUsInbound) {
+              running = r2(running + p.upsUsInbound);
+              rows.push({ label: 'US Inbound Surcharge', calc: 'Auto — USA destination (PDF)', amount: p.upsUsInbound, running, source: 'PDF' });
+            }
+            if (s.upsRemoteArea) {
+              const remoteAmt = Math.max(r2(p.upsRemotePerKg * kg), p.upsRemoteMin);
+              running = r2(running + remoteAmt);
+              rows.push({ label: 'Remote Area', calc: `max(₹${p.upsRemotePerKg}×${kg}kg, ₹${fmt(p.upsRemoteMin)})`, amount: remoteAmt, running, source: 'PDF' });
+            }
+            if (s.upsFormalClearance) {
+              running = r2(running + p.upsFormalClearance);
+              rows.push({ label: 'Formal Clearance (UPS)', calc: 'Flat (PDF)', amount: p.upsFormalClearance, running, source: 'PDF' });
+            }
+            if (s.upsDdp) {
+              running = r2(running + p.upsDdp);
+              rows.push({ label: 'DDP Delivery', calc: 'Flat (PDF)', amount: p.upsDdp, running, source: 'PDF' });
+            }
+            if (s.upsSignature) {
+              running = r2(running + p.upsSignature);
+              rows.push({ label: 'Signature Required', calc: 'Flat (PDF)', amount: p.upsSignature, running, source: 'PDF' });
+            }
+            if (s.upsGirth) {
+              running = r2(running + p.upsGirth);
+              rows.push({ label: 'Girth Surcharge (>400cm)', calc: 'Flat (PDF)', amount: p.upsGirth, running, source: 'PDF' });
+            }
+          }
+
+          // Subtotal divider
+          const preGst = r2(running);
+          rows.push({ label: 'Subtotal (pre-GST)', calc: null, amount: null, running: preGst, isSub: true });
+
+          // GST 18% (hardcoded)
+          const gstAmt = r2(preGst * 0.18);
+          running = r2(preGst + gstAmt);
+          rows.push({ label: 'GST 18%', calc: `₹${fmt(preGst)} × 18%`, amount: gstAmt, running, source: 'PDF' });
+
+          // Total
+          rows.push({ label: 'TOTAL PAYABLE', calc: null, amount: null, running, isTotal: true });
 
           return rows;
         },
 
-        get hasSkippedFields() {
-          const s = this.surcharges;
-          return [s.marginPct, s.fuelPct, s.demandPerKg, s.remoteFlat, s.gstPct]
-            .some(v => v === null || v === '');
+        get breakdown() {
+          return this.computeRows();
+        },
+
+        get finalCalc() {
+          const rows = this.computeRows();
+          if (!rows.length) return { preGst: 0, gstAmt: 0, total: 0 };
+          const subRow = rows.find(r => r.isSub);
+          const gstRow = rows.find(r => r.label === 'GST 18%');
+          const totalRow = rows[rows.length - 1];
+          return {
+            preGst:  subRow?.running  ?? 0,
+            gstAmt:  gstRow?.amount   ?? 0,
+            total:   totalRow?.running ?? 0,
+          };
         },
 
         carrierLabel(slug) {
@@ -536,13 +833,12 @@
         fmt(n) { return fmt(n); },
 
         resetAll() {
-          this.baseResult = null;
-          this.error = '';
-          this.form.weight = null;
-          this.form.country = '';
-          this.form.carrier = '';
-          this.form.shipmentType = 'package';
-          this.surcharges = { marginPct: null, fuelPct: null, demandPerKg: null, remoteFlat: null, gstPct: null };
+          this.baseResult   = null;
+          this.error        = '';
+          this.configLoaded = false;
+          this.configError  = '';
+          this.form = { weight: null, country: '', carrier: '', shipmentType: 'package' };
+          this.resetSurcharges();
         },
       };
     }
