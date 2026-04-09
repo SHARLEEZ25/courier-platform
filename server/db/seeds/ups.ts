@@ -6,17 +6,19 @@
  *   Pages 1-2 : Zones 1-8  (8 numeric zone columns)
  *   Pages 3-4 : Zone 9 + named country groups (9 columns)
  *   Pages 5-6 : Zone 10 — remote/difficult destinations (1 column)
+ *   Page 7    : Country → zone assignment list + T&C
  *
  * Named zone codes:
- *   POLAND  — Poland, Czech Rep., Hungary, Romania
+ *   POLAND  — Poland, Czech Rep., Hungary, Romania ONLY (Belgium is NOT in this group — Zone 7)
  *   NCL     — New Caledonia, Mauritius, Maldives
  *
- * Zone 9 = generic "South China" zone; country assignments are separate.
+ * Zone 9 = "South China" — UPS internal routing, no customer destination maps here.
  *
  * Shipment types: 'document' | 'package'
- * Document steps : 0.5 kg increments up to 5 kg
- * Package steps  : 0.5 kg increments up to 20 kg
- * Bands          : multiplicative (price = weight × price_per_kg) above 20 kg
+ * Document steps : 0.5 kg increments up to 5.0 kg (above 5 kg → use package rates)
+ * Package steps  : 0.5 kg increments up to 20.0 kg
+ * Bands          : multiplicative (price = weight × price_per_kg) for 20.001–70.0 kg only
+ *                  T&C: "This service not applicable if weight > 70 Kg" — no bands above 70 kg
  */
 
 import type { StepRow, BandRow } from './dhl.js';
@@ -95,15 +97,20 @@ const UPS_PKG: Record<number, number[]> = {
 // Source: Pages 2 & 4 of UPS-2026.pdf (bottom of each table)
 // Rows: [weight_min, weight_max | null, per_kg_rates for all 18 zones]
 // Column order same as ALL_ZONES above
+//
+// PDF bands: "21-44 kgs" and "45-70 kgs"
+// T&C (page 7): "This service not applicable, if weight of box is more than 70 Kg"
+// → Only two bands are valid. Bands for 71-99, 100-299, 300-499, 500-999, 1000+
+//   are present in the PDF rate table but correspond to a different service tier
+//   not applicable here. They are excluded. Engine blocks UPS above 70kg.
+//
+// weight_max_kg of the 45-70 band is 70.000 (inclusive) — PDF says "45-70 kgs".
+// At exactly 70.0 kg chargeable, this band applies (engine block is weight > 70,
+// so 70.0 kg is still quoted).
 const UPS_BAND_RATES: [number, number | null, number[]][] = [
   // wMin,   wMax,   [Z1,  Z2,  Z3,  Z4,  Z5,  Z6,  Z7,  Z8,    Z9, USA, CAN, AUS, NZL, SGP, POL, DEU, NCL,   Z10]
-  [20.001,  44.999, [308, 448, 437, 271, 463, 320, 631, 724,   438, 376, 394, 586, 688, 442, 410, 253, 896,   974]],
-  [45.000,  69.999, [282, 450, 440, 264, 454, 317, 601, 727,   441, 379, 395, 583, 691, 430, 401, 250, 777,   905]],
-  [70.000,  99.999, [280, 449, 438, 257, 453, 317, 591, 727,   440, 350, 395, 583, 691, 430, 365, 250, 777,   905]],
-  [100.000, 299.999,[277, 445, 435, 256, 453, 322, 580, 729,   436, 351, 396, 589, 693, 431, 274, 249, 705,   875]],
-  [300.000, 499.999,[277, 439, 429, 256, 449, 322, 576, 729,   431, 407, 396, 589, 690, 422, 274, 249, 705,   875]],
-  [500.000, 999.999,[262, 435, 425, 256, 442, 322, 570, 729,   426, 397, 396, 589, 689, 422, 274, 249, 705,   875]],
-  [1000.000, null,  [238, 392, 382, 233, 398, 293, 517, 662,   384, 353, 360, 535, 624, 384, 249, 226, 641,   796]],
+  [20.001, 44.999, [308, 448, 437, 271, 463, 320, 631, 724,   438, 376, 394, 586, 688, 442, 410, 253, 896,   974]],
+  [45.000, 70.000, [282, 450, 440, 264, 454, 317, 601, 727,   441, 379, 395, 583, 691, 430, 401, 250, 777,   905]],
 ];
 
 // ─── Build exports ────────────────────────────────────────────────────────────
@@ -130,6 +137,11 @@ function buildPkgSteps(): StepRow[] {
   return rows;
 }
 
+// Price at exactly 20 kg per zone — used as base_price_inr floor for band rows.
+// Sourced from UPS_PKG[20.0] above. Column order matches ALL_ZONES.
+// Rate engine clamps band price to max(weight × perKg, base_price_inr).
+const UPS_BASE_20KG = [6367, 8755, 8508, 4874, 9067, 5829, 12636, 14062, 8536, 8443, 9097, 11278, 13425, 9555, 8923, 4874, 15809, 16678];
+
 function buildBands(): BandRow[] {
   const rows: BandRow[] = [];
   for (const [wMin, wMax, perKgRates] of UPS_BAND_RATES) {
@@ -141,7 +153,7 @@ function buildBands(): BandRow[] {
         weight_min_kg: wMin,
         weight_max_kg: wMax,
         price_per_kg: perKgRates[i],
-        base_price_inr: 0,
+        base_price_inr: UPS_BASE_20KG[i],
         band_type: 'multiplicative',
       });
     });

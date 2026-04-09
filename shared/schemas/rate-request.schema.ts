@@ -59,7 +59,7 @@ export const ITEM_TYPES = [
 export const CARRIERS = ["dhl", "fedex", "ups", "aramex"] as const;
 
 export const DimensionsSchema = z.object({
-  l: z.number().positive(),
+  l: z.number().positive().max(300, "Length cannot exceed 300 cm (DHL limit)"),
   w: z.number().positive(),
   h: z.number().positive(),
 });
@@ -67,7 +67,7 @@ export const DimensionsSchema = z.object({
 export const RateRequestSchema = z.object({
   origin: z.enum(COUNTRIES).default("India"),
   destination: z.enum(COUNTRIES),
-  weight: z.number().positive().max(500),
+  weight: z.number().positive().max(3000, "Total weight cannot exceed 3,000 kg (DHL limit)"),
   shipmentType: z.enum(["document", "package"]).default("package"),
   itemType: z.enum(ITEM_TYPES),
   dims: DimensionsSchema.optional(),

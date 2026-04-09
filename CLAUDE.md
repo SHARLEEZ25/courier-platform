@@ -29,7 +29,7 @@ Uniex is an **international courier aggregator** based in India. Customers visit
 13. Delivered / Delivery attempted / No Delivery (NDR)
 14. Remarketing — 10% off email sent after delivery
 
-## Current Status (as of 1 April 2026)
+## Current Status (as of 9 April 2026)
 
 ### Done & Working
 - Website (Home, About, Services, Contact pages)
@@ -85,11 +85,30 @@ Uniex is an **international courier aggregator** based in India. Customers visit
 4. Email + WhatsApp notifications — after payment confirmed
 5. Admin / Ops panel — after all above are working
 
-### Rate Engine — Surcharge Config
-- `surcharge_config` table stores per-carrier: margin %, demand surcharge toggle/amount, FedEx peak toggle/amount, UPS surge toggle/amount
-- FSC (fuel surcharge) lives separately in `fuel_surcharges` table — updated monthly
+### Rate Engine — Pricing Formula
+The confirmed formula (implemented in `server/services/rate-engine/index.ts`):
+1. `chargeable_kg = ceil(actual_kg × 2) / 2`
+2. `base_rate` — lookup from `rate_card_steps` or `rate_card_bands`
+3. Apply item type discount (e.g. university 50% off) → `discounted_base`
+4. `with_margin = discounted_base × (1 + margin_pct / 100)`
+5. `with_fuel = with_margin × (1 + fsc_pct / 100)`
+6. `+ demand_per_kg × chargeable_kg` (if `demand_active`)
+7. `+ carrier flat charges` (DHL premium windows / FedEx peak / UPS fixed options)
+8. `+ pickup_surcharge + packaging + insurance`
+9. `final = subtotal × 1.18` (GST)
+
+### Rate Engine — Surcharge Config & Cache TTLs
+- `surcharge_config` stores per-carrier: margin %, demand surcharge toggle/amount, FedEx peak toggle/amount, UPS surge toggle/amount
+  - **Cache TTL: 5 minutes** — admin toggles (demand, peak, surge) reflect within 5 minutes
+- `fuel_surcharges` stores FSC % per carrier — updated monthly via Neon table editor
+  - **Cache TTL: 1 hour** — acceptable for monthly updates
+- Zone and rate card data cached for **30 minutes**
 - **Margin is currently 20% for all carriers** — client has not confirmed final percentages. Do not assume this is final.
 - FedEx IPF zones are currently identical to IP zones — needs updating when client's carrier account manager provides IPF-specific zone PDF
+
+### Rate Engine — What's DB-Driven vs. Hardcoded
+- **DB-driven (admin-editable via Neon):** FSC %, margin %, demand surcharge, FedEx peak, UPS surge
+- **Hardcoded (change requires code deploy):** DHL premium window fees (₹1,000 / ₹3,000), UPS DDP (₹1,050), UPS formal clearance (₹3,150), UPS signature (₹368), UPS US inbound (₹230), UPS remote area (max ₹57/kg, ₹3,150 min)
 
 ## Neon Database
 - Project: `unix` · ID: `falling-night-64411631` · Region: ap-southeast-1 (Singapore)

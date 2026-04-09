@@ -38,22 +38,21 @@ const DHL_ZONES: [string, string][] = [
   ['Taiwan',           '5'], ['Vietnam',       '5'],
   // Zone 6
   ['New Zealand',      '6'], ['Papua New Guinea','6'],
-  // Zone 7 — Western Europe
+  // Zone 7 — Western Europe (verified against DHL-2026.pdf country list)
   ['Austria',          '7'], ['Belgium',       '7'], ['Czech Republic','7'],
-  ['Denmark',          '7'], ['Finland',       '7'], ['France',       '7'],
-  ['Germany',          '7'], ['Greece',        '7'], ['Hungary',      '7'],
-  ['Ireland',          '7'], ['Italy',         '7'], ['Luxembourg',   '7'],
-  ['Netherlands',      '7'], ['Poland',        '7'], ['Portugal',     '7'],
-  ['Romania',          '7'], ['Slovakia',      '7'], ['Slovenia',     '7'],
+  ['Denmark',          '7'], ['France',        '7'], ['Germany',      '7'],
+  ['Hungary',          '7'], ['Ireland',       '7'], ['Italy',        '7'],
+  ['Luxembourg',       '7'], ['Netherlands',   '7'], ['Poland',       '7'],
+  ['Portugal',         '7'], ['Romania',       '7'], ['Slovakia',     '7'],
   ['Spain',            '7'], ['Sweden',        '7'], ['Switzerland',  '7'],
   ['UK',               '7'],
-  // Zone 8 — Eastern/Northern Europe + Israel + Turkey
-  ['Albania',          '8'], ['Belarus',       '8'], ['Bulgaria',     '8'],
-  ['Croatia',          '8'], ['Cyprus',        '8'], ['Estonia',      '8'],
+  // Zone 8 — Northern Europe + Balkans/Baltics + Israel + Turkey
+  // PDF: Finland=8, Greece=8, Slovenia=8 (NOT zone 7 as previously coded)
+  ['Belarus',          '8'], ['Bulgaria',      '8'], ['Cyprus',       '8'],
+  ['Estonia',          '8'], ['Finland',       '8'], ['Greece',       '8'],
   ['Iceland',          '8'], ['Israel',        '8'], ['Latvia',       '8'],
-  ['Lithuania',        '8'], ['Malta',         '8'], ['Montenegro',   '8'],
-  ['Norway',           '8'], ['Serbia',        '8'], ['Turkey',       '8'],
-  ['Ukraine',          '8'],
+  ['Lithuania',        '8'], ['Malta',         '8'], ['Norway',       '8'],
+  ['Slovenia',         '8'], ['Turkey',        '8'],
   // Zone 9 — Canada + Mexico + Pacific territories
   ['Canada',           '9'], ['Mexico',        '9'],
   // Zone 10 — South America + Caribbean
@@ -61,12 +60,14 @@ const DHL_ZONES: [string, string][] = [
   ['Chile',            '10'], ['Colombia',     '10'], ['Ecuador',     '10'],
   ['Paraguay',         '10'], ['Peru',         '10'], ['Uruguay',     '10'],
   ['Venezuela',        '10'], ['Jamaica',      '10'], ['Trinidad and Tobago','10'],
-  // Zone 11 — Rest of World / difficult
-  ['Afghanistan',      '11'], ['Angola',       '11'], ['Armenia',     '11'],
-  ['Azerbaijan',       '11'], ['Ethiopia',     '11'], ['Iran',        '11'],
-  ['Iraq',             '11'], ['Kazakhstan',   '11'], ['Libya',       '11'],
-  ['Morocco',          '11'], ['Russia',       '11'], ['Syria',       '11'],
-  ['Yemen',            '11'],
+  // Zone 11 — Rest of World / difficult destinations
+  // PDF: Albania=11, Croatia=11, Montenegro=11, Serbia=11, Ukraine=11 (NOT zone 8 as previously coded)
+  ['Afghanistan',      '11'], ['Albania',      '11'], ['Angola',      '11'],
+  ['Armenia',          '11'], ['Azerbaijan',   '11'], ['Croatia',     '11'],
+  ['Ethiopia',         '11'], ['Iran',         '11'], ['Iraq',        '11'],
+  ['Kazakhstan',       '11'], ['Libya',        '11'], ['Montenegro',  '11'],
+  ['Morocco',          '11'], ['Russia',       '11'], ['Serbia',      '11'],
+  ['Syria',            '11'], ['Ukraine',      '11'], ['Yemen',       '11'],
   // Zone 12 — USA
   ['USA',              '12'],
   // Zone 13 — Africa (key markets)
@@ -95,10 +96,10 @@ const FEDEX_ZONES: [string, string][] = [
   ['China',            'D'], ['Hong Kong',     'D'], ['Thailand',     'D'],
   // Zone E — Southeast Asia + Oceania + Pacific
   ['Australia',        'E'], ['Brunei',        'E'], ['Cambodia',     'E'],
-  ['Indonesia',        'E'], ['Japan',         'E'], ['Laos',         'E'],
-  ['Macau',            'E'], ['Malaysia',      'E'], ['New Caledonia','E'],
-  ['New Zealand',      'E'], ['Philippines',   'E'], ['South Korea',  'E'],
-  ['Taiwan',           'E'], ['Vietnam',       'E'],
+  ['Indonesia',        'E'], ['Laos',          'E'], ['Macau',        'E'],
+  ['Malaysia',         'E'], ['New Caledonia', 'E'], ['New Zealand',  'E'],
+  ['Philippines',      'E'], ['South Korea',   'E'], ['Taiwan',       'E'],
+  ['Vietnam',          'E'],
   // Zone F — Western Europe (core)
   ['Belgium',          'F'], ['Denmark',       'F'], ['France',       'F'],
   ['Germany',          'F'], ['Italy',         'F'], ['Luxembourg',   'F'],
@@ -106,8 +107,7 @@ const FEDEX_ZONES: [string, string][] = [
   ['UK',               'F'],
   // Zone G — USA + Mexico
   ['USA',              'G'], ['Mexico',        'G'],
-  // Zone H — Japan (separate from Zone E)
-  // Note: PDF puts Japan in Zone E for IP but Zone H exists — using E as default
+  // Zone H — Japan (PDF page 9 explicitly states "Japan | H | H" for both IP and IPF)
   // Zone I — Rest of Europe (Eastern + Northern)
   ['Albania',          'I'], ['Austria',       'I'], ['Belarus',      'I'],
   ['Bulgaria',         'I'], ['Croatia',       'I'], ['Cyprus',       'I'],
@@ -208,7 +208,9 @@ const UPS_ZONES: [string, string][] = [
   ['Czech Republic',   'POLAND'],  // grouped in "Poland, Czech Rep., Hungary, Romania" column
   ['Hungary',          'POLAND'],
   ['Romania',          'POLAND'],
-  ['Belgium',          'POLAND'],  // grouped with Poland/Czech in UPS rate card
+  // Belgium is NOT in the Poland/Czech/Hungary/Romania column per UPS-2026.pdf page 7.
+  // It is not listed in Zone 4 either. Falls under Zone 7 = Rest of World.
+  ['Belgium',          '7'],
   ['Maldives',         'NCL'],
   ['Mauritius',        'NCL'],
   ['New Caledonia',    'NCL'],

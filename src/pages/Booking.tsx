@@ -250,6 +250,17 @@ const Booking = () => {
       }
     }
 
+    // DHL hard limits from PDF
+    if (state.carrier === 'dhl') {
+      const pieces = parseInt(formData.numPieces, 10) || 1;
+      const perPiece = state.weight / pieces;
+      if (state.weight > 3000) {
+        newErrors.numPieces = "Total weight cannot exceed 3,000 kg (DHL limit)";
+      } else if (perPiece > 1000) {
+        newErrors.numPieces = `Per-piece weight is ${perPiece.toFixed(1)} kg — DHL limit is 1,000 kg per piece`;
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };

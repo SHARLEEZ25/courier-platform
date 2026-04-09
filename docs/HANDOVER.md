@@ -1,5 +1,5 @@
 # Uniex Courier — Developer Handover
-**Last updated:** 3 April 2026
+**Last updated:** 9 April 2026
 **Prepared by:** Claude Code (initial build)
 **For:** Incoming developer taking over remaining features
 
@@ -159,22 +159,37 @@ All routes are prefixed `/api`. Backend base URL in production: `https://uniex-r
 
 ## 7. Rate Engine
 
-The pricing pipeline lives in `server/services/rate-engine/`. Every quote goes through these steps in order:
+The pricing pipeline lives in `server/services/rate-engine/`. The confirmed formula:
 
-1. Resolve chargeable weight → `max(actual_kg, volumetric_kg)`. Volumetric = L×W×H ÷ 5000.
-2. Look up zone code for origin→destination pair in `carrier_zones`
-3. Look up base rate from `rate_card_steps` (exact weight breakpoints) or `rate_card_bands` (per-kg for heavy)
-4. Apply item type discount (from `item_type_discounts` — e.g. university docs get 50% off)
-5. Apply membership discount if user is an active member
-6. Apply margin % (from `surcharge_config` — currently 20% for all carriers, not confirmed final)
-7. Add FSC (from `fuel_surcharges` — update monthly)
-8. Add demand surcharge if active (from `surcharge_config`)
-9. Add carrier-specific extras: DHL premium delivery windows / FedEx peak / UPS fixed charges
-10. Add pickup surcharge (from `pickup_zones` by pincode)
-11. Add packaging + insurance if selected
-12. Add GST (18%)
+```
+chargeable_kg  = ceil(actual_kg × 2) / 2
+base_rate      = lookup(rate_card_steps or rate_card_bands, chargeable_kg, zone)
+discounted     = base_rate × (1 − item_discount_pct)
+with_margin    = discounted × (1 + margin_pct / 100)
+with_fuel      = with_margin × (1 + fsc_pct / 100)
+subtotal       = with_fuel
+               + (demand_active ? demand_per_kg × chargeable_kg : 0)
+               + carrier_flat_charges
+               + pickup_surcharge + packaging + insurance
+final_price    = subtotal × 1.18   ← GST
+```
 
-Full detail with exact formulas and source references: `docs/RATE_CALCULATION.md`
+**Carrier-specific flat charges (hardcoded from PDFs):**
+- DHL: `premium_1200` +₹1,000 · `premium_900` +₹3,000
+- FedEx: peak surcharge (DB-configurable, toggle on/off)
+- UPS: US inbound ₹230 (auto) · formal clearance ₹3,150 · DDP ₹1,050 · signature ₹368 · remote area max(₹57×kg, ₹3,150)
+
+**Cache TTLs (in-memory module cache):**
+
+| Data | Source table | Cache TTL | Why |
+|---|---|---|---|
+| Surcharge toggles (demand/peak/surge), margin % | `surcharge_config` | **5 min** | Admin may flip in real-time |
+| FSC % | `fuel_surcharges` | **1 hour** | Updated monthly |
+| Zones, rate steps, bands | `carrier_zones`, `rate_card_*` | **30 min** | Rarely changes |
+
+**DB-driven (admin edits in Neon, reflects within cache TTL):** FSC %, margin %, demand surcharge, FedEx peak, UPS surge
+
+**Hardcoded (requires code deploy to change):** DHL premium window fees, UPS DDP/clearance/signature/remote/US-inbound flat amounts
 
 **Things not confirmed by client yet — do not treat as final:**
 - Margin % (currently 20% for all carriers)
@@ -220,6 +235,11 @@ VALUES ('dhl', 30.00, '2026-04-01'),
        ('ups', 27.50, '2026-04-01');
 ```
 The rate engine always picks the row with the latest `effective_from` that is `<= today`.
+New rates will reflect in quotes within **1 hour** (FSC cache TTL). Restart the backend to force-refresh immediately.
+
+### Updating demand/peak/surge toggles
+
+Edit the relevant rows in `surcharge_config` via the Neon table editor. Changes reflect in quotes within **5 minutes** (surcharge_config cache TTL).
 
 ---
 

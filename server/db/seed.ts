@@ -44,10 +44,10 @@ async function upsertZones(rows: typeof ALL_ZONES): Promise<void> {
 async function upsertSteps(rows: { carrier_id: string; zone_code: string; shipment_type: string; weight_kg: number; price_inr: number }[]): Promise<void> {
   for (let i = 0; i < rows.length; i += BATCH) {
     const chunk = rows.slice(i, i + BATCH);
-    // postgres.js bulk insert via values list
     await sql`
       INSERT INTO rate_card_steps ${sql(chunk)}
-      ON CONFLICT (carrier_id, zone_code, shipment_type, weight_kg) DO NOTHING
+      ON CONFLICT (carrier_id, zone_code, shipment_type, weight_kg)
+      DO UPDATE SET price_inr = EXCLUDED.price_inr
     `;
     process.stdout.write(`\r  rate_card_steps: ${Math.min(i + BATCH, rows.length)}/${rows.length}`);
   }
@@ -59,7 +59,9 @@ async function upsertBands(rows: { carrier_id: string; zone_code: string; shipme
     const chunk = rows.slice(i, i + BATCH);
     await sql`
       INSERT INTO rate_card_bands ${sql(chunk)}
-      ON CONFLICT (carrier_id, zone_code, shipment_type, weight_min_kg) DO NOTHING
+      ON CONFLICT (carrier_id, zone_code, shipment_type, weight_min_kg)
+      DO UPDATE SET price_per_kg = EXCLUDED.price_per_kg,
+                    base_price_inr = EXCLUDED.base_price_inr
     `;
     process.stdout.write(`\r  rate_card_bands: ${Math.min(i + BATCH, rows.length)}/${rows.length}`);
   }

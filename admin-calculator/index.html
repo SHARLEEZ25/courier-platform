@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uniex — Admin Rate Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .step-connector {
+      border-left: 2px dashed #cbd5e1;
+      margin-left: 11px;
+      height: 20px;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    input[type=number]::-webkit-inner-spin-button {
+      opacity: 0.5;
+    }
+
+    .breakdown-row td {
+      padding: 6px 10px;
+    }
+
+    .breakdown-row:last-child td {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen" x-data="calc()" x-cloak>
+
+  <!-- Header -->
+  <header class="bg-slate-900 text-white px-6 py-4 shadow-lg">
+    <div class="max-w-5xl mx-auto flex items-center gap-3">
+      <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center font-bold text-sm">U</div>
+      <div>
+        <h1 class="font-semibold text-base leading-none">Uniex Courier</h1>
+        <p class="text-slate-400 text-xs mt-0.5">Admin Rate Calculator</p>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <span class="text-xs text-slate-400">API:</span>
+        <input x-model="apiBase" type="text" placeholder="https://your-backend.onrender.com"
+          class="bg-slate-800 text-slate-200 text-xs px-3 py-1.5 rounded border border-slate-700 w-72 focus:outline-none focus:border-blue-500" />
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8 space-y-6">
+
+    <!-- ── Step 1: Shipment Details ──────────────────────────────────────── -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="bg-slate-800 text-white px-5 py-3 flex items-center gap-2">
+        <span
+          class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+        <h2 class="font-semibold text-sm">Shipment Details</h2>
+      </div>
+      <div class="p-5">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <!-- Weight -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Weight (kg)</label>
+            <input x-model.number="form.weight" type="number" min="0.1" step="0.1" placeholder="e.g. 5"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <!-- Country -->
+          <div class="md:col-span-2">
+            <label class="block text-xs font-medium text-slate-500 mb-1">Destination Country</label>
+            <select x-model="form.country"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="">— Select country —</option>
+              <template x-for="c in countries" :key="c">
+                <option :value="c" x-text="c"></option>
+              </template>
+            </select>
+          </div>
+          <!-- Carrier -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Carrier</label>
+            <select x-model="form.carrier"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="">— Select —</option>
+              <option value="dhl">DHL Express</option>
+              <option value="fedex">FedEx International</option>
+              <option value="ups">UPS Worldwide</option>
+            </select>
+          </div>
+          <!-- Shipment Type -->
+          <div class="md:col-span-2">
+            <label class="block text-xs font-medium text-slate-500 mb-1">Shipment Type</label>
+            <div class="flex gap-3">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" x-model="form.shipmentType" value="package" class="accent-blue-500" />
+                <span class="text-sm">Package</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" x-model="form.shipmentType" value="document" class="accent-blue-500" />
+                <span class="text-sm">Document</span>
+              </label>
+            </div>
+          </div>
+          <!-- Fetch button -->
+          <div class="md:col-span-2 flex items-end">
+            <button @click="fetchBaseRate()" :disabled="!canFetch || loading"
+              class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold text-sm py-2 px-4 rounded-lg transition-colors">
+              <span x-show="!loading">Fetch Base Rate from DB</span>
+              <span x-show="loading" class="flex items-center justify-center gap-2">
+                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Fetching...
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div x-show="error" x-transition
+          class="mt-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg" x-text="error"></div>
+
+        <!-- Base rate result -->
+        <div x-show="baseResult" x-transition class="mt-4 fade-in">
+          <div class="bg-slate-50 border border-slate-200 rounded-lg px-5 py-4 flex flex-wrap gap-6 items-center">
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wide">Base Rate (DB)</p>
+              <p class="text-2xl font-bold text-slate-900 mt-0.5">₹<span x-text="fmt(baseResult?.base_rate_inr)"></span>
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wide">Chargeable Weight</p>
+              <p class="text-lg font-semibold text-slate-700 mt-0.5"><span x-text="baseResult?.chargeable_kg"></span> kg
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wide">Zone</p>
+              <p class="text-lg font-semibold text-slate-700 mt-0.5" x-text="baseResult?.zone"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wide">Carrier</p>
+              <p class="text-lg font-semibold text-slate-700 mt-0.5" x-text="carrierLabel(baseResult?.carrier)"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wide">Shipment Type</p>
+              <p class="text-sm font-medium text-slate-600 mt-0.5 capitalize" x-text="baseResult?.shipment_type"></p>
+            </div>
+            <div x-show="baseResult?.shipment_type !== form.shipmentType"
+              class="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded">
+              ⚠ Heavy document — priced as package
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Step 2: Surcharges ────────────────────────────────────────────── -->
+    <div x-show="baseResult" x-transition
+      class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in">
+      <div class="bg-slate-800 text-white px-5 py-3 flex items-center gap-2">
+        <span
+          class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+        <h2 class="font-semibold text-sm">Surcharges &amp; Fees</h2>
+        <span class="ml-2 text-slate-400 text-xs">(all optional — leave blank to skip)</span>
+      </div>
+      <div class="p-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+          <!-- Margin -->
+          <div class="relative">
+            <label class="block text-xs font-medium text-slate-500 mb-1">Margin (%)</label>
+            <div class="relative">
+              <input x-model.number="surcharges.marginPct" type="number" min="0" max="200" step="0.1"
+                placeholder="e.g. 20"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8" />
+              <span class="absolute right-3 top-2.5 text-slate-400 text-sm">%</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Applied on base rate first</p>
+          </div>
+
+          <!-- Fuel Surcharge -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Fuel Surcharge (%)</label>
+            <div class="relative">
+              <input x-model.number="surcharges.fuelPct" type="number" min="0" max="200" step="0.1"
+                placeholder="e.g. 29.5"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8" />
+              <span class="absolute right-3 top-2.5 text-slate-400 text-sm">%</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Applied after margin</p>
+          </div>
+
+          <!-- Demand Surcharge -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Demand Surcharge (₹/kg)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
+              <input x-model.number="surcharges.demandPerKg" type="number" min="0" step="1" placeholder="e.g. 50"
+                class="w-full border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <p class="text-xs text-slate-400 mt-1">× chargeable kg = <span
+                x-text="surcharges.demandPerKg && baseResult ? '₹' + fmt(surcharges.demandPerKg * baseResult.chargeable_kg) : '—'"></span>
+            </p>
+          </div>
+
+          <!-- Remote Charge -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Remote Area Charge (₹/shipment)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
+              <input x-model.number="surcharges.remoteFlat" type="number" min="0" step="1" placeholder="e.g. 3150"
+                class="w-full border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Flat fee per shipment</p>
+          </div>
+
+          <!-- GST -->
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">GST (%)</label>
+            <div class="relative">
+              <input x-model.number="surcharges.gstPct" type="number" min="0" max="100" step="0.1" placeholder="e.g. 18"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8" />
+              <span class="absolute right-3 top-2.5 text-slate-400 text-sm">%</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Applied on final subtotal</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Step 3: Final Breakdown ───────────────────────────────────────── -->
+    <div x-show="baseResult" x-transition
+      class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in">
+      <div class="bg-slate-800 text-white px-5 py-3 flex items-center gap-2">
+        <span
+          class="w-6 h-6 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+        <h2 class="font-semibold text-sm">Price Breakdown</h2>
+        <span class="ml-auto text-xs text-slate-400"
+          x-text="form.country + ' · ' + carrierLabel(form.carrier) + ' · ' + baseResult?.chargeable_kg + ' kg'"></span>
+      </div>
+      <div class="p-5">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs text-slate-400 uppercase border-b border-slate-100">
+              <th class="text-left px-2.5 py-2 font-medium">Component</th>
+              <th class="text-right px-2.5 py-2 font-medium">Calculation</th>
+              <th class="text-right px-2.5 py-2 font-medium">Amount (₹)</th>
+              <th class="text-right px-2.5 py-2 font-medium">Running Total (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="row in breakdown" :key="row.label">
+              <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors"
+                :class="row.isTotal ? 'bg-blue-50' : ''">
+                <td class="px-2.5 py-2.5"
+                  :class="row.isTotal ? 'font-bold text-slate-800 text-base' : 'text-slate-700'">
+                  <span x-text="row.label"></span>
+                  <span x-show="row.badge" class="ml-2 text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded"
+                    x-text="row.badge"></span>
+                </td>
+                <td class="px-2.5 py-2.5 text-right text-slate-500 text-xs" x-text="row.calc || '—'"></td>
+                <td class="px-2.5 py-2.5 text-right"
+                  :class="row.amount > 0 ? 'text-slate-700' : row.amount < 0 ? 'text-green-600' : 'text-slate-400'">
+                  <span x-show="row.amount > 0">+</span><span
+                    x-text="row.amount !== null ? '₹' + fmt(row.amount) : '—'"></span>
+                </td>
+                <td class="px-2.5 py-2.5 text-right font-semibold"
+                  :class="row.isTotal ? 'text-blue-700 text-base' : 'text-slate-800'">
+                  ₹<span x-text="fmt(row.running)"></span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+
+        <!-- Summary pill -->
+        <div
+          class="mt-5 flex flex-wrap gap-4 items-center justify-between bg-slate-50 rounded-lg px-5 py-4 border border-slate-200">
+          <div class="text-sm text-slate-500">
+            <span class="font-medium text-slate-700">Customer pays:</span>
+            <span class="ml-2 text-2xl font-bold text-blue-700">₹<span x-text="fmt(calc.total)"></span></span>
+            <span class="ml-1 text-xs text-slate-400">(incl. GST)</span>
+          </div>
+          <div class="flex gap-6 text-sm text-slate-500">
+            <span>Subtotal: <strong class="text-slate-700">₹<span x-text="fmt(calc.preGst)"></span></strong></span>
+            <span>GST: <strong class="text-slate-700">₹<span x-text="fmt(calc.gstAmt)"></span></strong></span>
+          </div>
+          <button @click="resetAll()"
+            class="text-xs text-slate-400 hover:text-red-500 underline transition-colors">Reset &amp; start
+            over</button>
+        </div>
+
+        <!-- Incomplete notice -->
+        <div x-show="hasSkippedFields"
+          class="mt-3 text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded px-3 py-2">
+          ℹ Some surcharge fields are empty — calculation shown with those fields treated as zero.
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    function calc() {
+      return {
+        apiBase: '',
+
+        form: {
+          weight: null,
+          country: '',
+          carrier: '',
+          shipmentType: 'package',
+        },
+
+        surcharges: {
+          marginPct: null,
+          fuelPct: null,
+          demandPerKg: null,
+          remoteFlat: null,
+          gstPct: null,
+        },
+
+        loading: false,
+        error: '',
+        baseResult: null,
+
+        // ── Country list (all countries served by DHL, FedEx, or UPS from India) ──
+        countries: [
+          'Afghanistan', 'Albania', 'Algeria', 'Angola', 'Argentina', 'Armenia', 'Australia',
+          'Austria', 'Azerbaijan', 'Bahrain', 'Bangladesh', 'Belarus', 'Belgium', 'Bhutan',
+          'Bolivia', 'Bosnia', 'Brazil', 'Brunei', 'Bulgaria', 'Cambodia', 'Cameroon',
+          'Canada', 'Chile', 'China', 'Colombia', 'Costa Rica', 'Croatia', 'Cyprus',
+          'Czech Republic', 'Denmark', 'Ecuador', 'Egypt', 'Estonia', 'Ethiopia',
+          'Finland', 'France', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Guatemala',
+          'Hong Kong', 'Hungary', 'Iceland', 'Indonesia', 'Iran', 'Iraq', 'Ireland',
+          'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya',
+          'Kuwait', 'Laos', 'Latvia', 'Lebanon', 'Libya', 'Lithuania', 'Luxembourg',
+          'Macau', 'Malaysia', 'Maldives', 'Malta', 'Mauritius', 'Mexico', 'Moldova',
+          'Montenegro', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nepal',
+          'Netherlands', 'New Caledonia', 'New Zealand', 'Nigeria', 'Norway', 'Oman',
+          'Pakistan', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines',
+          'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Saudi Arabia', 'Senegal',
+          'Serbia', 'Singapore', 'Slovakia', 'Slovenia', 'South Africa', 'South Korea',
+          'Spain', 'Sri Lanka', 'Sudan', 'Sweden', 'Switzerland', 'Syria', 'Taiwan',
+          'Tanzania', 'Thailand', 'Trinidad and Tobago', 'Turkey', 'UAE', 'Uganda',
+          'UK', 'Ukraine', 'Uruguay', 'USA', 'Uzbekistan', 'Venezuela', 'Vietnam',
+          'Yemen', 'Zambia', 'Zimbabwe',
+        ],
+
+        get canFetch() {
+          return this.form.weight > 0 && this.form.country && this.form.carrier && this.apiBase.trim();
+        },
+
+        async fetchBaseRate() {
+          this.loading = true;
+          this.error = '';
+          this.baseResult = null;
+          try {
+            const res = await fetch(`${this.apiBase.trim()}/api/admin/base-rate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                weight_kg: this.form.weight,
+                country: this.form.country,
+                carrier: this.form.carrier,
+                shipment_type: this.form.shipmentType,
+              }),
+            });
+            const data = await res.json();
+            if (!data.ok) {
+              this.error = data.error || 'Unknown error from server.';
+            } else {
+              this.baseResult = data;
+            }
+          } catch (e) {
+            this.error = 'Could not reach the server. Check the API URL in the header and make sure the backend is running.';
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        get calc() {
+          if (!this.baseResult) return { preGst: 0, gstAmt: 0, total: 0 };
+
+          const base = this.baseResult.base_rate_inr;
+          const wKg = this.baseResult.chargeable_kg;
+
+          const mPct = this.surcharges.marginPct ?? 0;
+          const fPct = this.surcharges.fuelPct ?? 0;
+          const dPkg = this.surcharges.demandPerKg ?? 0;
+          const remote = this.surcharges.remoteFlat ?? 0;
+          const gPct = this.surcharges.gstPct ?? 0;
+
+          const marginAmt = r2(base * mPct / 100);
+          const afterMargin = r2(base + marginAmt);
+
+          const fuelAmt = r2(afterMargin * fPct / 100);
+          const afterFuel = r2(afterMargin + fuelAmt);
+
+          const demandAmt = r2(dPkg * wKg);
+          const afterDemand = r2(afterFuel + demandAmt);
+
+          const afterRemote = r2(afterDemand + remote);
+
+          const gstAmt = r2(afterRemote * gPct / 100);
+          const total = r2(afterRemote + gstAmt);
+
+          return {
+            base, marginAmt, afterMargin,
+            fuelAmt, afterFuel,
+            demandAmt, afterDemand,
+            remote, afterRemote,
+            gstAmt,
+            preGst: afterRemote,
+            total,
+          };
+        },
+
+        get breakdown() {
+          if (!this.baseResult) return [];
+          const c = this.calc;
+          const wKg = this.baseResult.chargeable_kg;
+          const rows = [];
+
+          rows.push({
+            label: 'Base Rate (from DB)',
+            calc: `Zone ${this.baseResult.zone} · ${wKg} kg`,
+            amount: null,
+            running: c.base,
+            badge: null, isTotal: false,
+          });
+
+          if (this.surcharges.marginPct != null && this.surcharges.marginPct !== '') {
+            rows.push({
+              label: 'Margin',
+              calc: `₹${fmt(c.base)} × ${this.surcharges.marginPct}%`,
+              amount: c.marginAmt,
+              running: c.afterMargin,
+              badge: null, isTotal: false,
+            });
+          }
+
+          if (this.surcharges.fuelPct != null && this.surcharges.fuelPct !== '') {
+            rows.push({
+              label: 'Fuel Surcharge (FSC)',
+              calc: `₹${fmt(c.afterMargin)} × ${this.surcharges.fuelPct}%`,
+              amount: c.fuelAmt,
+              running: c.afterFuel,
+              badge: null, isTotal: false,
+            });
+          }
+
+          if (this.surcharges.demandPerKg != null && this.surcharges.demandPerKg !== '') {
+            rows.push({
+              label: 'Demand Surcharge',
+              calc: `₹${this.surcharges.demandPerKg}/kg × ${wKg} kg`,
+              amount: c.demandAmt,
+              running: c.afterDemand,
+              badge: null, isTotal: false,
+            });
+          }
+
+          if (this.surcharges.remoteFlat != null && this.surcharges.remoteFlat !== '') {
+            rows.push({
+              label: 'Remote Area Charge',
+              calc: 'Flat per shipment',
+              amount: c.remote,
+              running: c.afterRemote,
+              badge: null, isTotal: false,
+            });
+          }
+
+          rows.push({
+            label: 'Subtotal (pre-GST)',
+            calc: null,
+            amount: null,
+            running: c.preGst,
+            badge: null, isTotal: false,
+          });
+
+          if (this.surcharges.gstPct != null && this.surcharges.gstPct !== '') {
+            rows.push({
+              label: 'GST',
+              calc: `₹${fmt(c.preGst)} × ${this.surcharges.gstPct}%`,
+              amount: c.gstAmt,
+              running: c.total,
+              badge: null, isTotal: false,
+            });
+          }
+
+          rows.push({
+            label: 'TOTAL',
+            calc: null,
+            amount: null,
+            running: c.total,
+            badge: null, isTotal: true,
+          });
+
+          return rows;
+        },
+
+        get hasSkippedFields() {
+          const s = this.surcharges;
+          return [s.marginPct, s.fuelPct, s.demandPerKg, s.remoteFlat, s.gstPct]
+            .some(v => v === null || v === '');
+        },
+
+        carrierLabel(slug) {
+          return { dhl: 'DHL Express', fedex: 'FedEx International', ups: 'UPS Worldwide' }[slug] || slug || '—';
+        },
+
+        fmt(n) { return fmt(n); },
+
+        resetAll() {
+          this.baseResult = null;
+          this.error = '';
+          this.form.weight = null;
+          this.form.country = '';
+          this.form.carrier = '';
+          this.form.shipmentType = 'package';
+          this.surcharges = { marginPct: null, fuelPct: null, demandPerKg: null, remoteFlat: null, gstPct: null };
+        },
+      };
+    }
+
+    function r2(n) { return Math.round(n * 100) / 100; }
+    function fmt(n) {
+      if (n == null || isNaN(n)) return '0.00';
+      return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+  </script>
+
+  <!-- Alpine.js — loaded last so x-data is ready -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+
+</html>

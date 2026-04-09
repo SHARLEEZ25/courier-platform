@@ -1,5 +1,5 @@
 # Uniex — Project Status
-**Last updated:** 3 April 2026
+**Last updated:** 9 April 2026
 **Platform:** uniex-refresh-glow-2.onrender.com (frontend) · uniex-refresh-glow-1.onrender.com (backend)
 
 ---
@@ -24,11 +24,11 @@
 | Feature | Notes |
 |---|---|
 | Firebase Auth (login / signup) | Token verified on backend via firebase-admin |
-| Rate calculator | Full 2026 PDF spec — DHL, FedEx, UPS. Pipeline: base → discount → margin → FSC → demand → carrier extras → GST |
+| Rate calculator | Full 2026 PDF spec — DHL, FedEx, UPS. Pipeline: base → discount → margin → FSC → demand → carrier extras → GST. Formula audited and verified (9 Apr 2026). |
 | DHL premium delivery windows | Standard / 12pm / 9am — customer selects at quote |
 | UPS fixed charges | Formal clearance, DDP, signature, US inbound — customer selects at quote |
 | UPS 70kg block | System excludes UPS from quotes above 70kg |
-| Surcharge config table | Margin %, demand, peak, surge all DB-configurable per carrier |
+| Surcharge config table | Margin %, demand, peak, surge all DB-configurable per carrier. Cache TTL reduced to 5 min (was 1 hr) so admin toggles reflect quickly. FSC cache stays at 1 hr. |
 | Booking flow | Multi-step form, server-side price recalculation, full pricing snapshot locked to DB |
 | Membership plans page | Silver ₹299/yr · Gold ₹1,499/yr — live from DB |
 | Tracking page UI + AfterShip integration | Timeline view, status badges — UI complete. AfterShip service, webhook, and assign-tracking endpoint all built and tested. Awaiting Render env vars + AfterShip dashboard webhook config to go live. |

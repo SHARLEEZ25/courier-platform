@@ -9,7 +9,12 @@
       "Bash(cmd /c \"taskkill /IM node.exe /F\")",
       "Bash(cmd /c \"netstat -ano | findstr :3001\")",
       "mcp__Neon__list_projects",
-      "mcp__Neon__run_sql_transaction"
+      "mcp__Neon__run_sql_transaction",
+      "WebFetch(domain:support.aftership.com)",
+      "WebFetch(domain:www.shiprocket.in)",
+      "WebFetch(domain:support.shiprocket.in)",
+      "mcp__Neon__get_connection_string",
+      "Bash(npx tsx:*)"
     ]
   }
 }

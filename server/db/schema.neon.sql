@@ -68,8 +68,10 @@ CREATE TABLE IF NOT EXISTS rate_card_slabs (
 
 -- ============================================================
 -- RATE CARD STEPS  (exact price per weight breakpoint)
--- band_type = 'multiplicative' → price = weight × price_per_kg  (UPS)
--- band_type = 'additive'       → price = base + (weight - min) × ppkg (DHL)
+-- band_type = 'multiplicative' → price = weight × price_per_kg  (DHL + UPS)
+--   DHL PDF: "Multiplier rate per 1 KG from 30.1 KG" — confirmed multiplicative.
+--   Rate engine clamps to max(last_step_price, band_price) to prevent crossover underpricing.
+-- band_type = 'additive'       → price = base_price_inr + (weight - weight_min_kg) × price_per_kg
 -- (rows populated by npm run db:seed)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS rate_card_steps (

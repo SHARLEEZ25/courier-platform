@@ -29,14 +29,15 @@ async function withCache<T>(key: string, ttlMs: number, fetch: () => Promise<T>)
   return fetch().then(v => cacheSet(key, v, ttlMs));
 }
 
-const TTL_1H  = 60 * 60 * 1000;
-const TTL_30M = 30 * 60 * 1000;
+const TTL_1H   = 60 * 60 * 1000;
+const TTL_30M  = 30 * 60 * 1000;
+const TTL_5MIN =  5 * 60 * 1000; // surcharge toggles — admin may flip in real-time
 
 type ZoneCacheRow      = { carrier_id: string; zone_code: string };
 type FscCacheRow       = { carrier_id: string; fsc_percent: number };
 type SurchargeRow      = { carrier_id: string; key: string; value_num: string | null; value_bool: boolean | null };
-type StepCacheRow      = { carrier_id: string; zone_code: string; price_inr: number };
-type BandCacheRow      = { carrier_id: string; zone_code: string; price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number };
+type StepCacheRow      = { carrier_id: string; zone_code: string; shipment_type: string; price_inr: number };
+type BandCacheRow      = { carrier_id: string; zone_code: string; shipment_type: string; price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number };
 
 const CARRIER_NAMES: Record<CarrierSlug, string> = {
   dhl: "DHL Express",
@@ -106,11 +107,20 @@ function parseSurchargeConfig(
 export async function calculateRates(
   input: RateEngineInput
 ): Promise<RateResult[]> {
+  // DHL hard limits from PDF
+  if (input.carrier === 'dhl' || !input.carrier) {
+    if (input.weightKg > 3000) {
+      if (input.carrier === 'dhl') return [];
+      // else: DHL simply won't appear in all-carrier results
+    }
+    if (input.dims && input.dims.l > 300) {
+      if (input.carrier === 'dhl') return [];
+    }
+  }
+
   // UPS hard limit from PDF
   if (input.carrier === 'ups' || !input.carrier) {
     if (input.weightKg > 70) {
-      // If specifically requesting UPS, return empty (caller shows error).
-      // If requesting all carriers, UPS simply won't appear.
       if (input.carrier === 'ups') return [];
     }
   }
@@ -126,8 +136,8 @@ export async function calculateRates(
   const fscKey       = `fsc:${today}`;
   const discountKey  = `discount:${input.itemType}`;
   const surchargeKey = `surcharge_cfg:all`;
-  const stepKey      = `steps:${input.shipmentType}:${chargeable}`;
-  const bandKey      = `bands:${input.shipmentType}:${chargeable}`;
+  const stepKey      = `steps:${chargeable}`;
+  const bandKey      = `bands:${chargeable}`;
 
   // ── Single wave: all 7 queries in parallel ────────────────────────────────
   const start = Date.now();
@@ -178,7 +188,7 @@ export async function calculateRates(
         `.then(rows => rows[0] ?? null)
       : Promise.resolve(null),
 
-    withCache<SurchargeRow[]>(surchargeKey, TTL_1H, () =>
+    withCache<SurchargeRow[]>(surchargeKey, TTL_5MIN, () =>
       sql<SurchargeRow[]>`
         SELECT carrier_id, key, value_num, value_bool
         FROM surcharge_config
@@ -188,10 +198,9 @@ export async function calculateRates(
 
     withCache<StepCacheRow[]>(stepKey, TTL_30M, () =>
       sql<StepCacheRow[]>`
-        SELECT carrier_id, zone_code, price_inr
+        SELECT carrier_id, zone_code, shipment_type, price_inr
         FROM rate_card_steps
         WHERE carrier_id = ANY(${allCarriers}::text[])
-          AND shipment_type = ${input.shipmentType}
           AND weight_kg = ${chargeable}
           AND (effective_to IS NULL OR effective_to >= ${today}::date)
       `
@@ -199,10 +208,9 @@ export async function calculateRates(
 
     withCache<BandCacheRow[]>(bandKey, TTL_30M, () =>
       sql<BandCacheRow[]>`
-        SELECT carrier_id, zone_code, price_per_kg, base_price_inr, band_type, weight_min_kg
+        SELECT carrier_id, zone_code, shipment_type, price_per_kg, base_price_inr, band_type, weight_min_kg
         FROM rate_card_bands
         WHERE carrier_id = ANY(${allCarriers}::text[])
-          AND shipment_type = ${input.shipmentType}
           AND weight_min_kg <= ${chargeable}
           AND (weight_max_kg IS NULL OR weight_max_kg >= ${chargeable})
           AND (effective_to IS NULL OR effective_to >= ${today}::date)
@@ -241,20 +249,22 @@ export async function calculateRates(
   const activeCarriers = requestedCarriers.filter(c => {
     if (!zoneMap.has(c)) return false;
     if (c === 'ups' && input.weightKg > 70) return false;
+    if (c === 'dhl' && input.weightKg > 3000) return false;
+    if (c === 'dhl' && input.dims && input.dims.l > 300) return false;
     return true;
   });
   if (activeCarriers.length === 0) return [];
 
-  const pairKey = (c: string, z: string) => `${c}:${z}`;
+  const pairKey = (c: string, z: string, t: string) => `${c}:${z}:${t}`;
   const stepLookup = new Map<string, number>();
   for (const row of stepRows) {
-    const k = pairKey(row.carrier_id, row.zone_code);
+    const k = pairKey(row.carrier_id, row.zone_code, row.shipment_type);
     if (!stepLookup.has(k)) stepLookup.set(k, Number(row.price_inr));
   }
 
   const bandLookup = new Map<string, BandCacheRow>();
   for (const row of bandRows) {
-    const k = pairKey(row.carrier_id, row.zone_code);
+    const k = pairKey(row.carrier_id, row.zone_code, row.shipment_type);
     if (!bandLookup.has(k)) bandLookup.set(k, row);
   }
 
@@ -263,8 +273,21 @@ export async function calculateRates(
 
   for (const carrier of activeCarriers) {
     const zone = zoneMap.get(carrier)!;
-    const k = pairKey(carrier, zone);
     const cfg = cfgMap[carrier] ?? {};
+
+    // DHL: declared 'document' above 2.0 kg falls to the package table (Table B).
+    // UPS: document rate table only covers 0.5–5.0 kg (per UPS-2026.pdf pages 1 & 3).
+    //      Above 5.0 kg, use package rates.
+    // FedEx: Pak (document) table only covers 0.5–2.5 kg (per FDX EXPORT-2026.pdf).
+    //        Above 2.5 kg, use package rates.
+    const effectiveType: 'document' | 'package' =
+      (carrier === 'dhl'   && input.shipmentType === 'document' && chargeable > 2.0) ||
+      (carrier === 'ups'   && input.shipmentType === 'document' && chargeable > 5.0) ||
+      (carrier === 'fedex' && input.shipmentType === 'document' && chargeable > 2.5)
+        ? 'package'
+        : input.shipmentType;
+
+    const k = pairKey(carrier, zone, effectiveType);
 
     let priceInr: number | null = null;
     if (stepLookup.has(k)) {
@@ -274,10 +297,16 @@ export async function calculateRates(
       const perKg = Number(band.price_per_kg);
       const base  = Number(band.base_price_inr);
       const wMin  = Number(band.weight_min_kg);
-      priceInr =
+      const rawBand =
         band.band_type === "additive"
           ? base + (chargeable - wMin) * perKg
           : chargeable * perKg;
+      // Clamp: multiplicative bands can dip below the last step price at the
+      // crossover point (e.g. DHL 30.1–33.9 kg). base_price_inr holds the
+      // 30 kg (DHL) / 20 kg (UPS) step price as the minimum floor.
+      priceInr = band.band_type === "multiplicative"
+        ? Math.max(rawBand, base)
+        : rawBand;
     }
 
     if (priceInr === null) continue;
@@ -324,8 +353,8 @@ export async function calculateRates(
       if (surgeActive) {
         upsFixedInr += round2(Number(cfg['surge_amount'] ?? 0));
       }
-      // US inbound surcharge — auto
-      if (input.destination === 'US') {
+      // US inbound surcharge — auto (PDF: ₹230 per shipment extra for USA)
+      if (input.destination === 'USA') {
         usInboundInr = UPS_US_INBOUND;
       }
       // Customer-selectable options

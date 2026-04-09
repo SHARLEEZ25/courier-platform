@@ -1,11 +1,13 @@
 import { z } from "zod";
-import { CARRIERS, COUNTRIES, ITEM_TYPES } from "./rate-request.schema.js";
+import { CARRIERS, COUNTRIES, ITEM_TYPES, DimensionsSchema } from "./rate-request.schema.js";
 
 export const BookingCreateSchema = z.object({
   carrierId: z.enum(CARRIERS),
   originCountry: z.enum(COUNTRIES),
   destinationCountry: z.enum(COUNTRIES),
-  actualWeightKg: z.number().positive().max(500),
+  actualWeightKg: z.number().positive().max(3000, "Total weight cannot exceed 3,000 kg (DHL limit)"),
+  perPieceWeightKg: z.number().positive().max(1000, "Per-piece weight cannot exceed 1,000 kg (DHL limit)").optional(),
+  dims: DimensionsSchema.optional(),
   shipmentType: z.enum(["document", "package"]).default("package"),
   itemTypeId: z.enum(ITEM_TYPES),
   packaging: z.enum(["none", "standard", "premium"]).default("none"),

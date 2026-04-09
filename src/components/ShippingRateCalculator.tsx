@@ -114,7 +114,9 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!destination) newErrors.destination = "Please select destination";
-    if (!weight || parseFloat(weight) <= 0) newErrors.weight = "Invalid weight";
+    const w = parseFloat(weight);
+    if (!weight || w <= 0) newErrors.weight = "Invalid weight";
+    else if (w > 3000) newErrors.weight = "Total weight cannot exceed 3,000 kg (DHL limit)";
     if (!itemType) newErrors.itemType = "Select item type";
 
     setErrors(newErrors);

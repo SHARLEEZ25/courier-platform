@@ -5,6 +5,7 @@ import bookingsRoutes from "./bookings.routes.js";
 import trackingRoutes from "./tracking.routes.js";
 import membershipRoutes from "./membership.routes.js";
 import pincodeRoutes from "./pincode.routes.js";
+import adminRoutes from "./admin.routes.js";
 
 export function registerRoutes(app: Hono) {
   /**
@@ -37,4 +38,5 @@ export function registerRoutes(app: Hono) {
   app.route("/api/tracking", trackingRoutes);
   app.route("/api/membership", membershipRoutes);
   app.route("/api/pincode", pincodeRoutes);
+  app.route("/api/admin", adminRoutes);
 }

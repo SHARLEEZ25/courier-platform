@@ -25,9 +25,12 @@ export function chargeableWeight(
   dims?: Dimensions
 ): { chargeable: number; volumetric: number | null } {
   const volumetric = dims ? volumetricWeight(dims) : null;
-  const raw = volumetric !== null ? Math.max(actualKg, volumetric) : actualKg;
 
-  // Round up to nearest 0.5 kg
+  // Round actual weight first, then compare with volumetric
+  const roundedActual = Math.ceil(actualKg * 2) / 2;
+  const raw = volumetric !== null ? Math.max(roundedActual, volumetric) : roundedActual;
+
+  // Round chargeable (handles case where volumetric wins and is not on a 0.5 boundary)
   const chargeable = Math.ceil(raw * 2) / 2;
 
   return { chargeable, volumetric };

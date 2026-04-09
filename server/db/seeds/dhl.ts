@@ -223,17 +223,22 @@ function buildPkgSteps9_14(): StepRow[] {
   return rows;
 }
 
+// Price at exactly 30 kg per zone — used as base_price_inr floor for band rows.
+// Sourced from DHL_PKG_1_8[30.0] and DHL_PKG_9_14[30.0] above.
+// Rate engine clamps band price to max(weight × perKg, base_price_inr) to prevent
+// the multiplicative crossover dip that occurs between ~30.1–34 kg.
+const DHL_BASE_1_8  = [16008, 16495, 16109, 13160, 15526, 16834, 12353, 46887];
+const DHL_BASE_9_14 = [14976, 54403, 54305, 14885, 26902, 15059];
+
 function buildBands1_8(): BandRow[] {
   const rows: BandRow[] = [];
   const zones = ['1','2','3','4','5','6','7','8'];
   for (const band of DHL_BANDS_1_8) {
     zones.forEach((zone, i) => {
-      // base_price = price at 30kg for this zone
-      const base_price_inr = DHL_PKG_1_8[30.0]?.[i] ?? 0;
       rows.push({
         carrier_id: 'dhl', zone_code: zone, shipment_type: 'package',
         weight_min_kg: band.min, weight_max_kg: band.max,
-        price_per_kg: band.rates[i], base_price_inr, band_type: 'additive',
+        price_per_kg: band.rates[i], base_price_inr: DHL_BASE_1_8[i], band_type: 'multiplicative',
       });
     });
   }
@@ -245,11 +250,10 @@ function buildBands9_14(): BandRow[] {
   const zones = ['9','10','11','12','13','14'];
   for (const band of DHL_BANDS_9_14) {
     zones.forEach((zone, i) => {
-      const base_price_inr = DHL_PKG_9_14[30.0]?.[i] ?? 0;
       rows.push({
         carrier_id: 'dhl', zone_code: zone, shipment_type: 'package',
         weight_min_kg: band.min, weight_max_kg: band.max,
-        price_per_kg: band.rates[i], base_price_inr, band_type: 'additive',
+        price_per_kg: band.rates[i], base_price_inr: DHL_BASE_9_14[i], band_type: 'multiplicative',
       });
     });
   }
