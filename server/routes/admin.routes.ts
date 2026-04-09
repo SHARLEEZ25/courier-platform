@@ -4,9 +4,7 @@ import { sql } from "../config/db.js";
 
 const adminRoutes = new Hono();
 
-// Open CORS — this endpoint is called from a standalone HTML tool (unknown origin).
-// It only reads public rate card data; no auth or sensitive data is involved.
-adminRoutes.use("/*", cors({ origin: "*" }));
+
 
 /**
  * POST /api/admin/base-rate
