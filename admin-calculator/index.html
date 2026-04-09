@@ -61,18 +61,6 @@
             </select>
           </div>
 
-          <!-- Item Type -->
-          <div>
-            <label class="block text-xs font-medium text-slate-500 mb-1">Item Type / Service</label>
-            <select x-model="form.itemTypeId"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-              <option value="">— Standard —</option>
-              <template x-for="t in itemTypes" :key="t.item_type_id">
-                <option :value="t.item_type_id" x-text="t.display_name + (t.discount_pct > 0 ? ' (' + Math.round(t.discount_pct*100) + '% Off)' : '')"></option>
-              </template>
-            </select>
-          </div>
-
           <!-- Carrier -->
           <div>
             <label class="block text-xs font-medium text-slate-500 mb-1">Carrier</label>
@@ -505,9 +493,7 @@
       return {
         apiBase: 'https://uniex-refresh-glow-1.onrender.com',
 
-        form: { weight: null, country: '', carrier: '', shipmentType: 'package', itemTypeId: '' },
-
-        itemTypes: [],
+        form: { weight: null, country: '', carrier: '', shipmentType: 'package' },
 
         surcharges: {
           marginPct: null,
@@ -573,7 +559,6 @@
         ],
 
         init() {
-          this.fetchItemTypes();
           // Auto-load config whenever carrier changes
           this.$watch('form.carrier', (carrier) => {
             this.configLoaded = false;
@@ -589,14 +574,6 @@
               this.surcharges.upsUsInbound = (country === 'USA');
             }
           });
-        },
-
-        async fetchItemTypes() {
-          try {
-            const res = await fetch(`${this.apiBase.trim()}/api/admin/item-types`);
-            const data = await res.json();
-            if (data.ok) this.itemTypes = data.types;
-          } catch (e) { console.error("Failed to fetch item types", e); }
         },
 
         resetSurcharges() {
@@ -709,14 +686,6 @@
 
           // Base rate
           rows.push({ label: 'Base Rate (from DB)', calc: `Zone ${this.baseResult.zone} · ${kg} kg`, amount: null, running: r2(running), source: 'DB' });
-
-          // Item Discount
-          const selectedType = this.itemTypes.find(t => t.item_type_id === this.form.itemTypeId);
-          if (selectedType && selectedType.discount_pct > 0) {
-            const discAmt = r2(running * selectedType.discount_pct);
-            running = r2(running - discAmt);
-            rows.push({ label: `${selectedType.display_name} Discount`, calc: `-${Math.round(selectedType.discount_pct * 100)}% off base`, amount: -discAmt, running, source: 'DB' });
-          }
 
           // Margin
           const mPct = s.marginPct ?? 0;

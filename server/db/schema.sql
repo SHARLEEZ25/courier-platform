@@ -309,10 +309,10 @@ CREATE TABLE IF NOT EXISTS item_type_discounts (
 );
 
 INSERT INTO item_type_discounts (item_type_id, display_name, discount_pct, notes) VALUES
-  ('university', 'University Express',      0.5000, 'Save 50% on university documents'),
-  ('excess',     'Excess Baggage Express',  0.1000, 'Save 10% vs standard'),
-  ('docs',       'Documents & Parcels',     0.1500, 'Standard document discount'),
-  ('food',       'Food Products Express',   0.0500, 'Special rates for overseas students'),
+  ('university', 'University Express',      0.0000, 'University documents specialist'),
+  ('excess',     'Excess Baggage Express',  0.0000, 'Excess baggage handling'),
+  ('docs',       'Documents & Parcels',     0.0000, 'Standard documents and parcels'),
+  ('food',       'Food Products Express',   0.0000, 'Overseas food products specialist'),
   ('clothing',   'Clothing',                0.0000, NULL),
   ('medicine',   'Medicines',               0.0000, 'Prescription copy may be required'),
   ('jewellery',  'Jewellery',               0.0000, NULL),

@@ -164,11 +164,6 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight
                   <span className="text-4xl font-black text-brand-black tracking-tight">
                     ₹{Math.round(result.totalInr).toLocaleString("en-IN")}
                   </span>
-                  {result.discountPct > 0 && (
-                    <span className="ml-2 text-[11px] font-bold text-green-primary bg-green-50 px-2 py-0.5 rounded-full">
-                      {Math.round(result.discountPct * 100)}% off
-                    </span>
-                  )}
                 </div>
 
                 {/* Delivery — from carrier zone data (PDF-sourced, route-specific) */}
@@ -204,38 +199,8 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight
           })}
         </div>
 
-        {/* Bottom strip — discount-based savings if applicable, else item note */}
-        {savingsPct && marketAvg ? (
-          <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-primary/10 flex items-center justify-center shrink-0">
-                <Zap className="w-5 h-5 text-green-primary fill-green-primary" />
-              </div>
-              <div>
-                <p className="text-[14px] font-bold text-[#15803D] leading-tight">
-                  Ship smarter — pay up to {savingsPct}% less than standard market rates
-                </p>
-                <p className="text-[12px] text-slate-400 mt-0.5">
-                  Based on standard market rates for {origin} → {destination}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-8 shrink-0">
-              <div className="text-center">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Market Avg</p>
-                <p className="text-lg font-bold text-slate-400 line-through">
-                  ₹{Math.round(marketAvg).toLocaleString("en-IN")}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] font-bold text-green-primary uppercase tracking-widest mb-0.5">Uniex Price</p>
-                <p className="text-xl font-black text-brand-black">
-                  ₹{Math.round(cheapest.totalInr).toLocaleString("en-IN")}
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : ITEM_NOTE[itemType] ? (
+        {/* Bottom strip — show item note if applicable */}
+        {ITEM_NOTE[itemType] ? (
           <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl p-5 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-green-primary/10 flex items-center justify-center shrink-0">
               <Zap className="w-5 h-5 text-green-primary fill-green-primary" />
