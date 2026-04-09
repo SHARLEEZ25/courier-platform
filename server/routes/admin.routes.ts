@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { sql } from "../config/db.js";
 
 const adminRoutes = new Hono();
@@ -149,6 +148,91 @@ adminRoutes.post("/base-rate", async (c) => {
     carrier:        carrierSlug,
     country:        country.trim(),
     shipment_type:  effectiveType,
+  });
+});
+
+/**
+ * GET /api/admin/config/:carrier
+ *
+ * Returns the live surcharge config for a carrier — used by the admin calculator
+ * to auto-populate fields from DB instead of manual entry.
+ *
+ * Response includes:
+ *   - fsc_pct          : from fuel_surcharges (monthly)
+ *   - margin_pct       : from surcharge_config
+ *   - demand_active    : from surcharge_config
+ *   - demand_per_kg    : from surcharge_config
+ *   - peak_active/amount  : FedEx only, from surcharge_config
+ *   - surge_active/amount : UPS only, from surcharge_config
+ *   - PDF hardcoded amounts per carrier (for display in the calculator)
+ */
+adminRoutes.get("/config/:carrier", async (c) => {
+  const carrier = c.req.param("carrier");
+  if (!["dhl", "fedex", "ups"].includes(carrier)) {
+    return c.json({ ok: false, error: "carrier must be dhl, fedex, or ups" }, 400);
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+
+  // ── FSC from fuel_surcharges ────────────────────────────────────────────
+  const fscRows = await sql<{ fsc_percent: string }[]>`
+    SELECT fsc_percent FROM fuel_surcharges
+    WHERE carrier_id = ${carrier}
+      AND effective_from <= ${today}::date
+    ORDER BY effective_from DESC
+    LIMIT 1
+  `;
+  const fsc_pct = fscRows.length > 0 ? Number(fscRows[0].fsc_percent) : 0;
+
+  // ── surcharge_config keys ───────────────────────────────────────────────
+  const configRows = await sql<{ key: string; value_num: string | null; value_bool: boolean | null }[]>`
+    SELECT key, value_num, value_bool FROM surcharge_config
+    WHERE carrier_id = ${carrier}
+  `;
+  const cfg: Record<string, number | boolean> = {};
+  for (const row of configRows) {
+    cfg[row.key] = row.value_bool !== null ? row.value_bool : Number(row.value_num ?? 0);
+  }
+
+  // ── PDF-hardcoded amounts (per carrier) ────────────────────────────────
+  const pdf: Record<string, number> = {
+    gst_pct: 18,
+  };
+
+  if (carrier === "dhl") {
+    pdf.premium_1200_inr = 1000;
+    pdf.premium_900_inr  = 3000;
+  }
+
+  if (carrier === "ups") {
+    pdf.us_inbound_inr       = 230;
+    pdf.remote_per_kg_inr    = 57;
+    pdf.remote_min_inr       = 3150;
+    pdf.formal_clearance_inr = 3150;
+    pdf.ddp_inr              = 1050;
+    pdf.signature_inr        = 368;
+    pdf.girth_surcharge_inr  = 9450;
+  }
+
+  return c.json({
+    ok: true,
+    carrier,
+    fsc_pct,
+    margin_pct:    cfg.margin_pct    ?? 0,
+    demand_active: cfg.demand_active ?? false,
+    demand_per_kg: cfg.demand_per_kg ?? 0,
+    // FedEx only
+    ...(carrier === "fedex" && {
+      peak_active: cfg.peak_active ?? false,
+      peak_amount: cfg.peak_amount ?? 0,
+    }),
+    // UPS only
+    ...(carrier === "ups" && {
+      surge_active: cfg.surge_active ?? false,
+      surge_amount: cfg.surge_amount ?? 0,
+    }),
+    // PDF hardcoded amounts
+    ...pdf,
   });
 });
 
