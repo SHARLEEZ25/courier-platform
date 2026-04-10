@@ -13,7 +13,7 @@ export function useRates(input: RateRequest | null) {
     queryKey: ["rates", input],
     queryFn: () => api.post<RateResult[]>("/rates/calculate", input),
     enabled: !!input && !!input.destination && input.weight > 0 && !!input.itemType,
-    staleTime: 1000 * 60 * 5, // rates are fresh for 5 min
+    staleTime: 0, // always refetch — rates depend on live DB config
     retry: false,
   });
 }

@@ -34,8 +34,9 @@ Uniex is an **international courier aggregator** based in India. Customers visit
 ### Done & Working
 - Website (Home, About, Services, Contact pages)
 - Auth — Firebase Auth fully working (login, signup, token verification on backend)
-- Rate calculator — live quotes from DHL, FedEx, UPS with correct pricing pipeline:
-  base rate → item discount → margin → FSC → demand surcharge → carrier extras → GST
+- Rate calculator — live quotes from DHL, FedEx, UPS with pricing pipeline:
+  base rate → margin → FSC → demand surcharge → carrier extras → GST
+  (item discounts deferred — see Rate Engine gaps below)
 - Margin, demand surcharge, peak surcharge, surge fees all DB-configurable via `surcharge_config`
 - DHL premium delivery windows (9am / 12pm) — customer selects at quote
 - UPS fixed charges (formal clearance, DDP, signature, US inbound) — customer selects at quote
@@ -85,30 +86,67 @@ Uniex is an **international courier aggregator** based in India. Customers visit
 4. Email + WhatsApp notifications — after payment confirmed
 5. Admin / Ops panel — after all above are working
 
-### Rate Engine — Pricing Formula
-The confirmed formula (implemented in `server/services/rate-engine/index.ts`):
-1. `chargeable_kg = ceil(actual_kg × 2) / 2`
-2. `base_rate` — lookup from `rate_card_steps` or `rate_card_bands`
-3. Apply item type discount (e.g. university 50% off) → `discounted_base`
-4. `with_margin = discounted_base × (1 + margin_pct / 100)`
-5. `with_fuel = with_margin × (1 + fsc_pct / 100)`
-6. `+ demand_per_kg × chargeable_kg` (if `demand_active`)
-7. `+ carrier flat charges` (DHL premium windows / FedEx peak / UPS fixed options)
-8. `+ pickup_surcharge + packaging + insurance`
-9. `final = subtotal × 1.18` (GST)
+### Rate Engine — Actual Formula (as implemented, April 2026)
 
-### Rate Engine — Surcharge Config & Cache TTLs
-- `surcharge_config` stores per-carrier: margin %, demand surcharge toggle/amount, FedEx peak toggle/amount, UPS surge toggle/amount
-  - **Cache TTL: 5 minutes** — admin toggles (demand, peak, surge) reflect within 5 minutes
-- `fuel_surcharges` stores FSC % per carrier — updated monthly via Neon table editor
-  - **Cache TTL: 1 hour** — acceptable for monthly updates
-- Zone and rate card data cached for **30 minutes**
-- **Margin is currently 20% for all carriers** — client has not confirmed final percentages. Do not assume this is final.
-- FedEx IPF zones are currently identical to IP zones — needs updating when client's carrier account manager provides IPF-specific zone PDF
+**File:** `server/services/rate-engine/index.ts`
+
+```
+1. chargeable_kg = ceil(actual_kg × 2) / 2
+2. base_rate     — rate_card_steps (exact weight) OR rate_card_bands (heavy, per-kg)
+3. NO discount   — discountPct: 0, discountInr: 0 (hardcoded zero — see gap below)
+4. with_margin   = base_rate × (1 + margin_pct / 100)
+5. fsc_inr       = with_margin × (fsc_pct / 100)
+6. pre_gst       = with_margin + fsc_inr
+                   + demand_per_kg × chargeable_kg  (if demand_active)
+                   + carrier flat extras (see below)
+                   + pickup_surcharge + packaging_inr + insurance_inr
+7. gst_inr       = pre_gst × 0.18
+8. total         = round(pre_gst + gst_inr)
+```
+
+**Data sources (all fetched in a single parallel DB batch per request):**
+- `margin_pct` — `surcharge_config` table, per carrier · cache TTL 5 min
+- `fsc_pct` — `fuel_surcharges` table, per carrier · cache TTL 1 hour
+- `demand_active / demand_per_kg` — `surcharge_config` · cache TTL 5 min
+- Zone data — `carrier_zones` · cache TTL 30 min
+- Rate card — `rate_card_steps` / `rate_card_bands` · cache TTL 30 min
+- Pickup surcharge — `pickup_zones` · NOT cached (live per request)
+
+**Margin is currently 20% for all carriers** — client has not confirmed final percentages. Do not assume this is final.
+
+### Rate Engine — Implementation Gaps (known, intentional)
+
+These are NOT bugs. They are deferred until client confirms requirements.
+
+| Gap | Detail | Where to fix when ready |
+|-----|--------|------------------------|
+| **Item type discounts** | `item_type_discounts` table exists with 14 rows but is **never fetched or applied**. `discountPct` and `discountInr` are hardcoded to `0` in every result. The `GET /api/admin/item-types` endpoint exists. Waiting for client to confirm which types get discounts and at what %. | `server/services/rate-engine/index.ts` — add `item_type_discounts` to the parallel DB batch, apply discount between step 2 and 4 above |
+| **Volumetric weight (LBH dims)** | `weight-calc.ts` computes volumetric weight if `dims` are provided (divisor 5000). But dims are **optional** on the quote form — most customers don't enter them. When not provided, only actual_kg is used. The volumetric divisor (5000) has **not been confirmed** by carrier account managers. Do not change it until confirmed. | `server/services/rate-engine/weight-calc.ts` |
+| **Membership discount** | `user_memberships` table exists. Membership discount should stack on top of item type discount. Currently not applied anywhere in the rate engine. | Rate engine + auth middleware |
+| **FedEx IPF zones** | FedEx IPF zone rows exist in `carrier_zones` but are identical to IP zones. Client's carrier account manager needs to provide the IPF-specific zone PDF before these can be corrected. | `carrier_zones` table (Neon), no code change |
+
+### Rate Engine — Hard Limits & Carrier Rules (enforced in code)
+
+These are implemented and should not be removed without checking the carrier PDFs:
+
+- **DHL:** blocks if `weightKg > 3000` or `weightKg > 1000` or `dims.l > 300 cm`
+- **DHL documents:** declared 'document' above 2.0 kg chargeable → falls to package rate table
+- **UPS:** blocks if `weightKg > 70` (hard limit per PDF)
+- **UPS documents:** above 5.0 kg chargeable → falls to package rate table
+- **UPS girth rule:** if L + 2W + 2H > 300 cm → minimum 40 kg chargeable weight (forces band lookup at 40 kg)
+- **UPS girth oversize:** if girth > 400 cm → ₹9,450 flat oversize fee added
+- **UPS US inbound:** ₹230 auto-added for any `destination === 'USA'` — not customer-selectable
+- **FedEx documents:** above 2.5 kg chargeable → falls to package rate table
+- **Aramex:** in `carriers` table but no zone/rate data — will never appear in quotes
 
 ### Rate Engine — What's DB-Driven vs. Hardcoded
-- **DB-driven (admin-editable via Neon):** FSC %, margin %, demand surcharge, FedEx peak, UPS surge
-- **Hardcoded (change requires code deploy):** DHL premium window fees (₹1,000 / ₹3,000), UPS DDP (₹1,050), UPS formal clearance (₹3,150), UPS signature (₹368), UPS US inbound (₹230), UPS remote area (max ₹57/kg, ₹3,150 min)
+
+- **DB-driven (edit via Neon table editor):** FSC %, margin %, demand surcharge toggle/amount, FedEx peak toggle/amount, UPS surge toggle/amount
+- **Hardcoded (requires code deploy to change):** DHL premium windows (₹1,000 / ₹3,000), UPS formal clearance (₹3,150), UPS DDP (₹1,050), UPS signature (₹368), UPS US inbound (₹230), UPS remote area (₹57/kg, min ₹3,150), UPS oversize (₹9,450), GST (18%)
+
+### Rate Engine — Frontend Cache
+
+`src/hooks/useRates.ts` — `staleTime: 0` (always refetches on mount). Do not increase this without also adding a cache-bust mechanism on the admin side, or customers will see stale rates after DB config changes.
 
 ## Neon Database
 - Project: `unix` · ID: `falling-night-64411631` · Region: ap-southeast-1 (Singapore)
@@ -141,5 +179,5 @@ The confirmed formula (implemented in `server/services/rate-engine/index.ts`):
 - Volumetric weight divisor is 5000 (industry standard assumed) — not confirmed by carrier account managers yet
 - UPS max 70 kg per package — system blocks UPS quotes above this at engine level
 - `margin_inr` in bookings is internal — never display to customer
-- Membership discount stacks on top of item type discount (both applied before margin)
+- Membership discount stacks on top of item type discount (both applied before margin) — **neither is implemented yet**; both are deferred until client confirms
 - `tracking_events` has CASCADE DELETE from bookings — deleting a booking deletes all its events
