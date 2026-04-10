@@ -348,26 +348,33 @@ CREATE TABLE IF NOT EXISTS bookings (
                           CHECK (ups_delivery_type IN ('DDU', 'DDP')),
   ups_signature         BOOLEAN      NOT NULL DEFAULT false,
   ups_remote_area       BOOLEAN      NOT NULL DEFAULT false,  -- staff-flagged post-booking
-  -- Sender
-  sender_name           TEXT NOT NULL,
+  -- Sender (Shipper)
+  sender_company        TEXT NOT NULL,                          -- "Company / Name"
   sender_mobile         TEXT NOT NULL,
+  sender_telephone      TEXT NOT NULL DEFAULT '',               -- landline
   sender_email          TEXT,
+  sender_kyc            TEXT NOT NULL DEFAULT '',               -- KYC / document number
   pickup_pincode        CHAR(6) NOT NULL,
-  pickup_address        TEXT NOT NULL,
+  pickup_address_1      TEXT NOT NULL,
+  pickup_address_2      TEXT NOT NULL DEFAULT '',
   pickup_city           TEXT NOT NULL DEFAULT '',
   pickup_state          TEXT NOT NULL DEFAULT '',
   pickup_date           DATE NOT NULL,
   pickup_slot           TEXT NOT NULL,
-  -- Receiver
-  receiver_name         TEXT NOT NULL,
+  -- Receiver (Consignee)
+  receiver_company      TEXT NOT NULL,                          -- "Company / Name"
   receiver_mobile       TEXT NOT NULL,
+  receiver_telephone    TEXT NOT NULL DEFAULT '',               -- landline
   receiver_email        TEXT,
-  delivery_address      TEXT NOT NULL,
+  delivery_address_1    TEXT NOT NULL,
+  delivery_address_2    TEXT NOT NULL DEFAULT '',
   delivery_city         TEXT NOT NULL,
   delivery_state        TEXT NOT NULL,
   delivery_zip          TEXT NOT NULL,
   num_pieces            SMALLINT NOT NULL DEFAULT 1,
   contents_desc         TEXT,
+  shipper_reference     TEXT NOT NULL DEFAULT '',
+  special_instruction   TEXT NOT NULL DEFAULT '',
   -- Tracking
   tracking_number       TEXT,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),

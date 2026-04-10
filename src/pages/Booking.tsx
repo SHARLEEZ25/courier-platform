@@ -99,22 +99,34 @@ const Booking = () => {
   // All hooks must be declared before any conditional returns
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    senderName: "",
+    // Sender (Shipper)
+    senderCompany: "",
     senderMobile: "",
+    senderTelephone: "",
     senderEmail: "",
+    senderKyc: "",
     pickupPincode: routeState?.pickupPincode || "",
-    pickupAddress: "",
+    pickupAddress1: "",
+    pickupAddress2: "",
+    pickupCity: "",
+    pickupState: "",
     pickupDate: "",
     pickupSlot: "",
-    receiverName: "",
+    // Receiver (Consignee)
+    receiverCompany: "",
     receiverMobile: "",
+    receiverTelephone: "",
     receiverEmail: "",
-    deliveryAddress: "",
-    city: "",
-    state: "",
-    zipCode: "",
+    deliveryAddress1: "",
+    deliveryAddress2: "",
+    deliveryCity: "",
+    deliveryState: "",
+    deliveryZip: "",
+    // Services
     numPieces: "1",
-    contents: ""
+    contents: "",
+    shipperReference: "",
+    specialInstruction: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -216,9 +228,11 @@ const Booking = () => {
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
     const required = [
-      'senderName', 'senderMobile', 'pickupPincode', 'pickupAddress',
-      'pickupDate', 'pickupSlot', 'receiverName', 'receiverMobile',
-      'deliveryAddress', 'city', 'state', 'zipCode', 'numPieces', 'contents'
+      'senderCompany', 'senderMobile', 'pickupPincode', 'pickupAddress1',
+      'pickupCity', 'pickupState', 'pickupDate', 'pickupSlot',
+      'receiverCompany', 'receiverMobile',
+      'deliveryAddress1', 'deliveryCity', 'deliveryState', 'deliveryZip',
+      'numPieces', 'contents'
     ];
 
     required.forEach(field => {
@@ -235,12 +249,12 @@ const Booking = () => {
       newErrors.receiverMobile = "Enter a valid international number (e.g. +14155550100)";
     }
 
-    if (formData.deliveryAddress && formData.deliveryAddress.length < 5) {
-      newErrors.deliveryAddress = "Address must be at least 5 characters";
+    if (formData.deliveryAddress1 && formData.deliveryAddress1.length < 5) {
+      newErrors.deliveryAddress1 = "Address must be at least 5 characters";
     }
 
-    if (formData.pickupAddress && formData.pickupAddress.length < 5) {
-      newErrors.pickupAddress = "Address must be at least 5 characters";
+    if (formData.pickupAddress1 && formData.pickupAddress1.length < 5) {
+      newErrors.pickupAddress1 = "Address must be at least 5 characters";
     }
 
     if (formData.pickupDate) {
@@ -289,24 +303,31 @@ const Booking = () => {
       itemTypeId: toItemTypeSlug(state.itemType ?? "other"),
       packaging: state.packaging ?? "none",
       insurance: state.insurance ?? false,
-      senderName: formData.senderName,
+      senderCompany: formData.senderCompany,
       senderMobile: formData.senderMobile,
+      senderTelephone: formData.senderTelephone,
       senderEmail: formData.senderEmail,
+      senderKyc: formData.senderKyc,
       pickupPincode: formData.pickupPincode,
-      pickupAddress: formData.pickupAddress,
-      pickupCity: pincodeStatus.status === "found" ? pincodeStatus.city : (pincodeData?.city ?? ""),
-      pickupState: pincodeData?.state ?? "",
+      pickupAddress1: formData.pickupAddress1,
+      pickupAddress2: formData.pickupAddress2,
+      pickupCity: formData.pickupCity || (pincodeStatus.status === "found" ? pincodeStatus.city : (pincodeData?.city ?? "")),
+      pickupState: formData.pickupState || (pincodeData?.state ?? ""),
       pickupDate: formData.pickupDate,
       pickupSlot: formData.pickupSlot,
-      receiverName: formData.receiverName,
+      receiverCompany: formData.receiverCompany,
       receiverMobile: formData.receiverMobile,
+      receiverTelephone: formData.receiverTelephone,
       receiverEmail: formData.receiverEmail,
-      deliveryAddress: formData.deliveryAddress,
-      deliveryCity: formData.city,
-      deliveryState: formData.state,
-      deliveryZip: formData.zipCode,
+      deliveryAddress1: formData.deliveryAddress1,
+      deliveryAddress2: formData.deliveryAddress2,
+      deliveryCity: formData.deliveryCity,
+      deliveryState: formData.deliveryState,
+      deliveryZip: formData.deliveryZip,
       numPieces: parseInt(formData.numPieces, 10) || 1,
       contentsDesc: formData.contents || undefined,
+      shipperReference: formData.shipperReference,
+      specialInstruction: formData.specialInstruction,
     };
 
     createBooking(payload, {
@@ -367,46 +388,51 @@ const Booking = () => {
 
           {currentStep === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[800px] mx-auto">
-              {/* Card 1 — Sender details */}
+              {/* Card 1 — Shipper details */}
               <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="bg-green-50 p-2 rounded-lg text-green-primary"><User className="w-5 h-5" /></div>
-                  <h2 className="text-xl font-bold">1. Sender details</h2>
+                  <h2 className="text-xl font-bold">1. Shipper details</h2>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Full Name *</label>
-                    <Input 
-                      placeholder="Enter sender's name" 
-                      value={formData.senderName} 
-                      onChange={e => setFormData({...formData, senderName: e.target.value})}
-                      className={cn(errors.senderName && "border-red-500")}
+                  {/* Company / Name */}
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Company / Name *</label>
+                    <Input
+                      placeholder="Company name or sender's full name"
+                      value={formData.senderCompany}
+                      onChange={e => setFormData({...formData, senderCompany: e.target.value})}
+                      className={cn(errors.senderCompany && "border-red-500")}
+                    />
+                    {errors.senderCompany && <p className="text-[11px] text-red-500">{errors.senderCompany}</p>}
+                  </div>
+
+                  {/* Address 1 */}
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Address 1 *</label>
+                    <Input
+                      placeholder="House no, Street name, Locality"
+                      value={formData.pickupAddress1}
+                      onChange={e => setFormData({...formData, pickupAddress1: e.target.value})}
+                      className={cn(errors.pickupAddress1 && "border-red-500")}
+                    />
+                    {errors.pickupAddress1 && <p className="text-[11px] text-red-500">{errors.pickupAddress1}</p>}
+                  </div>
+
+                  {/* Address 2 */}
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Address 2</label>
+                    <Input
+                      placeholder="Apartment, suite, landmark (optional)"
+                      value={formData.pickupAddress2}
+                      onChange={e => setFormData({...formData, pickupAddress2: e.target.value})}
                     />
                   </div>
+
+                  {/* Pincode */}
                   <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Mobile Number *</label>
-                    <div className="flex gap-2">
-                      <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 flex items-center text-slate-500 font-medium">+91</div>
-                      <Input 
-                        placeholder="10-digit mobile" 
-                        maxLength={10}
-                        value={formData.senderMobile} 
-                        onChange={e => setFormData({...formData, senderMobile: e.target.value.replace(/\D/g, "")})}
-                        className={cn("flex-1", errors.senderMobile && "border-red-500")}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Email (Optional)</label>
-                    <Input 
-                      placeholder="sender@email.com" 
-                      value={formData.senderEmail} 
-                      onChange={e => setFormData({...formData, senderEmail: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Pickup Pincode *</label>
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Pincode *</label>
                     <Input
                       placeholder="6-digit pincode"
                       maxLength={6}
@@ -439,15 +465,77 @@ const Booking = () => {
                       <p className="text-[11px] text-red-500">{errors.pickupPincode}</p>
                     )}
                   </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Pickup Address *</label>
-                    <Input 
-                      placeholder="House no, Street name, Locality" 
-                      value={formData.pickupAddress} 
-                      onChange={e => setFormData({...formData, pickupAddress: e.target.value})}
-                      className={cn(errors.pickupAddress && "border-red-500")}
+
+                  {/* City */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">City *</label>
+                    <Input
+                      placeholder={pincodeStatus.status === "found" ? pincodeStatus.city : "City"}
+                      value={formData.pickupCity || (pincodeStatus.status === "found" ? pincodeStatus.city : "")}
+                      onChange={e => setFormData({...formData, pickupCity: e.target.value})}
+                      className={cn(errors.pickupCity && "border-red-500")}
+                    />
+                    {errors.pickupCity && <p className="text-[11px] text-red-500">{errors.pickupCity}</p>}
+                  </div>
+
+                  {/* State */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">State *</label>
+                    <Input
+                      placeholder={pincodeData?.state ?? "State"}
+                      value={formData.pickupState || (pincodeData?.state ?? "")}
+                      onChange={e => setFormData({...formData, pickupState: e.target.value})}
+                      className={cn(errors.pickupState && "border-red-500")}
+                    />
+                    {errors.pickupState && <p className="text-[11px] text-red-500">{errors.pickupState}</p>}
+                  </div>
+
+                  {/* Telephone */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Telephone</label>
+                    <Input
+                      placeholder="Landline number"
+                      value={formData.senderTelephone}
+                      onChange={e => setFormData({...formData, senderTelephone: e.target.value})}
                     />
                   </div>
+
+                  {/* Mobile No. */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Mobile No. *</label>
+                    <div className="flex gap-2">
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 flex items-center text-slate-500 font-medium">+91</div>
+                      <Input
+                        placeholder="10-digit mobile"
+                        maxLength={10}
+                        value={formData.senderMobile}
+                        onChange={e => setFormData({...formData, senderMobile: e.target.value.replace(/\D/g, "")})}
+                        className={cn("flex-1", errors.senderMobile && "border-red-500")}
+                      />
+                    </div>
+                    {errors.senderMobile && <p className="text-[11px] text-red-500">{errors.senderMobile}</p>}
+                  </div>
+
+                  {/* E-Mail */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">E-Mail</label>
+                    <Input
+                      placeholder="sender@email.com"
+                      value={formData.senderEmail}
+                      onChange={e => setFormData({...formData, senderEmail: e.target.value})}
+                    />
+                  </div>
+
+                  {/* KYC No. */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">KYC No.</label>
+                    <Input
+                      placeholder="Aadhaar / PAN / Passport no."
+                      value={formData.senderKyc}
+                      onChange={e => setFormData({...formData, senderKyc: e.target.value})}
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <label className="text-[13px] font-bold text-slate-600 uppercase flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Pickup Date *</label>
                     <Input 
@@ -481,25 +569,97 @@ const Booking = () => {
                 </div>
               </div>
 
-              {/* Card 2 — Receiver details */}
+              {/* Card 2 — Consignee details */}
               <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="bg-green-50 p-2 rounded-lg text-green-primary"><Package className="w-5 h-5" /></div>
-                  <h2 className="text-xl font-bold">2. Receiver details</h2>
+                  <h2 className="text-xl font-bold">2. Consignee details</h2>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Company / Name */}
                   <div className="md:col-span-2 space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Full Name *</label>
-                    <Input 
-                      placeholder="Receiver's full name" 
-                      value={formData.receiverName} 
-                      onChange={e => setFormData({...formData, receiverName: e.target.value})}
-                      className={cn(errors.receiverName && "border-red-500")}
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Company / Name *</label>
+                    <Input
+                      placeholder="Company name or receiver's full name"
+                      value={formData.receiverCompany}
+                      onChange={e => setFormData({...formData, receiverCompany: e.target.value})}
+                      className={cn(errors.receiverCompany && "border-red-500")}
+                    />
+                    {errors.receiverCompany && <p className="text-[11px] text-red-500">{errors.receiverCompany}</p>}
+                  </div>
+
+                  {/* Address 1 */}
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Address 1 *</label>
+                    <Input
+                      placeholder="Street address, building"
+                      value={formData.deliveryAddress1}
+                      onChange={e => setFormData({...formData, deliveryAddress1: e.target.value})}
+                      className={cn(errors.deliveryAddress1 && "border-red-500")}
+                    />
+                    {errors.deliveryAddress1 && <p className="text-[11px] text-red-500">{errors.deliveryAddress1}</p>}
+                  </div>
+
+                  {/* Address 2 */}
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Address 2</label>
+                    <Input
+                      placeholder="Apartment, suite, area (optional)"
+                      value={formData.deliveryAddress2}
+                      onChange={e => setFormData({...formData, deliveryAddress2: e.target.value})}
                     />
                   </div>
+
+                  {/* Pincode */}
                   <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Mobile Number *</label>
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Pincode / ZIP *</label>
+                    <Input
+                      placeholder="Postal / ZIP code"
+                      value={formData.deliveryZip}
+                      onChange={e => setFormData({...formData, deliveryZip: e.target.value})}
+                      className={cn(errors.deliveryZip && "border-red-500")}
+                    />
+                    {errors.deliveryZip && <p className="text-[11px] text-red-500">{errors.deliveryZip}</p>}
+                  </div>
+
+                  {/* City */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">City *</label>
+                    <Input
+                      placeholder="City"
+                      value={formData.deliveryCity}
+                      onChange={e => setFormData({...formData, deliveryCity: e.target.value})}
+                      className={cn(errors.deliveryCity && "border-red-500")}
+                    />
+                    {errors.deliveryCity && <p className="text-[11px] text-red-500">{errors.deliveryCity}</p>}
+                  </div>
+
+                  {/* State */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">State *</label>
+                    <Input
+                      placeholder="State / Province"
+                      value={formData.deliveryState}
+                      onChange={e => setFormData({...formData, deliveryState: e.target.value})}
+                      className={cn(errors.deliveryState && "border-red-500")}
+                    />
+                    {errors.deliveryState && <p className="text-[11px] text-red-500">{errors.deliveryState}</p>}
+                  </div>
+
+                  {/* Telephone */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Telephone</label>
+                    <Input
+                      placeholder="Landline number"
+                      value={formData.receiverTelephone}
+                      onChange={e => setFormData({...formData, receiverTelephone: e.target.value})}
+                    />
+                  </div>
+
+                  {/* Mobile No. */}
+                  <div className="space-y-2">
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">Mobile No. *</label>
                     <div className="flex gap-2">
                       <div className="bg-slate-100 border border-slate-200 rounded-lg px-3 flex items-center text-slate-500 font-medium">
                         {getMobilePrefix(state.destination)}
@@ -511,82 +671,66 @@ const Booking = () => {
                         className={cn("flex-1", errors.receiverMobile && "border-red-500")}
                       />
                     </div>
-                    {errors.receiverMobile && <p className="text-xs text-red-500">{errors.receiverMobile}</p>}
+                    {errors.receiverMobile && <p className="text-[11px] text-red-500">{errors.receiverMobile}</p>}
                   </div>
+
+                  {/* E-Mail */}
                   <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Email (Optional)</label>
-                    <Input 
-                      placeholder="receiver@email.com" 
-                      value={formData.receiverEmail} 
+                    <label className="text-[13px] font-bold text-slate-600 uppercase">E-Mail</label>
+                    <Input
+                      placeholder="receiver@email.com"
+                      value={formData.receiverEmail}
                       onChange={e => setFormData({...formData, receiverEmail: e.target.value})}
                     />
                   </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Delivery Address *</label>
-                    <Textarea 
-                      placeholder="Full delivery address with landmark" 
-                      value={formData.deliveryAddress} 
-                      onChange={e => setFormData({...formData, deliveryAddress: e.target.value})}
-                      className={cn("min-h-[80px]", errors.deliveryAddress && "border-red-500")}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">City *</label>
-                    <Input 
-                      placeholder="City" 
-                      value={formData.city} 
-                      onChange={e => setFormData({...formData, city: e.target.value})}
-                      className={cn(errors.city && "border-red-500")}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">State/Province</label>
-                    <Input
-                      placeholder="State / Province"
-                      value={formData.state}
-                      onChange={e => setFormData({...formData, state: e.target.value})}
-                      className={cn(errors.state && "border-red-500")}
-                    />
-                    {errors.state && <p className="text-xs text-red-500">{errors.state}</p>}
-                  </div>
+
+                  {/* Country — read-only */}
                   <div className="space-y-2">
                     <label className="text-[13px] font-bold text-slate-600 uppercase">Country</label>
-                    <Input 
-                      value={state.destination} 
-                      readOnly 
+                    <Input
+                      value={state.destination}
+                      readOnly
                       className="bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Postal / ZIP Code *</label>
-                    <Input 
-                      placeholder="ZIP Code" 
-                      value={formData.zipCode} 
-                      onChange={e => setFormData({...formData, zipCode: e.target.value})}
-                      className={cn(errors.zipCode && "border-red-500")}
-                    />
-                  </div>
                 </div>
-                
+
                 <div className="mt-8 pt-8 border-t border-slate-100">
-                  <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-6">Customs declaration</h3>
+                  <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-6">Shipment details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[13px] font-bold text-slate-600 uppercase">Number of Pieces *</label>
-                      <Input 
-                        type="number" 
-                        value={formData.numPieces} 
+                      <Input
+                        type="number"
+                        value={formData.numPieces}
                         onChange={e => setFormData({...formData, numPieces: e.target.value})}
                         className={cn(errors.numPieces && "border-red-500")}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-[13px] font-bold text-slate-600 uppercase">Shipper Reference</label>
+                      <Input
+                        placeholder="Your reference / order number"
+                        value={formData.shipperReference}
+                        onChange={e => setFormData({...formData, shipperReference: e.target.value})}
+                      />
+                    </div>
                     <div className="md:col-span-2 space-y-2">
-                      <label className="text-[13px] font-bold text-slate-600 uppercase">Contents Description *</label>
-                      <Textarea 
-                        placeholder="e.g. University application documents — transcripts, certificates. No commercial value." 
-                        value={formData.contents} 
+                      <label className="text-[13px] font-bold text-slate-600 uppercase">Content Description *</label>
+                      <Textarea
+                        placeholder="e.g. University application documents — transcripts, certificates. No commercial value."
+                        value={formData.contents}
                         onChange={e => setFormData({...formData, contents: e.target.value})}
                         className={cn("min-h-[100px]", errors.contents && "border-red-500")}
+                      />
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="text-[13px] font-bold text-slate-600 uppercase">Instruction</label>
+                      <Textarea
+                        placeholder="Special instructions for pickup or delivery (optional)"
+                        value={formData.specialInstruction}
+                        onChange={e => setFormData({...formData, specialInstruction: e.target.value})}
+                        className="min-h-[80px]"
                       />
                     </div>
                   </div>
@@ -609,33 +753,36 @@ const Booking = () => {
             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 max-w-[800px] mx-auto">
               <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                 <div className="p-8 space-y-10">
-                  {/* Sender Review */}
+                  {/* Shipper Review */}
                   <section>
                     <div className="flex items-center gap-2 mb-4 text-green-primary">
                        <User className="w-4 h-4" />
-                       <h3 className="font-bold text-sm uppercase tracking-wider">Sender details</h3>
+                       <h3 className="font-bold text-sm uppercase tracking-wider">Shipper details</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-[14px]">
-                       <div><span className="text-slate-400">Name:</span> <p className="font-semibold text-brand-black">{formData.senderName}</p></div>
+                       <div><span className="text-slate-400">Company / Name:</span> <p className="font-semibold text-brand-black">{formData.senderCompany}</p></div>
                        <div><span className="text-slate-400">Mobile:</span> <p className="font-semibold text-brand-black">+91 {formData.senderMobile}</p></div>
+                       {formData.senderTelephone && <div><span className="text-slate-400">Telephone:</span> <p className="font-semibold text-brand-black">{formData.senderTelephone}</p></div>}
                        <div><span className="text-slate-400">Email:</span> <p className="font-semibold text-brand-black">{formData.senderEmail || 'N/A'}</p></div>
+                       {formData.senderKyc && <div><span className="text-slate-400">KYC No.:</span> <p className="font-semibold text-brand-black">{formData.senderKyc}</p></div>}
                        <div><span className="text-slate-400">Pickup Date:</span> <p className="font-semibold text-brand-black">{formData.pickupDate} ({formData.pickupSlot})</p></div>
-                       <div className="md:col-span-2"><span className="text-slate-400">Address:</span> <p className="font-semibold text-brand-black leading-relaxed">{formData.pickupAddress}, {formData.pickupPincode}</p></div>
+                       <div className="md:col-span-2"><span className="text-slate-400">Address:</span> <p className="font-semibold text-brand-black leading-relaxed">{formData.pickupAddress1}{formData.pickupAddress2 ? `, ${formData.pickupAddress2}` : ""}, {formData.pickupCity}, {formData.pickupState} — {formData.pickupPincode}</p></div>
                     </div>
                   </section>
 
-                  {/* Receiver Review */}
+                  {/* Consignee Review */}
                   <section className="pt-8 border-t border-slate-100">
                     <div className="flex items-center gap-2 mb-4 text-green-primary">
                        <MapPin className="w-4 h-4" />
-                       <h3 className="font-bold text-sm uppercase tracking-wider">Receiver details</h3>
+                       <h3 className="font-bold text-sm uppercase tracking-wider">Consignee details</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8 text-[14px]">
-                       <div><span className="text-slate-400">Name:</span> <p className="font-semibold text-brand-black">{formData.receiverName}</p></div>
+                       <div><span className="text-slate-400">Company / Name:</span> <p className="font-semibold text-brand-black">{formData.receiverCompany}</p></div>
                        <div><span className="text-slate-400">Mobile:</span> <p className="font-semibold text-brand-black">{getMobilePrefix(state.destination)} {formData.receiverMobile}</p></div>
+                       {formData.receiverTelephone && <div><span className="text-slate-400">Telephone:</span> <p className="font-semibold text-brand-black">{formData.receiverTelephone}</p></div>}
                        <div><span className="text-slate-400">Country:</span> <p className="font-semibold text-brand-black">{state.destination}</p></div>
-                       <div><span className="text-slate-400">City/ZIP:</span> <p className="font-semibold text-brand-black">{formData.city}, {formData.zipCode}</p></div>
-                       <div className="md:col-span-2"><span className="text-slate-400">Address:</span> <p className="font-semibold text-brand-black leading-relaxed">{formData.deliveryAddress}</p></div>
+                       <div><span className="text-slate-400">City / ZIP:</span> <p className="font-semibold text-brand-black">{formData.deliveryCity}, {formData.deliveryZip}</p></div>
+                       <div className="md:col-span-2"><span className="text-slate-400">Address:</span> <p className="font-semibold text-brand-black leading-relaxed">{formData.deliveryAddress1}{formData.deliveryAddress2 ? `, ${formData.deliveryAddress2}` : ""}, {formData.deliveryState}</p></div>
                     </div>
                   </section>
 
