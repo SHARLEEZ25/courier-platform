@@ -35,9 +35,5 @@ export async function getFscPercent(carrier: CarrierSlug): Promise<number> {
  * Returns the FSC amount in INR (not the multiplier).
  */
 export function applyFsc(baseInr: number, fscPercent: number): number {
-  return round2(baseInr * (fscPercent / 100));
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
+  return baseInr * (fscPercent / 100);
 }

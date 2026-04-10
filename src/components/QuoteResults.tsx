@@ -162,7 +162,7 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight
                 {/* Price */}
                 <div className="mb-5">
                   <span className="text-4xl font-black text-brand-black tracking-tight">
-                    ₹{Math.round(result.totalInr).toLocaleString("en-IN")}
+                    ₹{result.totalInr.toLocaleString("en-IN")}
                   </span>
                 </div>
 

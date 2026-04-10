@@ -685,14 +685,14 @@
           const rows  = [];
 
           // Base rate
-          rows.push({ label: 'Base Rate (from DB)', calc: `Zone ${this.baseResult.zone} · ${kg} kg`, amount: null, running: r2(running), source: 'DB' });
+          rows.push({ label: 'Base Rate (from DB)', calc: `Zone ${this.baseResult.zone} · ${kg} kg`, amount: null, running, source: 'DB' });
 
           // Margin
           const mPct = s.marginPct ?? 0;
           if (mPct > 0) {
             const beforeMargin = running;
-            const marginAmt    = r2(beforeMargin * mPct / 100);
-            running = r2(running + marginAmt);
+            const marginAmt    = beforeMargin * mPct / 100;
+            running = running + marginAmt;
             rows.push({ label: 'Margin', calc: `${mPct}% on ₹${fmt(beforeMargin)}`, amount: marginAmt, running, source: 'DB' });
           }
 
@@ -700,29 +700,29 @@
           const fPct = s.fuelPct ?? 0;
           if (fPct > 0) {
             const beforeFsc = running;
-            const fscAmt    = r2(beforeFsc * fPct / 100);
-            running = r2(running + fscAmt);
+            const fscAmt    = beforeFsc * fPct / 100;
+            running = running + fscAmt;
             rows.push({ label: 'Fuel Surcharge (FSC)', calc: `${fPct}% on ₹${fmt(beforeFsc)}`, amount: fscAmt, running, source: 'DB' });
           }
 
           // FedEx peak surcharge
           if (carrier === 'fedex' && s.fedexPeakActive && (s.fedexPeakAmount ?? 0) > 0) {
-            const peakAmt = r2(s.fedexPeakAmount);
-            running = r2(running + peakAmt);
+            const peakAmt = s.fedexPeakAmount;
+            running = running + peakAmt;
             rows.push({ label: 'Peak Surcharge (FedEx)', calc: 'Flat per shipment', amount: peakAmt, running, source: 'DB' });
           }
 
           // UPS surge fee
           if (carrier === 'ups' && s.upsSurgeActive && (s.upsSurgeAmount ?? 0) > 0) {
-            const surgeAmt = r2(s.upsSurgeAmount);
-            running = r2(running + surgeAmt);
+            const surgeAmt = s.upsSurgeAmount;
+            running = running + surgeAmt;
             rows.push({ label: 'Surge Fee (UPS)', calc: 'Flat per shipment', amount: surgeAmt, running, source: 'DB' });
           }
 
           // Demand surcharge (all carriers)
           if (s.demandActive && (s.demandPerKg ?? 0) > 0) {
-            const demandAmt = r2(s.demandPerKg * kg);
-            running = r2(running + demandAmt);
+            const demandAmt = s.demandPerKg * kg;
+            running = running + demandAmt;
             rows.push({ label: 'Demand Surcharge', calc: `₹${s.demandPerKg}/kg × ${kg} kg`, amount: demandAmt, running, source: 'DB' });
           }
 
@@ -730,46 +730,46 @@
           if (carrier === 'dhl' && s.dhlService !== 'standard') {
             const premAmt   = s.dhlService === 'premium_900' ? p.dhlPremium900 : p.dhlPremium1200;
             const premLabel = s.dhlService === 'premium_900' ? 'Premium 9:00am Delivery' : 'Premium 12:00pm Delivery';
-            running = r2(running + premAmt);
+            running = running + premAmt;
             rows.push({ label: premLabel, calc: 'Flat (PDF)', amount: premAmt, running, source: 'PDF' });
           }
 
           // UPS fixed charges
           if (carrier === 'ups') {
             if (s.upsUsInbound) {
-              running = r2(running + p.upsUsInbound);
+              running = running + p.upsUsInbound;
               rows.push({ label: 'US Inbound Surcharge', calc: 'Auto — USA destination (PDF)', amount: p.upsUsInbound, running, source: 'PDF' });
             }
             if (s.upsRemoteArea) {
-              const remoteAmt = Math.max(r2(p.upsRemotePerKg * kg), p.upsRemoteMin);
-              running = r2(running + remoteAmt);
+              const remoteAmt = Math.max(p.upsRemotePerKg * kg, p.upsRemoteMin);
+              running = running + remoteAmt;
               rows.push({ label: 'Remote Area', calc: `max(₹${p.upsRemotePerKg}×${kg}kg, ₹${fmt(p.upsRemoteMin)})`, amount: remoteAmt, running, source: 'PDF' });
             }
             if (s.upsFormalClearance) {
-              running = r2(running + p.upsFormalClearance);
+              running = running + p.upsFormalClearance;
               rows.push({ label: 'Formal Clearance (UPS)', calc: 'Flat (PDF)', amount: p.upsFormalClearance, running, source: 'PDF' });
             }
             if (s.upsDdp) {
-              running = r2(running + p.upsDdp);
+              running = running + p.upsDdp;
               rows.push({ label: 'DDP Delivery', calc: 'Flat (PDF)', amount: p.upsDdp, running, source: 'PDF' });
             }
             if (s.upsSignature) {
-              running = r2(running + p.upsSignature);
+              running = running + p.upsSignature;
               rows.push({ label: 'Signature Required', calc: 'Flat (PDF)', amount: p.upsSignature, running, source: 'PDF' });
             }
             if (s.upsGirth) {
-              running = r2(running + p.upsGirth);
+              running = running + p.upsGirth;
               rows.push({ label: 'Girth Surcharge (>400cm)', calc: 'Flat (PDF)', amount: p.upsGirth, running, source: 'PDF' });
             }
           }
 
           // Subtotal divider
-          const preGst = r2(running);
+          const preGst = running;
           rows.push({ label: 'Subtotal (pre-GST)', calc: null, amount: null, running: preGst, isSub: true });
 
           // GST 18% (hardcoded)
-          const gstAmt = r2(preGst * 0.18);
-          running = r2(preGst + gstAmt);
+          const gstAmt = preGst * 0.18;
+          running = Math.round(preGst + gstAmt);
           rows.push({ label: 'GST 18%', calc: `₹${fmt(preGst)} × 18%`, amount: gstAmt, running, source: 'PDF' });
 
           // Total

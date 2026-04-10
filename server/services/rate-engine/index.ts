@@ -341,8 +341,8 @@ export async function calculateRates(
 
     // Step 1: margin (Uniex markup on carrier base — internal, never shown to customer)
     const marginPct = Number(cfg['margin_pct'] ?? 20);
-    const marginInr = round2(priceInr * (marginPct / 100));
-    const withMargin = round2(priceInr + marginInr);
+    const marginInr = priceInr * (marginPct / 100);
+    const withMargin = priceInr + marginInr;
 
     // Step 2: FSC (applied on withMargin per spec)
     const fscPct = fscMap.get(carrier) ?? FALLBACK_FSC[carrier] ?? 27.0;
@@ -351,7 +351,7 @@ export async function calculateRates(
     // Step 3: demand surcharge
     const demandActive  = cfg['demand_active'] === true;
     const demandPerKg   = Number(cfg['demand_per_kg'] ?? 0);
-    const demandSurchargeInr = demandActive ? round2(demandPerKg * effectiveChargeable) : 0;
+    const demandSurchargeInr = demandActive ? (demandPerKg * effectiveChargeable) : 0;
 
     // Step 4: carrier-specific extras
     let premiumServiceInr = 0;
@@ -367,7 +367,7 @@ export async function calculateRates(
     if (carrier === 'fedex') {
       const peakActive = cfg['peak_active'] === true;
       if (peakActive) {
-        peakSurchargeInr = round2(Number(cfg['peak_amount'] ?? 0));
+        peakSurchargeInr = Number(cfg['peak_amount'] ?? 0);
       }
     }
 
@@ -375,7 +375,7 @@ export async function calculateRates(
       // UPS surge fee (separate from FSC)
       const surgeActive = cfg['surge_active'] === true;
       if (surgeActive) {
-        upsFixedInr += round2(Number(cfg['surge_amount'] ?? 0));
+        upsFixedInr += Number(cfg['surge_amount'] ?? 0);
       }
       // US inbound surcharge — auto (PDF: ₹230 per shipment extra for USA)
       if (input.destination === 'USA') {
@@ -415,7 +415,7 @@ export async function calculateRates(
       chargeableWeightKg: effectiveChargeable,
       actualWeightKg: input.weightKg,
       volumetricWeightKg: volumetric,
-      baseRateInr: round2(priceInr),
+      baseRateInr: priceInr,
       discountPct: 0,
       discountInr: 0,
       marginPct,
@@ -439,8 +439,4 @@ export async function calculateRates(
   }
 
   return results.sort((a, b) => a.totalInr - b.totalInr);
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }

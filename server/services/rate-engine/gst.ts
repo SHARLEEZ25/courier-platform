@@ -12,7 +12,7 @@ export interface GstBreakdown {
  * Rounds to nearest rupee (standard for GST invoices).
  */
 export function applyGst(subtotal: number): GstBreakdown {
-  const gst = Math.round(subtotal * GST_RATE);
-  const total = subtotal + gst;
-  return { subtotal: Math.round(subtotal), gst, total };
+  const gst = subtotal * GST_RATE;
+  const total = Math.round(subtotal + gst);
+  return { subtotal, gst, total };
 }
