@@ -78,6 +78,12 @@ export const RateRequestSchema = z.object({
   carrier: z.enum(CARRIERS).optional(),
   packaging: z.enum(["none", "standard", "premium"]).optional().default("none"),
   insurance: z.boolean().optional().default(false),
+  dhlService: z.enum(["standard", "premium_900", "premium_1200"]).optional().default("standard"),
+  upsOptions: z.object({
+    formalClearance: z.boolean().optional().default(false),
+    ddp:             z.boolean().optional().default(false),
+    signature:       z.boolean().optional().default(false),
+  }).optional(),
 });
 
 export type RateRequest = z.infer<typeof RateRequestSchema>;

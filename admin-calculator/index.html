@@ -248,6 +248,22 @@
           </div>
         </div>
 
+        <!-- ── Pickup Surcharge ─────────────────────────────────────────── -->
+        <div class="border-t border-slate-100 pt-5">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+            Pickup Surcharge
+            <span class="ml-1 bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded font-normal normal-case">DB</span>
+          </p>
+          <div class="flex items-center gap-3">
+            <div class="relative w-44">
+              <span class="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
+              <input x-model.number="surcharges.pickupSurcharge" type="number" min="0" step="50" placeholder="0"
+                class="w-full border border-slate-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <span class="text-xs text-slate-500">flat per shipment (0 = free pickup / TN)</span>
+          </div>
+        </div>
+
         <!-- ── DHL: Premium delivery windows ────────────────────────────── -->
         <div x-show="form.carrier === 'dhl'" class="border-t border-slate-100 pt-5">
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
@@ -500,6 +516,7 @@
           fuelPct: null,
           demandActive: false,
           demandPerKg: 0,
+          pickupSurcharge: 0,
           // DHL
           dhlService: 'standard',
           // FedEx
@@ -724,6 +741,12 @@
             const demandAmt = s.demandPerKg * kg;
             running = running + demandAmt;
             rows.push({ label: 'Demand Surcharge', calc: `₹${s.demandPerKg}/kg × ${kg} kg`, amount: demandAmt, running, source: 'DB' });
+          }
+
+          // Pickup surcharge
+          if ((s.pickupSurcharge ?? 0) > 0) {
+            running = running + s.pickupSurcharge;
+            rows.push({ label: 'Pickup Surcharge', calc: 'Flat per shipment', amount: s.pickupSurcharge, running, source: 'DB' });
           }
 
           // DHL premium window

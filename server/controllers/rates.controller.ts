@@ -22,6 +22,8 @@ export async function handleCalculateRates(c: Context) {
       carrier: input.carrier,
       packaging: input.packaging ?? "none",
       insurance: input.insurance ?? false,
+      dhlService: input.dhlService,
+      upsOptions: input.upsOptions,
     });
 
     if (results.length === 0) {

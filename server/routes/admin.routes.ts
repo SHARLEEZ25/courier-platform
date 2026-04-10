@@ -179,6 +179,7 @@ adminRoutes.get("/config/:carrier", async (c) => {
     SELECT fsc_percent FROM fuel_surcharges
     WHERE carrier_id = ${carrier}
       AND effective_from <= ${today}::date
+      AND (effective_to IS NULL OR effective_to >= ${today}::date)
     ORDER BY effective_from DESC
     LIMIT 1
   `;
