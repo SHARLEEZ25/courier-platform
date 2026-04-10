@@ -109,6 +109,9 @@ export interface BookingCreate {
   deliveryZip: string;
   numPieces: number;
   contentsDesc?: string;
+  declaredValue?: number;
+  declaredCurrency?: string;
+  dims?: { l: number; w: number; h: number };
 }
 
 export interface BookingResponse {

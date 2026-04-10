@@ -34,7 +34,7 @@ const TTL_30M  = 30 * 60 * 1000;
 const TTL_5MIN =  5 * 60 * 1000; // surcharge toggles — admin may flip in real-time
 
 type ZoneCacheRow      = { carrier_id: string; zone_code: string };
-type FscCacheRow       = { carrier_id: string; fsc_percent: number };
+type FscCacheRow       = { carrier_id: string; fsc_percent: string };
 type SurchargeRow      = { carrier_id: string; key: string; value_num: string | null; value_bool: boolean | null };
 type StepCacheRow      = { carrier_id: string; zone_code: string; shipment_type: string; price_inr: number };
 type BandCacheRow      = { carrier_id: string; zone_code: string; shipment_type: string; price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number };
@@ -141,14 +141,14 @@ export async function calculateRates(
   const fedexService = input.fedexService ?? 'IP';
 
   const zoneKey      = `zones:${input.origin}:${input.destination}:${fedexService}`;
-  const fscKey       = `fsc:${today}`;
   const surchargeKey = `surcharge_cfg:all`;
+  const fscKey       = `fsc:all`;
   const stepKey      = `steps:${chargeable}`;
   const bandKey      = `bands:${chargeable}`;
 
   // ── Single wave: all 6 queries in parallel ────────────────────────────────
   const start = Date.now();
-  const [zoneRows, fscRows, surchargeRow, surchargeConfigRows, stepRows, bandRows] = await Promise.all([
+  const [zoneRows, surchargeRow, surchargeConfigRows, fscRows, stepRows, bandRows] = await Promise.all([
 
     withCache<ZoneCacheRow[]>(zoneKey, TTL_30M, () =>
       sql<ZoneCacheRow[]>`
@@ -161,17 +161,6 @@ export async function calculateRates(
             service_type = 'standard'
             OR (carrier_id = 'fedex' AND service_type = ${fedexService})
           )
-          AND (effective_to IS NULL OR effective_to >= ${today}::date)
-        ORDER BY effective_from DESC
-      `
-    ),
-
-    withCache<FscCacheRow[]>(fscKey, TTL_1H, () =>
-      sql<FscCacheRow[]>`
-        SELECT carrier_id, fsc_percent
-        FROM fuel_surcharges
-        WHERE carrier_id = ANY(${allCarriers}::text[])
-          AND effective_from <= ${today}::date
           AND (effective_to IS NULL OR effective_to >= ${today}::date)
         ORDER BY effective_from DESC
       `
@@ -191,6 +180,17 @@ export async function calculateRates(
         SELECT carrier_id, key, value_num, value_bool
         FROM surcharge_config
         WHERE carrier_id = ANY(${allCarriers}::text[])
+      `
+    ),
+
+    withCache<FscCacheRow[]>(fscKey, TTL_1H, () =>
+      sql<FscCacheRow[]>`
+        SELECT carrier_id, fsc_percent
+        FROM fuel_surcharges
+        WHERE carrier_id = ANY(${allCarriers}::text[])
+          AND effective_from <= ${today}::date
+          AND (effective_to IS NULL OR effective_to >= ${today}::date)
+        ORDER BY effective_from DESC
       `
     ),
 
@@ -230,14 +230,13 @@ export async function calculateRates(
     }
   }
 
-  const fscMap = new Map<CarrierSlug, number>();
-  for (const row of fscRows) {
-    if (!fscMap.has(row.carrier_id as CarrierSlug)) {
-      fscMap.set(row.carrier_id as CarrierSlug, Number(row.fsc_percent));
-    }
-  }
-
   const cfgMap = parseSurchargeConfig(surchargeConfigRows);
+
+  // Build FSC map — first row per carrier is the most-recent active row (ORDER BY effective_from DESC)
+  const fscMap = new Map<string, number>();
+  for (const row of fscRows) {
+    if (!fscMap.has(row.carrier_id)) fscMap.set(row.carrier_id, Number(row.fsc_percent));
+  }
 
   const pickupSurcharge = surchargeRow ? Number(surchargeRow.surcharge_inr) : 0;
 
@@ -345,7 +344,7 @@ export async function calculateRates(
     const withMargin = priceInr + marginInr;
 
     // Step 2: FSC (applied on withMargin per spec)
-    const fscPct = fscMap.get(carrier) ?? FALLBACK_FSC[carrier] ?? 27.0;
+    const fscPct = fscMap.get(carrier) ?? FALLBACK_FSC[carrier as CarrierSlug] ?? 27.0;
     const fscInr = applyFsc(withMargin, fscPct);
 
     // Step 3: demand surcharge

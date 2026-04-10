@@ -129,8 +129,7 @@ const RateBreakdown = () => {
   const [dims, setDims] = useState<{l: string, w: string, h: string}>(
     state.dims ? { l: String(state.dims.l), w: String(state.dims.w), h: String(state.dims.h) } : {l: "", w: "", h: ""}
   );
-  const [packaging, setPackaging] = useState<"none" | "standard" | "premium">("none");
-  const [insurance, setInsurance] = useState(false);
+  const [shipmentType, setShipmentType] = useState<"document" | "package">("package");
   const [dhlService, setDhlService] = useState<"standard" | "premium_900" | "premium_1200">("standard");
   const [upsOptions, setUpsOptions] = useState({ formalClearance: false, ddp: false, signature: false });
   const [selectedPlanId, setSelectedPlanId] = useState<CarrierSlug | null>(state.preselectedCarrier ?? null);
@@ -175,9 +174,57 @@ const RateBreakdown = () => {
   const chargeableWeight = actualWeight;
 
   // ── API hooks ────────────────────────────────────────────────────────────────
-  const parsedDims = dims.l && dims.w && dims.h 
-    ? { l: parseFloat(dims.l), w: parseFloat(dims.w), h: parseFloat(dims.h) } 
+  const parsedDims = dims.l && dims.w && dims.h
+    ? { l: parseFloat(dims.l), w: parseFloat(dims.w), h: parseFloat(dims.h) }
     : undefined;
+
+  // Carrier-adaptive weight slider max (per 2026 PDFs)
+  const CARRIER_WEIGHT_MAX: Record<string, number> = {
+    dhl:   300,  // DHL rate cards cover heavy freight up to 300 kg practically
+    fedex:  70,  // FedEx step table ends at 70.5 kg
+    ups:    70,  // UPS hard cap per UPS 2026 PDF
+  };
+  const sliderMax = selectedPlanId ? (CARRIER_WEIGHT_MAX[selectedPlanId] ?? 70) : 70;
+
+  // Shipment type labels and document rate cutoffs per carrier (2026 PDFs)
+  const SHIPMENT_TYPE_LABELS: Record<string, { doc: string; pkg: string; cutoffKg: number }> = {
+    dhl:   { doc: "Documents",       pkg: "Parcel",   cutoffKg: 2.0 },
+    fedex: { doc: "Pak (Documents)", pkg: "Package",  cutoffKg: 2.5 },
+    ups:   { doc: "Documents",       pkg: "Package",  cutoffKg: 5.0 },
+  };
+  const carrierTypeLabels = selectedPlanId ? (SHIPMENT_TYPE_LABELS[selectedPlanId] ?? { doc: "Documents", pkg: "Package", cutoffKg: 2.0 }) : { doc: "Documents", pkg: "Package", cutoffKg: 2.0 };
+  const docCutoffExceeded = shipmentType === "document" && chargeableWeight > carrierTypeLabels.cutoffKg;
+
+  // UPS girth (L + 2W + 2H) for oversize warnings (per UPS 2026 PDF)
+  const girthCm = parsedDims ? parsedDims.l + 2 * parsedDims.w + 2 * parsedDims.h : 0;
+
+  // Carrier service label for identity banner
+  const CARRIER_SERVICE: Record<string, string> = {
+    dhl:   "Express Worldwide",
+    fedex: "International Priority",
+    ups:   "Worldwide Express",
+  };
+
+  // What each carrier includes by default (shown in service highlights section)
+  const CARRIER_INCLUDES: Record<string, string[]> = {
+    dhl:   [
+      "Door-to-door customs clearance by DHL",
+      "Real-time shipment tracking",
+      "Digital Proof of Delivery",
+      "220+ countries · 24/7 support",
+    ],
+    fedex: [
+      "Customs clearance handled by FedEx",
+      "Door-to-door delivery to 220+ countries",
+      "Real-time tracking with delivery notifications",
+      "Priority handling in FedEx's global network",
+    ],
+    ups:   [
+      "Door-to-door delivery with full tracking",
+      "Informal customs clearance included",
+      "Real-time tracking · Delivery notifications",
+    ],
+  };
 
   const { data: rates, isLoading: ratesLoading } = useRates(
     state.destination ? {
@@ -186,9 +233,9 @@ const RateBreakdown = () => {
       weight: actualWeight,
       dims: parsedDims,
       itemType: (state.itemType as ItemType) ?? "other",
-      shipmentType: "package",
-      packaging,
-      insurance,
+      shipmentType,
+      packaging: "none",
+      insurance: false,
       pickupPincode: /^\d{6}$/.test(formData.pickupPincode) ? formData.pickupPincode : undefined,
       dhlService,
       upsOptions,
@@ -293,10 +340,10 @@ const RateBreakdown = () => {
       originCountry: state.origin,
       destinationCountry: state.destination,
       actualWeightKg: actualWeight,
-      shipmentType: "package",
+      shipmentType,
       itemTypeId: selectedRate.itemType,
-      packaging,
-      insurance,
+      packaging: "none",
+      insurance: false,
       dhlService: selectedRate.carrier === 'dhl' ? dhlService : undefined,
       upsOptions: selectedRate.carrier === 'ups' ? upsOptions : undefined,
       senderName: formData.senderName,
@@ -441,28 +488,76 @@ const RateBreakdown = () => {
                     </div>
                   )}
 
+                  {/* Carrier identity banner */}
+                  {selectedPlanId && (
+                    <div className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full px-3 py-1 text-xs font-semibold text-slate-600">
+                      <span className="w-2 h-2 rounded-full bg-green-primary inline-block" />
+                      {selectedRate?.carrierName ?? selectedPlanId.toUpperCase()} · {CARRIER_SERVICE[selectedPlanId] ?? "Express"}
+                    </div>
+                  )}
+
+                  {/* Shipment Type Toggle */}
+                  <div>
+                    <h3 className="text-sm font-bold text-brand-black mb-3">What are you sending?</h3>
+                    <div className="flex flex-wrap gap-3 mb-2">
+                      {[
+                        { id: "document" as const, label: carrierTypeLabels.doc },
+                        { id: "package"  as const, label: carrierTypeLabels.pkg },
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => setShipmentType(t.id)}
+                          className={cn(
+                            "px-4 py-2 rounded-full border text-sm font-medium transition-colors",
+                            shipmentType === t.id
+                              ? "bg-green-primary/10 border-green-primary text-green-primary"
+                              : "bg-transparent border-slate-200 text-slate-500 hover:border-slate-400"
+                          )}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    {shipmentType === "document" && !docCutoffExceeded && (
+                      <p className="text-[11px] text-slate-400">
+                        {selectedPlanId === "dhl"   && "Document rate applies up to 2 kg chargeable weight."}
+                        {selectedPlanId === "fedex" && "Pak rate applies up to 2.5 kg chargeable weight."}
+                        {selectedPlanId === "ups"   && "Document rate applies up to 5 kg chargeable weight."}
+                      </p>
+                    )}
+                    {docCutoffExceeded && (
+                      <p className="text-[11px] text-amber-600 flex items-center gap-1.5 mt-1">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        Weight exceeds {carrierTypeLabels.cutoffKg} kg — package rates are applied automatically.
+                      </p>
+                    )}
+                  </div>
+
                   {/* Weight Section */}
                   <div>
                     <div className="flex justify-between items-end mb-4">
                       <h3 className="text-base font-bold text-brand-black">Weight & Dimensions</h3>
                       <div className="text-xl font-bold text-green-primary">{actualWeight}<span className="text-sm font-normal text-slate-400 ml-1">kg</span></div>
                     </div>
-                    
+
                     <div className="relative mb-6">
-                      <input 
-                        type="range" 
-                        min="0.5" 
-                        max="30" 
-                        step="0.5" 
-                        value={actualWeight} 
+                      <input
+                        type="range"
+                        min="0.5"
+                        max={sliderMax}
+                        step="0.5"
+                        value={actualWeight}
                         onChange={(e) => setActualWeight(Number(e.target.value))}
                         className="w-full accent-green-primary h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
                       />
                       <div className="flex justify-between text-[11px] text-slate-400 mt-2 font-medium">
                           <span>0.5 kg</span>
-                          <span>30 kg</span>
+                          <span>{sliderMax} kg</span>
                       </div>
                     </div>
+                    {selectedPlanId === 'dhl' && actualWeight > 70 && (
+                      <p className="text-[11px] text-slate-400 -mt-4 mb-4">Heavier shipments use per-kg band pricing — your rate reflects the correct band.</p>
+                    )}
 
                     {/* Dimensions Input */}
                     <div className="mb-4">
@@ -472,7 +567,22 @@ const RateBreakdown = () => {
                         <Input type="number" placeholder="Width" value={dims.w} onChange={(e) => setDims({...dims, w: e.target.value})} className="h-10 text-center" />
                         <Input type="number" placeholder="Height" value={dims.h} onChange={(e) => setDims({...dims, h: e.target.value})} className="h-10 text-center" />
                       </div>
-                      {parsedDims && parsedDims.l > 300 && <p className="text-[11px] text-red-500 mt-1">Length exceeds 300cm DHL limit</p>}
+                      {/* Carrier-specific dimension validation */}
+                      {selectedPlanId === 'dhl' && parsedDims && parsedDims.l > 300 && (
+                        <p className="text-[11px] text-red-500 mt-1">Length exceeds DHL's 300 cm limit — shipment cannot be quoted.</p>
+                      )}
+                      {selectedPlanId === 'ups' && parsedDims && (
+                        girthCm > 400
+                          ? <p className="text-[11px] text-amber-600 mt-1">Girth {Math.round(girthCm)} cm — oversize fee of ₹9,450 will apply (UPS: &gt;400 cm).</p>
+                          : girthCm > 300
+                          ? <p className="text-[11px] text-amber-600 mt-1">Girth {Math.round(girthCm)} cm — minimum 40 kg chargeable weight applies (UPS: &gt;300 cm).</p>
+                          : <p className="text-[11px] text-slate-400 mt-1">Girth: {Math.round(girthCm)} cm (L + 2W + 2H)</p>
+                      )}
+                      {selectedPlanId === 'fedex' && parsedDims && (
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Volumetric weight: {Math.ceil((parsedDims.l * parsedDims.w * parsedDims.h) / 5000 * 2) / 2} kg
+                        </p>
+                      )}
                     </div>
 
                     <div className="bg-slate-50 rounded-lg p-4 flex justify-between items-center border border-slate-100 mt-2">
@@ -481,70 +591,10 @@ const RateBreakdown = () => {
                     </div>
                   </div>
 
-                  {/* Packaging Section */}
-                  <div>
-                    <h3 className="text-sm font-bold text-brand-black mb-3">Packaging</h3>
-                    <div className="flex flex-wrap gap-3 mb-2">
-                      {[
-                        { id: "none", label: "No packaging" },
-                        { id: "standard", label: "Standard box +₹150" },
-                        { id: "premium", label: "Premium box +₹350" },
-                      ].map((p) => (
-                        <button
-                          key={p.id}
-                          onClick={() => setPackaging(p.id as "none" | "standard" | "premium")}
-                          className={cn(
-                            "px-4 py-2 rounded-full border text-sm font-medium transition-colors",
-                            packaging === p.id 
-                              ? "bg-green-primary/10 border-green-primary text-green-primary" 
-                              : "bg-transparent border-slate-200 text-slate-500 hover:border-slate-400"
-                          )}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-                    {state.itemType === "food" && packaging === "premium" && (
-                        <div className="text-[12px] text-green-primary mt-2 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Vacuum sealing included — recommended for food items.</div>
-                    )}
-                  </div>
-
-                  {/* Insurance Section */}
-                  <div>
-                    <h3 className="text-sm font-bold text-brand-black mb-3">Insurance</h3>
-                    <div className="flex flex-wrap gap-3 mb-2">
-                        <button
-                          onClick={() => setInsurance(false)}
-                          className={cn(
-                            "px-4 py-2 rounded-full border text-sm font-medium transition-colors",
-                            !insurance 
-                              ? "bg-green-primary/10 border-green-primary text-green-primary" 
-                              : "bg-transparent border-slate-200 text-slate-500 hover:border-slate-400"
-                          )}
-                        >
-                          Not required
-                        </button>
-                        <button
-                          onClick={() => setInsurance(true)}
-                          className={cn(
-                            "px-4 py-2 rounded-full border text-sm font-medium transition-colors",
-                            insurance 
-                              ? "bg-green-primary/10 border-green-primary text-green-primary" 
-                              : "bg-transparent border-slate-200 text-slate-500 hover:border-slate-400"
-                          )}
-                        >
-                          Add insurance +₹199
-                        </button>
-                    </div>
-                    {insurance && (
-                        <div className="text-[12px] text-slate-500 mt-2">Covers up to ₹10,000 declared value · Claim support included</div>
-                    )}
-                  </div>
-
-                  {/* DHL Premium Service — only when DHL is selected */}
+                  {/* DHL Time-Definite Delivery — only when DHL is selected */}
                   {selectedPlanId === 'dhl' && (
                     <div>
-                      <h3 className="text-sm font-bold text-brand-black mb-3">DHL delivery window</h3>
+                      <h3 className="text-sm font-bold text-brand-black mb-3">DHL Time-Definite Delivery</h3>
                       <div className="flex flex-wrap gap-3 mb-2">
                         {[
                           { id: "standard",     label: "Standard" },
@@ -565,20 +615,53 @@ const RateBreakdown = () => {
                           </button>
                         ))}
                       </div>
-                      <p className="text-[12px] text-slate-400">Premium time-definite windows guaranteed by DHL.</p>
+                      <p className="text-[12px] text-slate-400">Guaranteed delivery to your consignee's door by the selected time, as per DHL Express service agreement.</p>
+                      {/* DHL included services strip */}
+                      {CARRIER_INCLUDES.dhl && (
+                        <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 mt-3">
+                          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Included with DHL Express</p>
+                          <ul className="space-y-1">
+                            {CARRIER_INCLUDES.dhl.map((item) => (
+                              <li key={item} className="flex items-center gap-2 text-[12px] text-slate-600">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-primary shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* UPS Add-ons — only when UPS is selected */}
+                  {/* FedEx — what's included info panel (no configurable add-ons) */}
+                  {selectedPlanId === 'fedex' && (
+                    <div>
+                      <h3 className="text-sm font-bold text-brand-black mb-3">What FedEx IP includes</h3>
+                      <div className="bg-slate-50 border border-slate-100 rounded-lg p-4">
+                        <ul className="space-y-1.5">
+                          {(CARRIER_INCLUDES.fedex ?? []).map((item) => (
+                            <li key={item} className="flex items-center gap-2 text-[12px] text-slate-600">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-green-primary shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-[11px] text-slate-400 mt-3">No additional options to configure — FedEx International Priority is a complete door-to-door service.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* UPS Service Options — only when UPS is selected */}
                   {selectedPlanId === 'ups' && (
                     <div>
-                      <h3 className="text-sm font-bold text-brand-black mb-3">UPS add-ons</h3>
+                      <h3 className="text-sm font-bold text-brand-black mb-3">UPS Service Options</h3>
                       {actualWeight > 70 && (
                         <div className="text-[12px] text-red-500 mb-3 flex items-center gap-1.5">
                           <AlertTriangle className="w-3.5 h-3.5" />
-                          UPS does not accept single packages over 70 kg. UPS will not be quoted.
+                          UPS does not accept single packages over 70 kg (per UPS terms). Please reduce weight or select DHL / FedEx.
                         </div>
                       )}
+                      <p className="text-[11px] text-slate-400 mb-3">Optional services charged at booking — all rates per UPS 2026 agreement.</p>
                       <div className="space-y-3">
                         {[
                           { key: "formalClearance", label: "Formal clearance by UPS", sub: "+₹3,150" },
@@ -598,6 +681,23 @@ const RateBreakdown = () => {
                             </span>
                           </label>
                         ))}
+                      </div>
+                      {state.destination === 'USA' && (
+                        <p className="text-[11px] text-slate-500 mt-3">
+                          US Inbound Surcharge: +₹230 per shipment — applied automatically for USA destinations.
+                        </p>
+                      )}
+                      {/* UPS included by default */}
+                      <div className="mt-4 pt-3 border-t border-slate-100">
+                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Included by default</p>
+                        <ul className="space-y-1">
+                          {(CARRIER_INCLUDES.ups ?? []).map((item) => (
+                            <li key={item} className="flex items-center gap-2 text-[12px] text-slate-600">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-green-primary shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
                   )}

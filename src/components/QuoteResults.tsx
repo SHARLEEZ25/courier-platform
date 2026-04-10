@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { MoveRight, Zap, AlertCircle } from "lucide-react";
+import { MoveRight, Zap, AlertCircle, Weight, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRates } from "@/hooks/useRates";
 import type { RateResult, ItemType } from "@/types/api";
@@ -13,33 +13,32 @@ interface QuoteResultsProps {
   dims?: {l: number, w: number, h: number};
 }
 
-// Tier config — assigned by price rank (cheapest=0, mid=1, most expensive=2)
-const TIERS = [
-  {
-    name: "Basic",
-    badge: null as string | null,
-    highlight: false,
-    // Economy: 7–14 working days (Uniex website)
-    deliveryDays: "7–14 working days",
-    description: "Reliable economy shipping via our trusted carrier network",
+// Per-carrier config sourced from DHL / FedEx / UPS 2026 PDFs
+const CARRIER_CONFIG: Record<string, {
+  service: string;
+  description: string;
+  weightLimit: string;
+  docNote: string;
+}> = {
+  dhl: {
+    service: "Express Worldwide",
+    description: "Time-definite express with optional guaranteed delivery windows — by 9am or 12pm",
+    weightLimit: "Up to 300 kg · Max length 300 cm",
+    docNote: "Document rate applies up to 2 kg",
   },
-  {
-    name: "Standard",
-    badge: "Most Popular",
-    highlight: true,
-    // Express: 3–6 working days (Uniex website)
-    deliveryDays: "3–6 working days",
-    description: "Express delivery with full end-to-end tracking and priority handling",
+  fedex: {
+    service: "International Priority",
+    description: "Priority express cleared through FedEx's global network with full customs handling",
+    weightLimit: "Up to 70 kg per package",
+    docNote: "Pak (document) rate applies up to 2.5 kg",
   },
-  {
-    name: "Premium",
-    badge: null as string | null,
-    highlight: false,
-    // Fastest express: 2–5 business days (Uniex website)
-    deliveryDays: "2–5 business days",
-    description: "Priority express — fastest available route for your shipment",
+  ups: {
+    service: "Worldwide Express",
+    description: "Reliable express with optional customs services — formal clearance, DDP, signature",
+    weightLimit: "Max 70 kg per package",
+    docNote: "Document rate applies up to 5 kg",
   },
-];
+};
 
 // Item-specific notes from Uniex website content (client-provided copy)
 const ITEM_NOTE: Partial<Record<string, string>> = {
@@ -77,7 +76,7 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[0, 1, 2].map(i => (
-              <div key={i} className={`rounded-2xl p-8 border ${i === 1 ? "border-2 border-slate-200 md:scale-[1.03]" : "border border-slate-200"} space-y-4`}>
+              <div key={i} className={`rounded-2xl p-8 border ${i === 0 ? "border-2 border-slate-200 md:scale-[1.03]" : "border border-slate-200"} space-y-4`}>
                 <div className="h-5 w-20 bg-slate-100 rounded animate-pulse" />
                 <div className="h-10 w-32 bg-slate-100 rounded-lg animate-pulse" />
                 <div className="h-4 w-28 bg-slate-100 rounded animate-pulse" />
@@ -114,11 +113,6 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight
 
   // API already sorts ascending by totalInr — take up to 3
   const tiers = rates.slice(0, 3);
-  const cheapest = tiers[0];
-
-  // Savings strip: use real discount data from rate engine
-  const savingsPct = cheapest.discountPct > 0 ? Math.round(cheapest.discountPct * 100) : null;
-  const marketAvg  = cheapest.discountPct > 0 ? Math.round(cheapest.totalInr + cheapest.discountInr) : null;
 
   return (
     <div id="quote-results" className="py-12 bg-white scroll-mt-24">
@@ -127,37 +121,47 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight
         {/* Header */}
         <div className="text-center mb-10">
           <h3 className="text-2xl md:text-3xl font-bold text-brand-black mb-2">
-            Choose Your Shipping Plan
+            Choose Your Carrier
           </h3>
           <p className="text-sm text-brand-gray font-medium">
-            All plans include real-time tracking and professional handling.
+            All options include real-time tracking and door-to-door handling.
           </p>
         </div>
 
         {/* Cards — always 3 columns on desktop, stacked on mobile */}
         <div className={`grid grid-cols-1 gap-6 mb-10 ${tiers.length === 1 ? "md:grid-cols-1 max-w-sm mx-auto" : tiers.length === 2 ? "md:grid-cols-2 max-w-2xl mx-auto" : "md:grid-cols-3"}`}>
           {tiers.map((result, idx) => {
-            const tier = TIERS[idx];
+            // idx === 0 is cheapest → Best Value (highlighted)
+            const isBestValue = idx === 0;
+            const config = CARRIER_CONFIG[result.carrier] ?? {
+              service: result.carrierName,
+              description: "Express international delivery with full tracking",
+              weightLimit: "",
+              docNote: "",
+            };
+
             return (
               <div
                 key={result.carrier}
                 className={`relative flex flex-col rounded-2xl p-8 transition-all duration-300 ${
-                  tier.highlight
+                  isBestValue
                     ? "border-2 border-green-primary shadow-xl bg-white md:scale-[1.03] z-10"
                     : "border border-slate-200 shadow-sm bg-white"
                 }`}
               >
-                {/* Most Popular badge */}
-                {tier.badge && (
+                {/* Best Value badge */}
+                {isBestValue && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
                     <span className="bg-white border border-slate-200 shadow-sm text-slate-700 px-4 py-1.5 rounded-full text-[11px] font-bold tracking-widest uppercase">
-                      {tier.badge}
+                      Best Value
                     </span>
                   </div>
                 )}
 
-                {/* Tier name */}
-                <h4 className="text-xl font-bold text-brand-black mb-3">{tier.name}</h4>
+                {/* Carrier name (primary header) */}
+                <h4 className="text-xl font-bold text-brand-black">{result.carrierName}</h4>
+                {/* Service name */}
+                <p className="text-[12px] text-slate-400 font-medium mb-3">{config.service}</p>
 
                 {/* Price */}
                 <div className="mb-5">
@@ -173,25 +177,36 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight
                 </div>
 
                 {/* Description */}
-                <p className="text-sm text-slate-500 leading-relaxed flex-grow mb-5">
-                  {tier.description}
+                <p className="text-sm text-slate-500 leading-relaxed flex-grow mb-4">
+                  {config.description}
                 </p>
 
-                {/* Carrier label */}
-                <p className="text-[11px] text-slate-400 font-medium mb-5">
-                  via {result.carrierName}
-                </p>
+                {/* Weight limit + doc note */}
+                <div className="space-y-1 mb-5">
+                  {config.weightLimit && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                      <Weight className="w-3 h-3 shrink-0" />
+                      {config.weightLimit}
+                    </div>
+                  )}
+                  {config.docNote && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                      <FileText className="w-3 h-3 shrink-0" />
+                      {config.docNote}
+                    </div>
+                  )}
+                </div>
 
                 {/* CTA */}
                 <Button
                   onClick={() => handleBook(result)}
                   className={`w-full h-12 rounded-xl font-bold text-sm flex items-center justify-between group ${
-                    tier.highlight
+                    isBestValue
                       ? "bg-green-primary hover:bg-green-dark text-white"
                       : "bg-white border border-green-primary text-green-primary hover:bg-green-50"
                   }`}
                 >
-                  Book Now
+                  Select &amp; Customise
                   <MoveRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </div>

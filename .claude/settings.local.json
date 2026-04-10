@@ -16,7 +16,10 @@
       "mcp__Neon__get_connection_string",
       "Bash(npx tsx:*)",
       "Bash(surge --version)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(cmd /c \"cd d:\\\\uniex-refresh-glow && npx tsc --noEmit 2>&1 | head -50\")",
+      "Bash(cmd /c \"cd d:\\\\uniex-refresh-glow && npx tsc --noEmit\")",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")"
     ]
   }
 }
