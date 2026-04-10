@@ -33,6 +33,21 @@ export function registerRoutes(app: Hono) {
     }
   });
 
+  /**
+   * GET /api/destinations
+   * Returns all distinct destination countries served by any carrier, sorted A-Z.
+   * Used to populate the destination dropdown on the quote calculator.
+   */
+  app.get("/api/destinations", async (c) => {
+    const rows = await sql<{ destination_country: string }[]>`
+      SELECT DISTINCT destination_country
+      FROM carrier_zones
+      WHERE origin_country = 'India'
+      ORDER BY destination_country ASC
+    `;
+    return c.json({ ok: true, data: rows.map(r => r.destination_country) });
+  });
+
   app.route("/api/rates", ratesRoutes);
   app.route("/api/bookings", bookingsRoutes);
   app.route("/api/tracking", trackingRoutes);

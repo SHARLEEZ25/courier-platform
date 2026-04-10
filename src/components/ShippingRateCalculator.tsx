@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useDestinations } from "@/hooks/useDestinations";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronsUpDown, ChevronDown, MapPin, Search as SearchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,44 +27,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const countries = [
-  { label: "India", value: "India" },
-  { label: "United States", value: "USA" },
-  { label: "Canada", value: "Canada" },
-  { label: "United Kingdom", value: "UK" },
-  { label: "Australia", value: "Australia" },
-  { label: "New Zealand", value: "New Zealand" },
-  { label: "United Arab Emirates", value: "UAE" },
-  { label: "Saudi Arabia", value: "Saudi Arabia" },
-  { label: "Qatar", value: "Qatar" },
-  { label: "Kuwait", value: "Kuwait" },
-  { label: "Bahrain", value: "Bahrain" },
-  { label: "Oman", value: "Oman" },
-  { label: "Singapore", value: "Singapore" },
-  { label: "Malaysia", value: "Malaysia" },
-  { label: "Hong Kong", value: "Hong Kong" },
-  { label: "Thailand", value: "Thailand" },
-  { label: "Japan", value: "Japan" },
-  { label: "South Korea", value: "South Korea" },
-  { label: "China", value: "China" },
-  { label: "Germany", value: "Germany" },
-  { label: "France", value: "France" },
-  { label: "Netherlands", value: "Netherlands" },
-  { label: "Italy", value: "Italy" },
-  { label: "Spain", value: "Spain" },
-  { label: "Switzerland", value: "Switzerland" },
-  { label: "Belgium", value: "Belgium" },
-  { label: "Austria", value: "Austria" },
-  { label: "Sweden", value: "Sweden" },
-  { label: "Norway", value: "Norway" },
-  { label: "Denmark", value: "Denmark" },
-  { label: "Ireland", value: "Ireland" },
-  { label: "Portugal", value: "Portugal" },
-  { label: "South Africa", value: "South Africa" },
-  { label: "Nigeria", value: "Nigeria" },
-  { label: "Kenya", value: "Kenya" },
-  { label: "Brazil", value: "Brazil" },
-];
 
 const itemTypes = [
   { label: "Document & Parcels", value: "docs" },
@@ -89,6 +52,7 @@ interface ShippingRateCalculatorProps {
 }
 
 const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant = "sidebar", onCalculate, initialData }) => {
+  const { data: countries = [] } = useDestinations();
   const isSidebar = variant === "sidebar";
   const isHorizontal = variant === "horizontal";
   const isCompact = variant === "compact";
@@ -164,7 +128,7 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
                 role="combobox"
                 className={cn("w-full justify-between font-normal", isSidebar ? "h-10 text-xs" : "h-12", errors.destination && "border-red-500")}
               >
-                {destination ? countries.find(c => c.value === destination)?.label : "Select Destination"}
+                {destination || "Select Destination"}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -185,19 +149,19 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
                   <CommandGroup className="p-2">
                     {countries.map((c) => (
                       <CommandItem
-                        key={c.value}
-                        value={c.label}
+                        key={c}
+                        value={c}
                         onSelect={() => {
-                          setDestination(c.value);
+                          setDestination(c);
                           setOpenDest(false);
                         }}
                         className="py-2.5 px-4 rounded-lg cursor-pointer data-[selected='true']:!bg-green-50 data-[selected='true']:!text-green-primary transition-all mb-0.5 last:mb-0 group/item flex items-center justify-between"
                       >
                         <div className="flex items-center gap-3">
-                          <MapPin className={cn("w-3.5 h-3.5", destination === c.value ? "text-green-primary" : "text-slate-400")} />
-                          <span className="font-semibold text-[13px]">{c.label}</span>
+                          <MapPin className={cn("w-3.5 h-3.5", destination === c ? "text-green-primary" : "text-slate-400")} />
+                          <span className="font-semibold text-[13px]">{c}</span>
                         </div>
-                        {destination === c.value && <Check className="h-3 w-3 text-green-primary" />}
+                        {destination === c && <Check className="h-3 w-3 text-green-primary" />}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -507,23 +471,23 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
                     <CommandGroup className="p-2">
                       {countries.map((c) => (
                         <CommandItem
-                          key={c.value}
-                          value={c.label}
-                          onSelect={() => { setDestination(c.value); setOpenDest(false); }}
+                          key={c}
+                          value={c}
+                          onSelect={() => { setDestination(c); setOpenDest(false); }}
                           className="py-3 px-4 rounded-lg cursor-pointer data-[selected='true']:!bg-green-50 data-[selected='true']:!text-green-primary transition-all mb-1 last:mb-0 group/item flex items-center justify-between"
                         >
                           <div className="flex items-center gap-3">
                             <div className={cn(
                               "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                              destination === c.value ? "bg-green-100 text-green-primary" : "bg-slate-50 text-slate-400 group-hover/item:bg-green-50 group-hover/item:text-green-primary"
+                              destination === c ? "bg-green-100 text-green-primary" : "bg-slate-50 text-slate-400 group-hover/item:bg-green-50 group-hover/item:text-green-primary"
                             )}>
                               <MapPin className="w-4 h-4" />
                             </div>
                             <span className="font-semibold text-[14px] text-slate-700 group-hover/item:text-green-primary transition-colors">
-                              {c.label}
+                              {c}
                             </span>
                           </div>
-                          {destination === c.value && (
+                          {destination === c && (
                             <div className="w-5 h-5 rounded-full bg-green-primary flex items-center justify-center animate-in zoom-in-50">
                               <Check className="h-3 w-3 text-white" />
                             </div>
@@ -640,13 +604,13 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
                       <CommandGroup className="p-1">
                         {countries.map((c) => (
                           <CommandItem
-                            key={c.value}
-                            value={c.label}
-                            onSelect={() => { setDestination(c.value); setOpenDest(false); }}
+                            key={c}
+                            value={c}
+                            onSelect={() => { setDestination(c); setOpenDest(false); }}
                             className="py-2 px-3 rounded-md cursor-pointer data-[selected='true']:bg-green-50 data-[selected='true']:text-green-primary text-xs flex justify-between"
                           >
-                            <span>{c.label}</span>
-                            {destination === c.value && <Check className="h-3 w-3 text-green-primary" />}
+                            <span>{c}</span>
+                            {destination === c && <Check className="h-3 w-3 text-green-primary" />}
                           </CommandItem>
                         ))}
                       </CommandGroup>

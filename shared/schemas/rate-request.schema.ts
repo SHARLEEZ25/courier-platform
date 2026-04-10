@@ -1,43 +1,5 @@
 import { z } from "zod";
 
-export const COUNTRIES = [
-  "India",
-  "USA",
-  "Canada",
-  "UK",
-  "Australia",
-  "New Zealand",
-  "Germany",
-  "France",
-  "Netherlands",
-  "Italy",
-  "Spain",
-  "UAE",
-  "Saudi Arabia",
-  "Qatar",
-  "Kuwait",
-  "Bahrain",
-  "Oman",
-  "Singapore",
-  "Malaysia",
-  "Hong Kong",
-  "Japan",
-  "South Korea",
-  "China",
-  "South Africa",
-  "Nigeria",
-  "Kenya",
-  "Sweden",
-  "Norway",
-  "Denmark",
-  "Switzerland",
-  "Belgium",
-  "Ireland",
-  "Portugal",
-  "Austria",
-  "Thailand",
-  "Brazil",
-] as const;
 
 export const ITEM_TYPES = [
   "university",
@@ -65,8 +27,8 @@ export const DimensionsSchema = z.object({
 });
 
 export const RateRequestSchema = z.object({
-  origin: z.enum(COUNTRIES).default("India"),
-  destination: z.enum(COUNTRIES),
+  origin: z.string().min(1).default("India"),
+  destination: z.string().min(1),
   weight: z.number().positive().max(3000, "Total weight cannot exceed 3,000 kg (DHL limit)"),
   shipmentType: z.enum(["document", "package"]).default("package"),
   itemType: z.enum(ITEM_TYPES),
@@ -88,6 +50,6 @@ export const RateRequestSchema = z.object({
 
 export type RateRequest = z.infer<typeof RateRequestSchema>;
 export type Dimensions = z.infer<typeof DimensionsSchema>;
-export type Country = (typeof COUNTRIES)[number];
+export type Country = string;
 export type ItemType = (typeof ITEM_TYPES)[number];
 export type CarrierSlug = (typeof CARRIERS)[number];
