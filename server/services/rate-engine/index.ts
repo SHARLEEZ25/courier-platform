@@ -100,7 +100,7 @@ function parseSurchargeConfig(
  * Core rate calculation pipeline.
  *
  * Computation order per PDF spec:
- *   base → item discount → margin → FSC → demand surcharge
+ *   base → margin → FSC → demand surcharge
  *   → carrier-specific extras → GST
  *
  * All DB queries fire in ONE parallel batch.
@@ -142,14 +142,13 @@ export async function calculateRates(
 
   const zoneKey      = `zones:${input.origin}:${input.destination}:${fedexService}`;
   const fscKey       = `fsc:${today}`;
-  const discountKey  = `discount:${input.itemType}`;
   const surchargeKey = `surcharge_cfg:all`;
   const stepKey      = `steps:${chargeable}`;
   const bandKey      = `bands:${chargeable}`;
 
-  // ── Single wave: all 7 queries in parallel ────────────────────────────────
+  // ── Single wave: all 6 queries in parallel ────────────────────────────────
   const start = Date.now();
-  const [zoneRows, fscRows, discountRow, surchargeRow, surchargeConfigRows, stepRows, bandRows] = await Promise.all([
+  const [zoneRows, fscRows, surchargeRow, surchargeConfigRows, stepRows, bandRows] = await Promise.all([
 
     withCache<ZoneCacheRow[]>(zoneKey, TTL_30M, () =>
       sql<ZoneCacheRow[]>`
@@ -176,15 +175,6 @@ export async function calculateRates(
           AND (effective_to IS NULL OR effective_to >= ${today}::date)
         ORDER BY effective_from DESC
       `
-    ),
-
-    withCache<{ discount_pct: number } | null>(discountKey, TTL_1H, () =>
-      sql<{ discount_pct: number }[]>`
-        SELECT discount_pct
-        FROM item_type_discounts
-        WHERE item_type_id = ${input.itemType}
-        LIMIT 1
-      `.then(rows => rows[0] ?? null)
     ),
 
     input.pickupPincode
@@ -249,7 +239,6 @@ export async function calculateRates(
 
   const cfgMap = parseSurchargeConfig(surchargeConfigRows);
 
-  const discountPct     = discountRow  ? Number(discountRow.discount_pct)   : 0;
   const pickupSurcharge = surchargeRow ? Number(surchargeRow.surcharge_inr) : 0;
 
   const requestedCarriers = input.carrier ? [input.carrier] : allCarriers;
@@ -350,25 +339,21 @@ export async function calculateRates(
       }
     }
 
-    // Step 1: item discount (Uniex discount to customer, e.g. university 50% off)
-    const discountInr    = round2(priceInr * discountPct);
-    const discountedBase = round2(priceInr - discountInr);
-
-    // Step 2: margin (Uniex markup on carrier base — internal, never shown to customer)
+    // Step 1: margin (Uniex markup on carrier base — internal, never shown to customer)
     const marginPct = Number(cfg['margin_pct'] ?? 20);
-    const marginInr = round2(discountedBase * (marginPct / 100));
-    const withMargin = round2(discountedBase + marginInr);
+    const marginInr = round2(priceInr * (marginPct / 100));
+    const withMargin = round2(priceInr + marginInr);
 
-    // Step 3: FSC (applied on withMargin per spec)
+    // Step 2: FSC (applied on withMargin per spec)
     const fscPct = fscMap.get(carrier) ?? FALLBACK_FSC[carrier] ?? 27.0;
     const fscInr = applyFsc(withMargin, fscPct);
 
-    // Step 4: demand surcharge
+    // Step 3: demand surcharge
     const demandActive  = cfg['demand_active'] === true;
     const demandPerKg   = Number(cfg['demand_per_kg'] ?? 0);
     const demandSurchargeInr = demandActive ? round2(demandPerKg * effectiveChargeable) : 0;
 
-    // Step 5: carrier-specific extras
+    // Step 4: carrier-specific extras
     let premiumServiceInr = 0;
     let peakSurchargeInr  = 0;
     let usInboundInr      = 0;
@@ -411,11 +396,11 @@ export async function calculateRates(
       }
     }
 
-    // Step 6: packaging + insurance
+    // Step 5: packaging + insurance
     const packagingInr = PACKAGING_FEES[input.packaging];
     const insuranceInr = input.insurance ? INSURANCE_FEE : 0;
 
-    // Step 7: GST on full subtotal
+    // Step 6: GST on full subtotal
     const preGst = withMargin + fscInr + demandSurchargeInr
       + premiumServiceInr + peakSurchargeInr
       + usInboundInr + upsFixedInr
@@ -431,8 +416,8 @@ export async function calculateRates(
       actualWeightKg: input.weightKg,
       volumetricWeightKg: volumetric,
       baseRateInr: round2(priceInr),
-      discountPct,
-      discountInr,
+      discountPct: 0,
+      discountInr: 0,
       marginPct,
       marginInr,
       fscPct,
