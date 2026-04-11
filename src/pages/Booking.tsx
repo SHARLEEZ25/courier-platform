@@ -77,7 +77,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MagicPaste } from "@/components/MagicPaste";
 
 
 // Steps definition
@@ -153,13 +152,6 @@ const Booking = () => {
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
   const [currentSubStep, setCurrentSubStep] = useState(1); // 1: Shipper, 2: Consignee, 3: Shipment
   const [direction, setDirection] = useState(0);
-
-  const handleMagicApply = (data: any) => {
-    setFormData(prev => ({
-      ...prev,
-      ...data
-    }));
-  };
 
 
   // Pincode lookup via hook — auto-fires when formData.pickupPincode is 6 digits
@@ -444,13 +436,10 @@ const Booking = () => {
                 >
                   {currentSubStep === 1 && (
                     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-                      <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                           <div className="bg-green-50 p-2 rounded-lg text-green-primary"><User className="w-5 h-5" /></div>
                           <h2 className="text-xl font-bold">1. Shipper details</h2>
                         </div>
-                        <MagicPaste currentStep={currentStep} onApply={handleMagicApply} />
-                      </div>
 
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -633,13 +622,10 @@ const Booking = () => {
 
                   {currentSubStep === 2 && (
                     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-                      <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                           <div className="bg-green-50 p-2 rounded-lg text-green-primary"><Package className="w-5 h-5" /></div>
                           <h2 className="text-xl font-bold">2. Consignee details</h2>
                         </div>
-                        <MagicPaste currentStep={currentStep} onApply={handleMagicApply} />
-                      </div>
 
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -765,13 +751,10 @@ const Booking = () => {
 
                   {currentSubStep === 3 && (
                     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-                      <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                           <div className="bg-green-50 p-2 rounded-lg text-green-primary"><Package className="w-5 h-5" /></div>
                           <h2 className="text-xl font-bold">3. Shipment details</h2>
                         </div>
-                        <MagicPaste currentStep={currentStep} onApply={handleMagicApply} />
-                      </div>
 
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
