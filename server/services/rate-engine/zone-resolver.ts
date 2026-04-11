@@ -33,6 +33,7 @@ export const DELIVERY_DAYS: Record<CarrierSlug, Record<string, string>> = {
     'E': '3-5',   // SE Asia, Australia, Oceania
     'F': '3-5',   // Western Europe core
     'G': '4-6',   // USA, Mexico
+    'H': '3-4',   // Japan
     'I': '4-6',   // Rest of Europe (Eastern + Northern)
     'J': '6-9',   // Americas + Caribbean
     'K': '5-8',   // South Africa

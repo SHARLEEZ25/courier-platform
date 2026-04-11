@@ -108,6 +108,7 @@ const FEDEX_ZONES: [string, string][] = [
   // Zone G — USA + Mexico
   ['USA',              'G'], ['Mexico',        'G'],
   // Zone H — Japan (PDF page 9 explicitly states "Japan | H | H" for both IP and IPF)
+  ['Japan',            'H'],
   // Zone I — Rest of Europe (Eastern + Northern)
   ['Albania',          'I'], ['Austria',       'I'], ['Belarus',      'I'],
   ['Bulgaria',         'I'], ['Croatia',       'I'], ['Cyprus',       'I'],
@@ -134,17 +135,15 @@ const FEDEX_ZONES: [string, string][] = [
   ['Bahrain',          'M'], ['Kuwait',        'M'], ['Oman',         'M'],
   ['Qatar',            'M'],
   // Zone N — East Africa + Mauritius + Sudan
-  ['Kenya',            'N'], ['Mauritius',     'N'], ['Sudan',        'N'],
-  ['Tanzania',         'N'], ['Uganda',        'N'],
+  ['Ethiopia',         'N'], ['Kenya',         'N'], ['Mauritius',    'N'],
+  ['Sudan',            'N'], ['Tanzania',      'N'], ['Uganda',       'N'],
   // Zone O — West/North Africa
-  ['Algeria',          'O'], ['Ghana',         'O'], ['Libya',        'O'],
-  ['Morocco',          'O'], ['Nigeria',       'O'],
+  ['Algeria',          'O'], ['Angola',        'O'], ['Ghana',        'O'],
+  ['Libya',            'O'], ['Morocco',       'O'], ['Nigeria',      'O'],
   // Zone P — Southern Africa
-  ['Mozambique',       'P'], ['Namibia',       'P'], ['Zimbabwe',     'P'],
-  ['Zambia',           'P'],
-  // Zone Q — West Africa + others
-  ['Angola',           'Q'], ['Cameroon',      'Q'], ['Egypt',        'Q'],
-  ['Ethiopia',         'Q'], ['Senegal',       'Q'],
+  ['Namibia',          'P'], ['Zambia',        'P'], ['Zimbabwe',     'P'],
+  // Zone Q — West/Central Africa + others (Mozambique is Q per PDF, not P)
+  ['Cameroon',         'Q'], ['Mozambique',    'Q'], ['Senegal',      'Q'],
 ];
 
 // ─── UPS Zones (from UPS-2026.pdf country list, pages 7-9) ──────────────────
