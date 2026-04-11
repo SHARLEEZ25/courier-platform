@@ -77,6 +77,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MagicPaste } from "@/components/MagicPaste";
+
 
 // Steps definition
 const STEPS = [
@@ -108,33 +110,33 @@ const Booking = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Sender (Shipper)
-    senderCompany: "",
-    senderMobile: "",
-    senderTelephone: "",
-    senderEmail: "",
-    senderKyc: "",
-    pickupPincode: routeState?.pickupPincode || "",
-    pickupAddress1: "",
-    pickupAddress2: "",
-    pickupCity: "",
-    pickupState: "",
-    pickupDate: "",
-    pickupSlot: "",
+    senderCompany: "Rahul Sharma",
+    senderMobile: "9876543210",
+    senderTelephone: "0112345678",
+    senderEmail: "rahul.sharma@example.com",
+    senderKyc: "ABCDE1234F", // Sample PAN card format
+    pickupPincode: routeState?.pickupPincode || "110001",
+    pickupAddress1: "123, Connaught Place",
+    pickupAddress2: "Near Metro Gate 3",
+    pickupCity: "New Delhi",
+    pickupState: "Delhi",
+    pickupDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0], // 2 days from now
+    pickupSlot: "Morning",
     // Receiver (Consignee)
-    receiverCompany: "",
-    receiverMobile: "",
+    receiverCompany: "John Doe",
+    receiverMobile: "2015550123",
     receiverTelephone: "",
-    receiverEmail: "",
-    deliveryAddress1: "",
-    deliveryAddress2: "",
-    deliveryCity: "",
-    deliveryState: "",
-    deliveryZip: "",
+    receiverEmail: "john.doe@example.com",
+    deliveryAddress1: "456 Main Street",
+    deliveryAddress2: "Apartment 4B",
+    deliveryCity: "New York",
+    deliveryState: "NY",
+    deliveryZip: "10001",
     // Services
     numPieces: "1",
-    contents: "",
-    shipperReference: "",
-    specialInstruction: "",
+    contents: "University application documents and certificates.",
+    shipperReference: "UNX-DEMO-001",
+    specialInstruction: "Please call before arrival for pickup.",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -151,6 +153,14 @@ const Booking = () => {
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
   const [currentSubStep, setCurrentSubStep] = useState(1); // 1: Shipper, 2: Consignee, 3: Shipment
   const [direction, setDirection] = useState(0);
+
+  const handleMagicApply = (data: any) => {
+    setFormData(prev => ({
+      ...prev,
+      ...data
+    }));
+  };
+
 
   // Pincode lookup via hook — auto-fires when formData.pickupPincode is 6 digits
   const { data: pincodeData, isLoading: pincodeLoading, error: pincodeError } =
@@ -434,10 +444,14 @@ const Booking = () => {
                 >
                   {currentSubStep === 1 && (
                     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="bg-green-50 p-2 rounded-lg text-green-primary"><User className="w-5 h-5" /></div>
-                        <h2 className="text-xl font-bold">1. Shipper details</h2>
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-green-50 p-2 rounded-lg text-green-primary"><User className="w-5 h-5" /></div>
+                          <h2 className="text-xl font-bold">1. Shipper details</h2>
+                        </div>
+                        <MagicPaste currentStep={currentStep} onApply={handleMagicApply} />
                       </div>
+
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Company / Name */}
@@ -619,10 +633,14 @@ const Booking = () => {
 
                   {currentSubStep === 2 && (
                     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="bg-green-50 p-2 rounded-lg text-green-primary"><Package className="w-5 h-5" /></div>
-                        <h2 className="text-xl font-bold">2. Consignee details</h2>
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-green-50 p-2 rounded-lg text-green-primary"><Package className="w-5 h-5" /></div>
+                          <h2 className="text-xl font-bold">2. Consignee details</h2>
+                        </div>
+                        <MagicPaste currentStep={currentStep} onApply={handleMagicApply} />
                       </div>
+
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Company / Name */}
@@ -747,10 +765,14 @@ const Booking = () => {
 
                   {currentSubStep === 3 && (
                     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-                      <div className="flex items-center gap-3 mb-6">
-                        <div className="bg-green-50 p-2 rounded-lg text-green-primary"><Package className="w-5 h-5" /></div>
-                        <h2 className="text-xl font-bold">3. Shipment details</h2>
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-green-50 p-2 rounded-lg text-green-primary"><Package className="w-5 h-5" /></div>
+                          <h2 className="text-xl font-bold">3. Shipment details</h2>
+                        </div>
+                        <MagicPaste currentStep={currentStep} onApply={handleMagicApply} />
                       </div>
+
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
