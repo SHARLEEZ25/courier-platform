@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import type { BookingCreate, CarrierSlug, ItemType } from "@/types/api";
 import { CARRIERS, ITEM_TYPES } from "../../shared/schemas/rate-request.schema";
 
-// Reverse-lookup: display label → slug (for carrier and item type)
+// Reverse-lookup: display label ΓåÆ slug (for carrier and item type)
 function toCarrierSlug(val: string): CarrierSlug {
   if ((CARRIERS as readonly string[]).includes(val)) return val as CarrierSlug;
   const lower = val.toLowerCase();
@@ -152,7 +152,7 @@ const Booking = () => {
   const [currentSubStep, setCurrentSubStep] = useState(1); // 1: Shipper, 2: Consignee, 3: Shipment
   const [direction, setDirection] = useState(0);
 
-  // Pincode lookup via hook — auto-fires when formData.pickupPincode is 6 digits
+  // Pincode lookup via hook ΓÇö auto-fires when formData.pickupPincode is 6 digits
   const { data: pincodeData, isLoading: pincodeLoading, error: pincodeError } =
     usePincode(formData.pickupPincode);
 
@@ -178,7 +178,7 @@ const Booking = () => {
 
   if (authLoading || !user) return null;
 
-  // Safe to use routeState after auth guard — fallback uses a valid carrier
+  // Safe to use routeState after auth guard ΓÇö fallback uses a valid carrier
   const state = routeState || {
     origin: "India",
     destination: "USA",
@@ -356,7 +356,7 @@ const Booking = () => {
             trackingId: booking.booking_ref,
             totalPrice: booking.total_inr,
             estimatedDelivery: state.estimatedDelivery ?? "5ΓÇô7 business days",
-            route: `${pincodeStatus.status === "found" ? pincodeStatus.city : "India"} → ${state.destination}`,
+            route: `${pincodeStatus.status === "found" ? pincodeStatus.city : "India"} ΓåÆ ${state.destination}`,
           },
         });
       },
@@ -502,8 +502,8 @@ const Booking = () => {
                             <p className="text-[11px] text-green-600 font-semibold">
                               {pincodeStatus.city}
                               {pincodeStatus.surchargeInr > 0
-                                ? ` — Pickup surcharge: ₹${pincodeStatus.surchargeInr}`
-                                : " — Free pickup"}
+                                ? ` ΓÇö Pickup surcharge: Γé╣${pincodeStatus.surchargeInr}`
+                                : " ΓÇö Free pickup"}
                             </p>
                           )}
                           {pincodeStatus.status === "not_found" && (
@@ -731,7 +731,7 @@ const Booking = () => {
                           />
                         </div>
 
-                        {/* Country — read-only */}
+                        {/* Country ΓÇö read-only */}
                         <div className="space-y-2">
                           <label className="text-[13px] font-bold text-slate-600 uppercase">Country</label>
                           <Input
@@ -772,7 +772,7 @@ const Booking = () => {
                         <div className="md:col-span-2 space-y-2">
                           <label className="text-[13px] font-bold text-slate-600 uppercase">Content Description *</label>
                           <Textarea
-                            placeholder="e.g. University application documents — transcripts, certificates. No commercial value."
+                            placeholder="e.g. University application documents ΓÇö transcripts, certificates. No commercial value."
                             value={formData.contents}
                             onChange={e => setFormData({...formData, contents: e.target.value})}
                             className={cn("min-h-[100px]", errors.contents && "border-red-500")}
@@ -829,7 +829,7 @@ const Booking = () => {
                        <div><span className="text-slate-400">Email:</span> <p className="font-semibold text-brand-black">{formData.senderEmail || 'N/A'}</p></div>
                        {formData.senderKyc && <div><span className="text-slate-400">KYC No.:</span> <p className="font-semibold text-brand-black">{formData.senderKyc}</p></div>}
                        <div><span className="text-slate-400">Pickup Date:</span> <p className="font-semibold text-brand-black">{formData.pickupDate} ({formData.pickupSlot})</p></div>
-                       <div className="md:col-span-2"><span className="text-slate-400">Address:</span> <p className="font-semibold text-brand-black leading-relaxed">{formData.pickupAddress1}{formData.pickupAddress2 ? `, ${formData.pickupAddress2}` : ""}, {formData.pickupCity}, {formData.pickupState} — {formData.pickupPincode}</p></div>
+                       <div className="md:col-span-2"><span className="text-slate-400">Address:</span> <p className="font-semibold text-brand-black leading-relaxed">{formData.pickupAddress1}{formData.pickupAddress2 ? `, ${formData.pickupAddress2}` : ""}, {formData.pickupCity}, {formData.pickupState} ΓÇö {formData.pickupPincode}</p></div>
                     </div>
                   </section>
 
@@ -871,29 +871,29 @@ const Booking = () => {
                    <div className="space-y-3">
                       <div className="flex justify-between text-sm">
                          <span className="text-slate-500">Shipping charge ({state.weight}kg)</span>
-                         <span className="font-medium text-brand-black">₹{Math.round(state.totalPrice - (state.pickupSurcharge || 0) - (state.packaging === 'standard' ? 150 : state.packaging === 'premium' ? 350 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
+                         <span className="font-medium text-brand-black">Γé╣{Math.round(state.totalPrice - (state.pickupSurcharge || 0) - (state.packaging === 'standard' ? 150 : state.packaging === 'premium' ? 350 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
                       </div>
                       {state.packaging !== 'none' && (
                          <div className="flex justify-between text-sm">
                             <span className="text-slate-500">Packaging ({state.packaging} box)</span>
-                            <span className="font-medium text-brand-black">+₹{state.packaging === 'standard' ? '150' : '350'}</span>
+                            <span className="font-medium text-brand-black">+Γé╣{state.packaging === 'standard' ? '150' : '350'}</span>
                          </div>
                       )}
                       {state.insurance && (
                          <div className="flex justify-between text-sm">
                             <span className="text-slate-500">Transit Insurance</span>
-                            <span className="font-medium text-brand-black">+₹199</span>
+                            <span className="font-medium text-brand-black">+Γé╣199</span>
                          </div>
                       )}
                       {state.pickupSurcharge > 0 && (
                          <div className="flex justify-between text-sm">
                             <span className="text-slate-500">Pickup surcharge ({state.pickupCity})</span>
-                            <span className="font-medium text-brand-black">+₹{state.pickupSurcharge}</span>
+                            <span className="font-medium text-brand-black">+Γé╣{state.pickupSurcharge}</span>
                          </div>
                       )}
                       <div className="pt-4 border-t border-slate-200 flex justify-between items-end">
                          <span className="font-bold text-brand-black">Total Payable</span>
-                         <span className="text-3xl font-bold text-green-primary leading-none">₹{state.totalPrice.toLocaleString()}</span>
+                         <span className="text-3xl font-bold text-green-primary leading-none">Γé╣{state.totalPrice.toLocaleString()}</span>
                       </div>
                    </div>
                 </div>
@@ -940,8 +940,8 @@ const Booking = () => {
                      <span>{state.pickupCity || 'Chennai'}</span>
                      <ArrowLeft className="w-3 h-3 rotate-180 text-slate-400" />
                      <span className="truncate max-w-[100px]">{state.destination}</span>
-                     <span className="mx-1 text-slate-300">·</span>
-                     <span className="text-green-dark">₹{state.totalPrice.toLocaleString()}</span>
+                     <span className="mx-1 text-slate-300">┬╖</span>
+                     <span className="text-green-dark">Γé╣{state.totalPrice.toLocaleString()}</span>
                   </div>
                   {isSummaryExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                </div>
@@ -952,14 +952,14 @@ const Booking = () => {
                     <div className="flex justify-between items-start">
                        <div>
                           <p className="text-[12px] text-slate-400 uppercase font-black">Shipment</p>
-                          <p className="text-[14px] font-bold">{state.itemType} · {state.carrier}</p>
+                          <p className="text-[14px] font-bold">{state.itemType} ┬╖ {state.carrier}</p>
                        </div>
                        <p className="text-[12px] font-mono text-slate-400">REF-2025-AX92</p>
                     </div>
                     <div className="space-y-1">
                        <div className="flex justify-between text-[13px] text-slate-500">
                           <span>Shipping charge</span>
-                          <span>₹{state.totalPrice.toLocaleString()}</span>
+                          <span>Γé╣{state.totalPrice.toLocaleString()}</span>
                        </div>
                     </div>
                  </div>
@@ -978,7 +978,7 @@ const Booking = () => {
                            </button>
                            <h1 className="text-[22px] font-medium text-brand-black">Payment</h1>
                         </div>
-                        <p className="text-slate-400 text-[13px] ml-9">Complete your booking — you won't be charged until you confirm</p>
+                        <p className="text-slate-400 text-[13px] ml-9">Complete your booking ΓÇö you won't be charged until you confirm</p>
                      </div>
 
                      {/* Payment Method Tabs */}
@@ -1176,7 +1176,7 @@ const Booking = () => {
                                 disabled={isCreatingBooking || !cardNumber || !cardExpiry || !cardCvv}
                                 className="w-full h-[48px] bg-[#16A34A] hover:bg-[#15803D] text-white rounded-[10px] font-medium text-[15px]"
                               >
-                                 {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay ₹${state.totalPrice.toLocaleString()} →`}
+                                 {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay Γé╣${state.totalPrice.toLocaleString()} ΓåÆ`}
                               </Button>
                            </div>
                         )}
@@ -1214,7 +1214,7 @@ const Booking = () => {
                                    disabled={isCreatingBooking}
                                    className="w-full h-[48px] bg-[#16A34A] hover:bg-[#15803D] text-white rounded-[10px] font-medium text-[15px]"
                                  >
-                                    {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : "Proceed to bank →"}
+                                    {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : "Proceed to bank ΓåÆ"}
                                  </Button>
                               </div>
                            </div>
@@ -1253,23 +1253,23 @@ const Booking = () => {
                                  <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
                                  <span>{state.destination}</span>
                               </div>
-                              <p className="text-[12px] text-slate-400 mt-1">{state.itemType} · {state.carrier}</p>
+                              <p className="text-[12px] text-slate-400 mt-1">{state.itemType} ┬╖ {state.carrier}</p>
                               <p className="text-[11px] text-slate-400">{state.planDays || '12ΓÇô15 business days'}</p>
                            </div>
 
                            <div className="border-t border-slate-100 pt-4 space-y-2">
                               {/* Price Rows */}
                               <div className="flex justify-between items-center h-8 text-[13px]">
-                                 <span className="text-slate-500">Shipping charge ({state.weight}kg · 50% off)</span>
-                                 <span className="text-brand-black">₹{(state.totalPrice - (state.packaging === 'premium' ? 350 : state.packaging === 'standard' ? 150 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
+                                 <span className="text-slate-500">Shipping charge ({state.weight}kg ┬╖ 50% off)</span>
+                                 <span className="text-brand-black">Γé╣{(state.totalPrice - (state.packaging === 'premium' ? 350 : state.packaging === 'standard' ? 150 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
                               </div>
                               <div className="flex justify-between items-center h-8 text-[13px]">
                                  <span className="text-slate-500">Packaging</span>
-                                 <span className="text-brand-black">₹{state.packaging === 'premium' ? 350 : state.packaging === 'standard' ? 150 : 0}</span>
+                                 <span className="text-brand-black">Γé╣{state.packaging === 'premium' ? 350 : state.packaging === 'standard' ? 150 : 0}</span>
                               </div>
                               <div className="flex justify-between items-center h-8 text-[13px]">
                                  <span className="text-slate-500">Insurance</span>
-                                 <span className="text-brand-black">₹{state.insurance ? 199 : 0}</span>
+                                 <span className="text-brand-black">Γé╣{state.insurance ? 199 : 0}</span>
                               </div>
                               <div className="flex justify-between items-center h-8 text-[13px]">
                                  <span className="text-slate-500">Pickup surcharge</span>
@@ -1279,7 +1279,7 @@ const Booking = () => {
 
                            <div className="border-t border-slate-100 pt-4 flex justify-between items-center">
                               <span className="text-[15px] font-semibold text-brand-black">Total payable</span>
-                              <span className="text-[22px] font-bold text-[#15803D]">₹{state.totalPrice.toLocaleString()}</span>
+                              <span className="text-[22px] font-bold text-[#15803D]">Γé╣{state.totalPrice.toLocaleString()}</span>
                            </div>
 
                            <div className="space-y-3">
@@ -1320,7 +1320,7 @@ const Booking = () => {
             disabled={isCreatingBooking}
             className="flex-1 bg-[#16A34A] hover:bg-[#15803D] text-white h-14 rounded-xl font-bold text-lg shadow-xl shadow-green-primary/20"
            >
-             {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay ₹${state.totalPrice.toLocaleString()}`}
+             {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay Γé╣${state.totalPrice.toLocaleString()}`}
            </Button>
            {submitError && (
              <p className="text-sm text-red-500 text-center mt-3">{submitError}</p>
