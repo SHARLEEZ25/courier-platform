@@ -257,6 +257,7 @@ const RateBreakdown = () => {
             estimatedDelivery: selectedRate.estimatedDeliveryDays + " days",
             dhlService,
             upsOptions,
+            rateDetails: selectedRate,
           }
         });
       }

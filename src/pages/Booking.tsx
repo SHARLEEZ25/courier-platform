@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePincode } from "@/hooks/usePincode";
 import { useCreateBooking } from "@/hooks/useBooking";
@@ -191,7 +191,8 @@ const Booking = () => {
     insurance: false,
     pickupSurcharge: 0,
     pickupCity: "",
-    pickupPincode: ""
+    pickupPincode: "",
+    rateDetails: null as any
   };
 
   const pincodeStatus:
@@ -355,7 +356,7 @@ const Booking = () => {
             bookingRef: booking.booking_ref,
             trackingId: booking.booking_ref,
             totalPrice: booking.total_inr,
-            estimatedDelivery: state.estimatedDelivery ?? "5ΓÇô7 business days",
+            estimatedDelivery: state.estimatedDelivery ?? "5-7 business days",
             route: `${pincodeStatus.status === "found" ? pincodeStatus.city : "India"} → ${state.destination}`,
           },
         });
@@ -869,10 +870,49 @@ const Booking = () => {
                 <div className="bg-slate-50 p-8 border-t border-slate-100">
                    <h3 className="font-bold text-sm uppercase tracking-wider text-slate-500 mb-4">Price Breakdown</h3>
                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                         <span className="text-slate-500">Shipping charge ({state.weight}kg)</span>
-                         <span className="font-medium text-brand-black">₹{Math.round(state.totalPrice - (state.pickupSurcharge || 0) - (state.packaging === 'standard' ? 150 : state.packaging === 'premium' ? 350 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
-                      </div>
+                      {state.rateDetails ? (
+                         <>
+                            <div className="flex justify-between text-sm">
+                               <span className="text-slate-500">Base Shipping Rate ({state.weight}kg)</span>
+                               <span className="font-medium text-brand-black">₹{state.rateDetails.baseRateInr?.toLocaleString() || 0}</span>
+                            </div>
+                            {(state.rateDetails.fscInr > 0) && (
+                               <div className="flex justify-between text-sm mt-1">
+                                  <span className="text-slate-500">Fuel Surcharge (FSC)</span>
+                                  <span className="font-medium text-brand-black">+₹{state.rateDetails.fscInr.toLocaleString()}</span>
+                               </div>
+                            )}
+                            {(state.rateDetails.marginInr > 0) && (
+                               <div className="flex justify-between text-sm mt-1">
+                                  <span className="text-slate-500">Platform Margin</span>
+                                  <span className="font-medium text-brand-black">+₹{state.rateDetails.marginInr.toLocaleString()}</span>
+                               </div>
+                            )}
+                            {(state.rateDetails.demandSurchargeInr > 0) && (
+                               <div className="flex justify-between text-sm mt-1">
+                                  <span className="text-slate-500">Demand Surcharge</span>
+                                  <span className="font-medium text-brand-black">+₹{state.rateDetails.demandSurchargeInr.toLocaleString()}</span>
+                               </div>
+                            )}
+                            {((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0) > 0) && (
+                               <div className="flex justify-between text-sm mt-1">
+                                  <span className="text-slate-500">Carrier Extras</span>
+                                  <span className="font-medium text-brand-black">+₹{((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0)).toLocaleString()}</span>
+                               </div>
+                            )}
+                            {(state.rateDetails.gstInr > 0) && (
+                               <div className="flex justify-between text-sm mt-1">
+                                  <span className="text-slate-500">GST (18%)</span>
+                                  <span className="font-medium text-brand-black">+₹{state.rateDetails.gstInr.toLocaleString()}</span>
+                               </div>
+                            )}
+                         </>
+                      ) : (
+                         <div className="flex justify-between text-sm">
+                            <span className="text-slate-500">Shipping charge ({state.weight}kg)</span>
+                            <span className="font-medium text-brand-black">₹{Math.round(state.totalPrice - (state.pickupSurcharge || 0) - (state.packaging === 'standard' ? 150 : state.packaging === 'premium' ? 350 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
+                         </div>
+                      )}
                       {state.packaging !== 'none' && (
                          <div className="flex justify-between text-sm">
                             <span className="text-slate-500">Packaging ({state.packaging} box)</span>
@@ -1254,15 +1294,53 @@ const Booking = () => {
                                  <span>{state.destination}</span>
                               </div>
                               <p className="text-[12px] text-slate-400 mt-1">{state.itemType} · {state.carrier}</p>
-                              <p className="text-[11px] text-slate-400">{state.planDays || '12ΓÇô15 business days'}</p>
+                              <p className="text-[11px] text-slate-400">{state.planDays || '12-15 business days'}</p>
                            </div>
 
                            <div className="border-t border-slate-100 pt-4 space-y-2">
-                              {/* Price Rows */}
-                              <div className="flex justify-between items-center h-8 text-[13px]">
-                                 <span className="text-slate-500">Shipping charge ({state.weight}kg · 50% off)</span>
-                                 <span className="text-brand-black">₹{(state.totalPrice - (state.packaging === 'premium' ? 350 : state.packaging === 'standard' ? 150 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
-                              </div>
+                              {state.rateDetails ? (
+                                <>
+                                  <div className="flex justify-between items-center h-8 text-[13px]">
+                                    <span className="text-slate-500">Base Shipping Rate ({state.weight}kg)</span>
+                                    <span className="text-brand-black">₹{state.rateDetails.baseRateInr?.toLocaleString() || 0}</span>
+                                  </div>
+                                  {(state.rateDetails.fscInr > 0) && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-slate-500">Fuel Surcharge (FSC)</span>
+                                      <span className="text-brand-black">+₹{state.rateDetails.fscInr.toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {(state.rateDetails.marginInr > 0) && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-slate-500">Platform Margin</span>
+                                      <span className="text-brand-black">+₹{state.rateDetails.marginInr.toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {(state.rateDetails.demandSurchargeInr > 0) && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-slate-500">Demand Surcharge</span>
+                                      <span className="text-brand-black">+₹{state.rateDetails.demandSurchargeInr.toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0) > 0) && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-slate-500">Carrier Extras</span>
+                                      <span className="text-brand-black">+₹{((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0)).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {(state.rateDetails.gstInr > 0) && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-slate-500">GST (18%)</span>
+                                      <span className="text-brand-black">+₹{state.rateDetails.gstInr.toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="flex justify-between items-center h-8 text-[13px]">
+                                   <span className="text-slate-500">Shipping charge ({state.weight}kg · 50% off)</span>
+                                   <span className="text-brand-black">₹{(state.totalPrice - (state.packaging === 'premium' ? 350 : state.packaging === 'standard' ? 150 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
+                                </div>
+                              )}
                               <div className="flex justify-between items-center h-8 text-[13px]">
                                  <span className="text-slate-500">Packaging</span>
                                  <span className="text-brand-black">₹{state.packaging === 'premium' ? 350 : state.packaging === 'standard' ? 150 : 0}</span>
