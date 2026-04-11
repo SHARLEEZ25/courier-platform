@@ -36,7 +36,7 @@ const TTL_5MIN =  5 * 60 * 1000; // surcharge toggles — admin may flip in real
 type ZoneCacheRow      = { carrier_id: string; zone_code: string };
 type FscCacheRow       = { carrier_id: string; fsc_percent: string };
 type SurchargeRow      = { carrier_id: string; key: string; value_num: string | null; value_bool: boolean | null };
-type StepCacheRow      = { carrier_id: string; zone_code: string; shipment_type: string; price_inr: number };
+type StepCacheRow      = { carrier_id: string; zone_code: string; shipment_type: string; price_inr: number; weight_kg: number };
 type BandCacheRow      = { carrier_id: string; zone_code: string; shipment_type: string; price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number };
 
 const CARRIER_NAMES: Record<CarrierSlug, string> = {
