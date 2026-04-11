@@ -693,6 +693,79 @@ const RateBreakdown = () => {
                           <span className="text-[11px] text-slate-400">{Math.round(selectedRate.discountPct * 100)}% off applied</span>
                         </div>
                       )}
+
+                      {/* Itemized Breakdown Card */}
+                      {selectedRate && (
+                        <div className="mt-4 bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2">
+                          <div className="flex justify-between text-[12px]">
+                            <span className="text-slate-500">Base Shipping ({selectedRate.chargeableWeightKg}kg)</span>
+                            <span className="font-medium">₹{Math.round(selectedRate.baseRateInr).toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-[12px]">
+                            <span className="text-slate-500">Fuel Surcharge (FSC) ({selectedRate.fscPct}%)</span>
+                            <span className="font-medium">+₹{Math.round(selectedRate.fscInr).toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-[12px]">
+                            <span className="text-slate-500">Platform Fee ({selectedRate.marginPct}%)</span>
+                            <span className="font-medium">+₹{Math.round(selectedRate.marginInr).toLocaleString()}</span>
+                          </div>
+                          
+                          {/* Itemized Carrier Extras */}
+                          {selectedRate.formalClearanceInr > 0 && (
+                            <div className="flex justify-between text-[12px]">
+                              <span className="text-slate-500">Formal clearance by UPS</span>
+                              <span className="font-medium">+₹{selectedRate.formalClearanceInr.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {selectedRate.ddpInr > 0 && (
+                            <div className="flex justify-between text-[12px]">
+                              <span className="text-slate-500">DDP delivery (duties prepaid)</span>
+                              <span className="font-medium">+₹{selectedRate.ddpInr.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {selectedRate.signatureInr > 0 && (
+                            <div className="flex justify-between text-[12px]">
+                              <span className="text-slate-500">Signature on delivery</span>
+                              <span className="font-medium">+₹{selectedRate.signatureInr.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {selectedRate.premiumServiceInr > 0 && (
+                            <div className="flex justify-between text-[12px]">
+                              <span className="text-slate-500">DHL Premium Service</span>
+                              <span className="font-medium">+₹{selectedRate.premiumServiceInr.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {selectedRate.usInboundInr > 0 && (
+                             <div className="flex justify-between text-[12px]">
+                               <span className="text-slate-500">US Inbound Surcharge</span>
+                               <span className="font-medium">+₹{selectedRate.usInboundInr.toLocaleString()}</span>
+                             </div>
+                          )}
+                          {selectedRate.oversizeFeeInr > 0 && (
+                             <div className="flex justify-between text-[12px]">
+                               <span className="text-slate-500 text-red-500 font-medium italic">Oversize / Girth Fee</span>
+                               <span className="font-medium text-red-500">+₹{selectedRate.oversizeFeeInr.toLocaleString()}</span>
+                             </div>
+                          )}
+                          
+                          <div className="flex justify-between text-[12px]">
+                            <span className="text-slate-500">GST (18%)</span>
+                            <span className="font-medium">+₹{Math.round(selectedRate.gstInr).toLocaleString()}</span>
+                          </div>
+
+                          {pincodeData?.surchargeInr && pincodeData.surchargeInr > 0 ? (
+                            <div className="flex justify-between text-[12px]">
+                              <span className="text-slate-500">Pickup surcharge</span>
+                              <span className="font-medium">+₹{pincodeData.surchargeInr.toLocaleString()}</span>
+                            </div>
+                          ) : (
+                            <div className="flex justify-between text-[12px]">
+                              <span className="text-slate-500">Pickup surcharge</span>
+                              <span className="text-green-primary font-bold">FREE</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* All Options Selection List */}

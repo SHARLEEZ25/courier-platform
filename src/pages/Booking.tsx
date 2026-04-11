@@ -1327,10 +1327,52 @@ const Booking = () => {
                                       <span className="text-brand-black">+₹{Math.round(state.rateDetails.demandSurchargeInr).toLocaleString()}</span>
                                     </div>
                                   )}
-                                  {((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0) > 0) && (
+                                  {(state.rateDetails.formalClearanceInr || 0) > 0 && (
                                     <div className="flex justify-between items-center h-8 text-[13px]">
-                                      <span className="text-slate-500">Carrier Extras</span>
-                                      <span className="text-brand-black">+₹{Math.round((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0)).toLocaleString()}</span>
+                                      <span className="text-slate-500">Formal clearance (UPS)</span>
+                                      <span className="text-brand-black">+₹{Math.round(state.rateDetails.formalClearanceInr).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {(state.rateDetails.ddpInr || 0) > 0 && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-slate-500">DDP (duties prepaid)</span>
+                                      <span className="text-brand-black">+₹{Math.round(state.rateDetails.ddpInr).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {(state.rateDetails.signatureInr || 0) > 0 && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-slate-500">Signature on delivery</span>
+                                      <span className="text-brand-black">+₹{Math.round(state.rateDetails.signatureInr).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {(state.rateDetails.premiumServiceInr || 0) > 0 && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-slate-500">DHL Premium Service</span>
+                                      <span className="text-brand-black">+₹{Math.round(state.rateDetails.premiumServiceInr).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {(state.rateDetails.usInboundInr || 0) > 0 && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-slate-500">US Inbound Surcharge</span>
+                                      <span className="text-brand-black">+₹{Math.round(state.rateDetails.usInboundInr).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {(state.rateDetails.remoteAreaInr || 0) > 0 && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-slate-500">Remote Area Surcharge</span>
+                                      <span className="text-brand-black">+₹{Math.round(state.rateDetails.remoteAreaInr).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {(state.rateDetails.peakSurchargeInr || 0) > 0 && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-slate-500">Peak Surcharge</span>
+                                      <span className="text-brand-black">+₹{Math.round(state.rateDetails.peakSurchargeInr).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  {(state.rateDetails.oversizeFeeInr || 0) > 0 && (
+                                    <div className="flex justify-between items-center h-8 text-[13px]">
+                                      <span className="text-red-500">Oversize / Girth Fee</span>
+                                      <span className="text-red-500">+₹{Math.round(state.rateDetails.oversizeFeeInr).toLocaleString()}</span>
                                     </div>
                                   )}
                                   {(state.rateDetails.gstInr > 0) && (

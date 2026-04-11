@@ -21,6 +21,11 @@ export interface RateResult {
   premiumServiceInr: number;   // DHL premium 9am/12pm
   peakSurchargeInr: number;    // FedEx seasonal
   usInboundInr: number;        // UPS: auto ₹230 for USA
+  formalClearanceInr: number;  // UPS
+  ddpInr: number;              // UPS
+  signatureInr: number;        // UPS
+  remoteAreaInr: number;       // UPS
+  oversizeFeeInr: number;      // UPS
   upsFixedInr: number;         // UPS: formal clearance + DDP + signature
   pickupSurchargeInr: number;
   packagingInr: number;

@@ -51,6 +51,11 @@ export interface RateResult {
   premiumServiceInr: number;
   peakSurchargeInr: number;
   usInboundInr: number;
+  formalClearanceInr: number;
+  ddpInr: number;
+  signatureInr: number;
+  remoteAreaInr: number;
+  oversizeFeeInr: number;
   upsFixedInr: number;
   pickupSurchargeInr: number;
   packagingInr: number;
