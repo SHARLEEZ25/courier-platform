@@ -13,7 +13,7 @@ const BookingConfirmation = () => {
   const [trackingId, setTrackingId] = useState("");
   
   const state = location.state || {
-    senderName: "Customer",
+    senderCompany: "Customer",
     destination: "USA",
     carrier: "Aramex",
     totalPrice: 1500,
@@ -42,7 +42,7 @@ const BookingConfirmation = () => {
             <p className="text-slate-500 text-lg">
               {state.isMembership 
                 ? `Thank you, ${state.name}. Your ${state.membershipType} membership is now active.` 
-                : `Thank you, ${state.senderName}. Your shipment has been scheduled.`}
+                : `Thank you, ${state.senderCompany}. Your shipment has been scheduled.`}
             </p>
           </div>
 
