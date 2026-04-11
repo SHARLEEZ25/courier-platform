@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+﻿import React, { useState, useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePincode } from "@/hooks/usePincode";
 import { useCreateBooking } from "@/hooks/useBooking";
@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import type { BookingCreate, CarrierSlug, ItemType } from "@/types/api";
 import { CARRIERS, ITEM_TYPES } from "../../shared/schemas/rate-request.schema";
 
-// Reverse-lookup: display label → slug (for carrier and item type)
+// Reverse-lookup: display label ΓåÆ slug (for carrier and item type)
 function toCarrierSlug(val: string): CarrierSlug {
   if ((CARRIERS as readonly string[]).includes(val)) return val as CarrierSlug;
   const lower = val.toLowerCase();
@@ -152,7 +152,7 @@ const Booking = () => {
   const [currentSubStep, setCurrentSubStep] = useState(1); // 1: Shipper, 2: Consignee, 3: Shipment
   const [direction, setDirection] = useState(0);
 
-  // Pincode lookup via hook — auto-fires when formData.pickupPincode is 6 digits
+  // Pincode lookup via hook ΓÇö auto-fires when formData.pickupPincode is 6 digits
   const { data: pincodeData, isLoading: pincodeLoading, error: pincodeError } =
     usePincode(formData.pickupPincode);
 
@@ -178,7 +178,7 @@ const Booking = () => {
 
   if (authLoading || !user) return null;
 
-  // Safe to use routeState after auth guard — fallback uses a valid carrier
+  // Safe to use routeState after auth guard ΓÇö fallback uses a valid carrier
   const state = routeState || {
     origin: "India",
     destination: "USA",
@@ -248,55 +248,27 @@ const Booking = () => {
 
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
-    const required = [
-      'senderCompany', 'senderMobile', 'pickupPincode', 'pickupAddress1',
-      'pickupCity', 'pickupState', 'pickupDate', 'pickupSlot',
-      'receiverCompany', 'receiverMobile',
-      'deliveryAddress1', 'deliveryCity', 'deliveryState', 'deliveryZip',
-      'numPieces', 'contents'
-    ];
-
-    required.forEach(field => {
-      if (!formData[field as keyof typeof formData]) {
-        newErrors[field] = "Field is required";
-      }
-    });
-
-    if (formData.senderMobile && !/^\d{10}$/.test(formData.senderMobile)) {
-      newErrors.senderMobile = "Enter a valid 10-digit mobile number";
+    
+    if (currentSubStep === 1) {
+      const required = ['senderCompany', 'senderMobile', 'pickupPincode', 'pickupAddress1', 'pickupCity', 'pickupState', 'pickupDate', 'pickupSlot'];
+      required.forEach(f => { if (!formData[f as keyof typeof formData]) newErrors[f] = "Required"; });
+      if (formData.senderMobile && !/^\d{10}$/.test(formData.senderMobile)) newErrors.senderMobile = "Enter 10-digit mobile";
+      if (pincodeStatus.status === "not_found") newErrors.pickupPincode = "Invalid pincode";
+    } 
+    else if (currentSubStep === 2) {
+      const required = ['receiverCompany', 'receiverMobile', 'deliveryAddress1', 'deliveryCity', 'deliveryState', 'deliveryZip'];
+      required.forEach(f => { if (!formData[f as keyof typeof formData]) newErrors[f] = "Required"; });
     }
-
-    if (pincodeStatus.status === "not_found") {
-      newErrors.pickupPincode = "Invalid pincode";
-    }
-
-    if (formData.receiverMobile && !/^\+?\d{7,15}$/.test(formData.receiverMobile)) {
-      newErrors.receiverMobile = "Enter a valid international number (e.g. +14155550100)";
-    }
-
-    if (formData.deliveryAddress1 && formData.deliveryAddress1.length < 5) {
-      newErrors.deliveryAddress1 = "Address must be at least 5 characters";
-    }
-
-    if (formData.pickupAddress1 && formData.pickupAddress1.length < 5) {
-      newErrors.pickupAddress1 = "Address must be at least 5 characters";
-    }
-
-    if (formData.pickupDate) {
-      const date = new Date(formData.pickupDate);
-      if (date.getDay() === 0) {
-        newErrors.pickupDate = "No Sunday pickups";
-      }
-    }
-
-    // DHL hard limits from PDF
-    if (state.carrier === 'dhl') {
-      const pieces = parseInt(formData.numPieces, 10) || 1;
-      const perPiece = state.weight / pieces;
-      if (state.weight > 3000) {
-        newErrors.numPieces = "Total weight cannot exceed 3,000 kg (DHL limit)";
-      } else if (perPiece > 1000) {
-        newErrors.numPieces = `Per-piece weight is ${perPiece.toFixed(1)} kg — DHL limit is 1,000 kg per piece`;
+    else if (currentSubStep === 3) {
+      const required = ['numPieces', 'contents'];
+      required.forEach(f => { if (!formData[f as keyof typeof formData]) newErrors[f] = "Required"; });
+      
+      // Carrier specific checks
+      if (state.carrier === 'dhl') {
+        const pieces = parseInt(formData.numPieces, 10) || 1;
+        const perPiece = state.weight / pieces;
+        if (state.weight > 3000) newErrors.numPieces = "Exceeds 3,000 kg limit";
+        else if (perPiece > 1000) newErrors.numPieces = "Exceeds 1,000 kg per piece";
       }
     }
 
@@ -383,8 +355,8 @@ const Booking = () => {
             bookingRef: booking.booking_ref,
             trackingId: booking.booking_ref,
             totalPrice: booking.total_inr,
-            estimatedDelivery: state.estimatedDelivery ?? "5–7 business days",
-            route: `${pincodeStatus.status === "found" ? pincodeStatus.city : "India"} → ${state.destination}`,
+            estimatedDelivery: state.estimatedDelivery ?? "5ΓÇô7 business days",
+            route: `${pincodeStatus.status === "found" ? pincodeStatus.city : "India"} ΓåÆ ${state.destination}`,
           },
         });
       },
@@ -448,355 +420,378 @@ const Booking = () => {
           )}
 
           {currentStep === 1 && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[800px] mx-auto">
-              {/* Card 1 — Shipper details */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="bg-green-50 p-2 rounded-lg text-green-primary"><User className="w-5 h-5" /></div>
-                  <h2 className="text-xl font-bold">1. Shipper details</h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Company / Name */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Company / Name *</label>
-                    <Input
-                      placeholder="Company name or sender's full name"
-                      value={formData.senderCompany}
-                      onChange={e => setFormData({...formData, senderCompany: e.target.value})}
-                      className={cn(errors.senderCompany && "border-red-500")}
-                    />
-                    {errors.senderCompany && <p className="text-[11px] text-red-500">{errors.senderCompany}</p>}
-                  </div>
-
-                  {/* Address 1 */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Address 1 *</label>
-                    <Input
-                      placeholder="House no, Street name, Locality"
-                      value={formData.pickupAddress1}
-                      onChange={e => setFormData({...formData, pickupAddress1: e.target.value})}
-                      className={cn(errors.pickupAddress1 && "border-red-500")}
-                    />
-                    {errors.pickupAddress1 && <p className="text-[11px] text-red-500">{errors.pickupAddress1}</p>}
-                  </div>
-
-                  {/* Address 2 */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Address 2</label>
-                    <Input
-                      placeholder="Apartment, suite, landmark (optional)"
-                      value={formData.pickupAddress2}
-                      onChange={e => setFormData({...formData, pickupAddress2: e.target.value})}
-                    />
-                  </div>
-
-                  {/* Pincode */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Pincode *</label>
-                    <Input
-                      placeholder="6-digit pincode"
-                      maxLength={6}
-                      value={formData.pickupPincode}
-                      onChange={e => {
-                        const val = e.target.value.replace(/\D/g, "");
-                        setFormData({...formData, pickupPincode: val});
-                      }}
-                      className={cn(
-                        errors.pickupPincode && "border-red-500",
-                        pincodeStatus.status === "found" && "border-green-500",
-                        pincodeStatus.status === "not_found" && "border-red-500",
-                      )}
-                    />
-                    {pincodeStatus.status === "loading" && (
-                      <p className="text-[11px] text-slate-400">Checking pincode...</p>
-                    )}
-                    {pincodeStatus.status === "found" && (
-                      <p className="text-[11px] text-green-600 font-semibold">
-                        {pincodeStatus.city}
-                        {pincodeStatus.surchargeInr > 0
-                          ? ` — Pickup surcharge: ₹${pincodeStatus.surchargeInr}`
-                          : " — Free pickup"}
-                      </p>
-                    )}
-                    {pincodeStatus.status === "not_found" && (
-                      <p className="text-[11px] text-red-500 font-semibold">Pickup not available at this pincode</p>
-                    )}
-                    {errors.pickupPincode && pincodeStatus.status === "idle" && (
-                      <p className="text-[11px] text-red-500">{errors.pickupPincode}</p>
-                    )}
-                  </div>
-
-                  {/* City */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">City *</label>
-                    <Input
-                      placeholder={pincodeStatus.status === "found" ? pincodeStatus.city : "City"}
-                      value={formData.pickupCity || (pincodeStatus.status === "found" ? pincodeStatus.city : "")}
-                      onChange={e => setFormData({...formData, pickupCity: e.target.value})}
-                      className={cn(errors.pickupCity && "border-red-500")}
-                    />
-                    {errors.pickupCity && <p className="text-[11px] text-red-500">{errors.pickupCity}</p>}
-                  </div>
-
-                  {/* State */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">State *</label>
-                    <Input
-                      placeholder={pincodeData?.state ?? "State"}
-                      value={formData.pickupState || (pincodeData?.state ?? "")}
-                      onChange={e => setFormData({...formData, pickupState: e.target.value})}
-                      className={cn(errors.pickupState && "border-red-500")}
-                    />
-                    {errors.pickupState && <p className="text-[11px] text-red-500">{errors.pickupState}</p>}
-                  </div>
-
-                  {/* Telephone */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Telephone</label>
-                    <Input
-                      placeholder="Landline number"
-                      value={formData.senderTelephone}
-                      onChange={e => setFormData({...formData, senderTelephone: e.target.value})}
-                    />
-                  </div>
-
-                  {/* Mobile No. */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Mobile No. *</label>
-                    <div className="flex gap-2">
-                      <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 flex items-center text-slate-500 font-medium">+91</div>
-                      <Input
-                        placeholder="10-digit mobile"
-                        maxLength={10}
-                        value={formData.senderMobile}
-                        onChange={e => setFormData({...formData, senderMobile: e.target.value.replace(/\D/g, "")})}
-                        className={cn("flex-1", errors.senderMobile && "border-red-500")}
-                      />
-                    </div>
-                    {errors.senderMobile && <p className="text-[11px] text-red-500">{errors.senderMobile}</p>}
-                  </div>
-
-                  {/* E-Mail */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">E-Mail</label>
-                    <Input
-                      placeholder="sender@email.com"
-                      value={formData.senderEmail}
-                      onChange={e => setFormData({...formData, senderEmail: e.target.value})}
-                    />
-                  </div>
-
-                  {/* KYC No. */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">KYC No.</label>
-                    <Input
-                      placeholder="Aadhaar / PAN / Passport no."
-                      value={formData.senderKyc}
-                      onChange={e => setFormData({...formData, senderKyc: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Pickup Date *</label>
-                    <Input 
-                      type="date"
-                      min={new Date(Date.now() + 86400000).toISOString().split('T')[0]} // Min tomorrow
-                      value={formData.pickupDate} 
-                      onChange={e => setFormData({...formData, pickupDate: e.target.value})}
-                      className={cn(errors.pickupDate && "border-red-500")}
-                    />
-                    {errors.pickupDate && <p className="text-[11px] text-red-500 font-medium">{errors.pickupDate}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Preferred Time Slot *</label>
-                    <div className="flex flex-wrap gap-2">
-                      {["9 AM–12 PM", "12 PM–3 PM", "3 PM–6 PM"].map(slot => (
-                        <button
-                          key={slot}
-                          onClick={() => setFormData({...formData, pickupSlot: slot})}
-                          className={cn(
-                            "px-3 py-1.5 rounded-full border text-[12px] font-semibold transition-all",
-                            formData.pickupSlot === slot 
-                              ? "bg-green-primary border-green-primary text-white" 
-                              : "bg-white border-slate-200 text-slate-500 hover:border-slate-400"
-                          )}
-                        >
-                          {slot}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2 — Consignee details */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="bg-green-50 p-2 rounded-lg text-green-primary"><Package className="w-5 h-5" /></div>
-                  <h2 className="text-xl font-bold">2. Consignee details</h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Company / Name */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Company / Name *</label>
-                    <Input
-                      placeholder="Company name or receiver's full name"
-                      value={formData.receiverCompany}
-                      onChange={e => setFormData({...formData, receiverCompany: e.target.value})}
-                      className={cn(errors.receiverCompany && "border-red-500")}
-                    />
-                    {errors.receiverCompany && <p className="text-[11px] text-red-500">{errors.receiverCompany}</p>}
-                  </div>
-
-                  {/* Address 1 */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Address 1 *</label>
-                    <Input
-                      placeholder="Street address, building"
-                      value={formData.deliveryAddress1}
-                      onChange={e => setFormData({...formData, deliveryAddress1: e.target.value})}
-                      className={cn(errors.deliveryAddress1 && "border-red-500")}
-                    />
-                    {errors.deliveryAddress1 && <p className="text-[11px] text-red-500">{errors.deliveryAddress1}</p>}
-                  </div>
-
-                  {/* Address 2 */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Address 2</label>
-                    <Input
-                      placeholder="Apartment, suite, area (optional)"
-                      value={formData.deliveryAddress2}
-                      onChange={e => setFormData({...formData, deliveryAddress2: e.target.value})}
-                    />
-                  </div>
-
-                  {/* Pincode */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Pincode / ZIP *</label>
-                    <Input
-                      placeholder="Postal / ZIP code"
-                      value={formData.deliveryZip}
-                      onChange={e => setFormData({...formData, deliveryZip: e.target.value})}
-                      className={cn(errors.deliveryZip && "border-red-500")}
-                    />
-                    {errors.deliveryZip && <p className="text-[11px] text-red-500">{errors.deliveryZip}</p>}
-                  </div>
-
-                  {/* City */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">City *</label>
-                    <Input
-                      placeholder="City"
-                      value={formData.deliveryCity}
-                      onChange={e => setFormData({...formData, deliveryCity: e.target.value})}
-                      className={cn(errors.deliveryCity && "border-red-500")}
-                    />
-                    {errors.deliveryCity && <p className="text-[11px] text-red-500">{errors.deliveryCity}</p>}
-                  </div>
-
-                  {/* State */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">State *</label>
-                    <Input
-                      placeholder="State / Province"
-                      value={formData.deliveryState}
-                      onChange={e => setFormData({...formData, deliveryState: e.target.value})}
-                      className={cn(errors.deliveryState && "border-red-500")}
-                    />
-                    {errors.deliveryState && <p className="text-[11px] text-red-500">{errors.deliveryState}</p>}
-                  </div>
-
-                  {/* Telephone */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Telephone</label>
-                    <Input
-                      placeholder="Landline number"
-                      value={formData.receiverTelephone}
-                      onChange={e => setFormData({...formData, receiverTelephone: e.target.value})}
-                    />
-                  </div>
-
-                  {/* Mobile No. */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Mobile No. *</label>
-                    <div className="flex gap-2">
-                      <div className="bg-slate-100 border border-slate-200 rounded-lg px-3 flex items-center text-slate-500 font-medium">
-                        {getMobilePrefix(state.destination)}
+            <div className="max-w-[800px] mx-auto overflow-hidden">
+              <AnimatePresence mode="wait" custom={direction}>
+                <motion.div
+                  key={currentSubStep}
+                  custom={direction}
+                  initial={{ x: direction > 0 ? 50 : -50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: direction > 0 ? -50 : 50, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="space-y-8"
+                >
+                  {currentSubStep === 1 && (
+                    <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-green-50 p-2 rounded-lg text-green-primary"><User className="w-5 h-5" /></div>
+                        <h2 className="text-xl font-bold">1. Shipper details</h2>
                       </div>
-                      <Input
-                        placeholder="Mobile number"
-                        value={formData.receiverMobile}
-                        onChange={e => setFormData({...formData, receiverMobile: e.target.value.replace(/\D/g, "")})}
-                        className={cn("flex-1", errors.receiverMobile && "border-red-500")}
-                      />
-                    </div>
-                    {errors.receiverMobile && <p className="text-[11px] text-red-500">{errors.receiverMobile}</p>}
-                  </div>
 
-                  {/* E-Mail */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">E-Mail</label>
-                    <Input
-                      placeholder="receiver@email.com"
-                      value={formData.receiverEmail}
-                      onChange={e => setFormData({...formData, receiverEmail: e.target.value})}
-                    />
-                  </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Company / Name */}
+                        <div className="md:col-span-2 space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Company / Name *</label>
+                          <Input
+                            placeholder="Company name or sender's full name"
+                            value={formData.senderCompany}
+                            onChange={e => setFormData({...formData, senderCompany: e.target.value})}
+                            className={cn(errors.senderCompany && "border-red-500")}
+                          />
+                          {errors.senderCompany && <p className="text-[11px] text-red-500">{errors.senderCompany}</p>}
+                        </div>
 
-                  {/* Country — read-only */}
-                  <div className="space-y-2">
-                    <label className="text-[13px] font-bold text-slate-600 uppercase">Country</label>
-                    <Input
-                      value={state.destination}
-                      readOnly
-                      className="bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed"
-                    />
-                  </div>
-                </div>
+                        {/* Address 1 */}
+                        <div className="md:col-span-2 space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Address 1 *</label>
+                          <Input
+                            placeholder="House no, Street name, Locality"
+                            value={formData.pickupAddress1}
+                            onChange={e => setFormData({...formData, pickupAddress1: e.target.value})}
+                            className={cn(errors.pickupAddress1 && "border-red-500")}
+                          />
+                          {errors.pickupAddress1 && <p className="text-[11px] text-red-500">{errors.pickupAddress1}</p>}
+                        </div>
 
-                <div className="mt-8 pt-8 border-t border-slate-100">
-                  <h3 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-6">Shipment details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[13px] font-bold text-slate-600 uppercase">Number of Pieces *</label>
-                      <Input
-                        type="number"
-                        value={formData.numPieces}
-                        onChange={e => setFormData({...formData, numPieces: e.target.value})}
-                        className={cn(errors.numPieces && "border-red-500")}
-                      />
+                        {/* Address 2 */}
+                        <div className="md:col-span-2 space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Address 2</label>
+                          <Input
+                            placeholder="Apartment, suite, landmark (optional)"
+                            value={formData.pickupAddress2}
+                            onChange={e => setFormData({...formData, pickupAddress2: e.target.value})}
+                          />
+                        </div>
+
+                        {/* Pincode */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Pincode *</label>
+                          <Input
+                            placeholder="6-digit pincode"
+                            maxLength={6}
+                            value={formData.pickupPincode}
+                            onChange={e => {
+                              const val = e.target.value.replace(/\D/g, "");
+                              setFormData({
+                                ...formData, 
+                                pickupPincode: val,
+                                pickupCity: "",
+                                pickupState: ""
+                              });
+                            }}
+                            className={cn(
+                              errors.pickupPincode && "border-red-500",
+                              pincodeStatus.status === "found" && "border-green-500",
+                              pincodeStatus.status === "not_found" && "border-red-500",
+                            )}
+                          />
+                          {pincodeStatus.status === "loading" && (
+                            <p className="text-[11px] text-slate-400">Checking pincode...</p>
+                          )}
+                          {pincodeStatus.status === "found" && (
+                            <p className="text-[11px] text-green-600 font-semibold">
+                              {pincodeStatus.city}
+                              {pincodeStatus.surchargeInr > 0
+                                ? ` ΓÇö Pickup surcharge: Γé╣${pincodeStatus.surchargeInr}`
+                                : " ΓÇö Free pickup"}
+                            </p>
+                          )}
+                          {pincodeStatus.status === "not_found" && (
+                            <p className="text-[11px] text-red-500 font-semibold">Pickup not available at this pincode</p>
+                          )}
+                          {errors.pickupPincode && pincodeStatus.status === "idle" && (
+                            <p className="text-[11px] text-red-500">{errors.pickupPincode}</p>
+                          )}
+                        </div>
+
+                        {/* City */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">City *</label>
+                          <Input
+                            placeholder="City"
+                            value={formData.pickupCity}
+                            onChange={e => setFormData({...formData, pickupCity: e.target.value})}
+                            className={cn(errors.pickupCity && "border-red-500")}
+                          />
+                          {errors.pickupCity && <p className="text-[11px] text-red-500">{errors.pickupCity}</p>}
+                        </div>
+
+                        {/* State */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">State *</label>
+                          <Input
+                            placeholder="State"
+                            value={formData.pickupState}
+                            onChange={e => setFormData({...formData, pickupState: e.target.value})}
+                            className={cn(errors.pickupState && "border-red-500")}
+                          />
+                          {errors.pickupState && <p className="text-[11px] text-red-500">{errors.pickupState}</p>}
+                        </div>
+
+                        {/* Telephone */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Telephone</label>
+                          <Input
+                            placeholder="Landline number"
+                            value={formData.senderTelephone}
+                            onChange={e => setFormData({...formData, senderTelephone: e.target.value})}
+                          />
+                        </div>
+
+                        {/* Mobile No. */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Mobile No. *</label>
+                          <div className="flex gap-2">
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 flex items-center text-slate-500 font-medium">+91</div>
+                            <Input
+                              placeholder="10-digit mobile"
+                              maxLength={10}
+                              value={formData.senderMobile}
+                              onChange={e => setFormData({...formData, senderMobile: e.target.value.replace(/\D/g, "")})}
+                              className={cn("flex-1", errors.senderMobile && "border-red-500")}
+                            />
+                          </div>
+                          {errors.senderMobile && <p className="text-[11px] text-red-500">{errors.senderMobile}</p>}
+                        </div>
+
+                        {/* E-Mail */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">E-Mail</label>
+                          <Input
+                            placeholder="sender@email.com"
+                            value={formData.senderEmail}
+                            onChange={e => setFormData({...formData, senderEmail: e.target.value})}
+                          />
+                        </div>
+
+                        {/* KYC No. */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">KYC No.</label>
+                          <Input
+                            placeholder="Aadhaar / PAN / Passport no."
+                            value={formData.senderKyc}
+                            onChange={e => setFormData({...formData, senderKyc: e.target.value})}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Pickup Date *</label>
+                          <Input 
+                            type="date"
+                            min={new Date(Date.now() + 86400000).toISOString().split('T')[0]} // Min tomorrow
+                            value={formData.pickupDate} 
+                            onChange={e => setFormData({...formData, pickupDate: e.target.value})}
+                            className={cn(errors.pickupDate && "border-red-500")}
+                          />
+                          {errors.pickupDate && <p className="text-[11px] text-red-500 font-medium">{errors.pickupDate}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Preferred Time Slot *</label>
+                          <Select 
+                            value={formData.pickupSlot} 
+                            onValueChange={(val) => setFormData({...formData, pickupSlot: val})}
+                          >
+                            <SelectTrigger className="w-full bg-white border-slate-200">
+                              <SelectValue placeholder="Select a time slot" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Morning">Morning</SelectItem>
+                              <SelectItem value="Afternoon">Afternoon</SelectItem>
+                              <SelectItem value="Evening">Evening</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {errors.pickupSlot && <p className="text-[11px] text-red-500 font-medium mt-1">{errors.pickupSlot}</p>}
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[13px] font-bold text-slate-600 uppercase">Shipper Reference</label>
-                      <Input
-                        placeholder="Your reference / order number"
-                        value={formData.shipperReference}
-                        onChange={e => setFormData({...formData, shipperReference: e.target.value})}
-                      />
+                  )}
+
+                  {currentSubStep === 2 && (
+                    <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-green-50 p-2 rounded-lg text-green-primary"><Package className="w-5 h-5" /></div>
+                        <h2 className="text-xl font-bold">2. Consignee details</h2>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Company / Name */}
+                        <div className="md:col-span-2 space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Company / Name *</label>
+                          <Input
+                            placeholder="Company name or receiver's full name"
+                            value={formData.receiverCompany}
+                            onChange={e => setFormData({...formData, receiverCompany: e.target.value})}
+                            className={cn(errors.receiverCompany && "border-red-500")}
+                          />
+                          {errors.receiverCompany && <p className="text-[11px] text-red-500">{errors.receiverCompany}</p>}
+                        </div>
+
+                        {/* Address 1 */}
+                        <div className="md:col-span-2 space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Address 1 *</label>
+                          <Input
+                            placeholder="Street address, building"
+                            value={formData.deliveryAddress1}
+                            onChange={e => setFormData({...formData, deliveryAddress1: e.target.value})}
+                            className={cn(errors.deliveryAddress1 && "border-red-500")}
+                          />
+                          {errors.deliveryAddress1 && <p className="text-[11px] text-red-500">{errors.deliveryAddress1}</p>}
+                        </div>
+
+                        {/* Address 2 */}
+                        <div className="md:col-span-2 space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Address 2</label>
+                          <Input
+                            placeholder="Apartment, suite, area (optional)"
+                            value={formData.deliveryAddress2}
+                            onChange={e => setFormData({...formData, deliveryAddress2: e.target.value})}
+                          />
+                        </div>
+
+                        {/* Pincode */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Pincode / ZIP *</label>
+                          <Input
+                            placeholder="Postal / ZIP code"
+                            value={formData.deliveryZip}
+                            onChange={e => setFormData({...formData, deliveryZip: e.target.value})}
+                            className={cn(errors.deliveryZip && "border-red-500")}
+                          />
+                          {errors.deliveryZip && <p className="text-[11px] text-red-500">{errors.deliveryZip}</p>}
+                        </div>
+
+                        {/* City */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">City *</label>
+                          <Input
+                            placeholder="City"
+                            value={formData.deliveryCity}
+                            onChange={e => setFormData({...formData, deliveryCity: e.target.value})}
+                            className={cn(errors.deliveryCity && "border-red-500")}
+                          />
+                          {errors.deliveryCity && <p className="text-[11px] text-red-500">{errors.deliveryCity}</p>}
+                        </div>
+
+                        {/* State */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">State *</label>
+                          <Input
+                            placeholder="State / Province"
+                            value={formData.deliveryState}
+                            onChange={e => setFormData({...formData, deliveryState: e.target.value})}
+                            className={cn(errors.deliveryState && "border-red-500")}
+                          />
+                          {errors.deliveryState && <p className="text-[11px] text-red-500">{errors.deliveryState}</p>}
+                        </div>
+
+                        {/* Telephone */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Telephone</label>
+                          <Input
+                            placeholder="Landline number"
+                            value={formData.receiverTelephone}
+                            onChange={e => setFormData({...formData, receiverTelephone: e.target.value})}
+                          />
+                        </div>
+
+                        {/* Mobile No. */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Mobile No. *</label>
+                          <div className="flex gap-2">
+                            <div className="bg-slate-100 border border-slate-200 rounded-lg px-3 flex items-center text-slate-500 font-medium">
+                              {getMobilePrefix(state.destination)}
+                            </div>
+                            <Input
+                              placeholder="Mobile number"
+                              value={formData.receiverMobile}
+                              onChange={e => setFormData({...formData, receiverMobile: e.target.value.replace(/\D/g, "")})}
+                              className={cn("flex-1", errors.receiverMobile && "border-red-500")}
+                            />
+                          </div>
+                          {errors.receiverMobile && <p className="text-[11px] text-red-500">{errors.receiverMobile}</p>}
+                        </div>
+
+                        {/* E-Mail */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">E-Mail</label>
+                          <Input
+                            placeholder="receiver@email.com"
+                            value={formData.receiverEmail}
+                            onChange={e => setFormData({...formData, receiverEmail: e.target.value})}
+                          />
+                        </div>
+
+                        {/* Country ΓÇö read-only */}
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Country</label>
+                          <Input
+                            value={state.destination}
+                            readOnly
+                            className="bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="md:col-span-2 space-y-2">
-                      <label className="text-[13px] font-bold text-slate-600 uppercase">Content Description *</label>
-                      <Textarea
-                        placeholder="e.g. University application documents — transcripts, certificates. No commercial value."
-                        value={formData.contents}
-                        onChange={e => setFormData({...formData, contents: e.target.value})}
-                        className={cn("min-h-[100px]", errors.contents && "border-red-500")}
-                      />
+                  )}
+
+                  {currentSubStep === 3 && (
+                    <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-green-50 p-2 rounded-lg text-green-primary"><Package className="w-5 h-5" /></div>
+                        <h2 className="text-xl font-bold">3. Shipment details</h2>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Number of Pieces *</label>
+                          <Input
+                            type="number"
+                            value={formData.numPieces}
+                            onChange={e => setFormData({...formData, numPieces: e.target.value})}
+                            className={cn(errors.numPieces && "border-red-500")}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Shipper Reference</label>
+                          <Input
+                            placeholder="Your reference / order number"
+                            value={formData.shipperReference}
+                            onChange={e => setFormData({...formData, shipperReference: e.target.value})}
+                          />
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Content Description *</label>
+                          <Textarea
+                            placeholder="e.g. University application documents ΓÇö transcripts, certificates. No commercial value."
+                            value={formData.contents}
+                            onChange={e => setFormData({...formData, contents: e.target.value})}
+                            className={cn("min-h-[100px]", errors.contents && "border-red-500")}
+                          />
+                        </div>
+                        <div className="md:col-span-2 space-y-2">
+                          <label className="text-[13px] font-bold text-slate-600 uppercase">Instruction</label>
+                          <Textarea
+                            placeholder="Special instructions for pickup or delivery (optional)"
+                            value={formData.specialInstruction}
+                            onChange={e => setFormData({...formData, specialInstruction: e.target.value})}
+                            className="min-h-[80px]"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="md:col-span-2 space-y-2">
-                      <label className="text-[13px] font-bold text-slate-600 uppercase">Instruction</label>
-                      <Textarea
-                        placeholder="Special instructions for pickup or delivery (optional)"
-                        value={formData.specialInstruction}
-                        onChange={e => setFormData({...formData, specialInstruction: e.target.value})}
-                        className="min-h-[80px]"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
 
               <div className="flex justify-between mt-8">
                 <button 
@@ -834,7 +829,7 @@ const Booking = () => {
                        <div><span className="text-slate-400">Email:</span> <p className="font-semibold text-brand-black">{formData.senderEmail || 'N/A'}</p></div>
                        {formData.senderKyc && <div><span className="text-slate-400">KYC No.:</span> <p className="font-semibold text-brand-black">{formData.senderKyc}</p></div>}
                        <div><span className="text-slate-400">Pickup Date:</span> <p className="font-semibold text-brand-black">{formData.pickupDate} ({formData.pickupSlot})</p></div>
-                       <div className="md:col-span-2"><span className="text-slate-400">Address:</span> <p className="font-semibold text-brand-black leading-relaxed">{formData.pickupAddress1}{formData.pickupAddress2 ? `, ${formData.pickupAddress2}` : ""}, {formData.pickupCity}, {formData.pickupState} — {formData.pickupPincode}</p></div>
+                       <div className="md:col-span-2"><span className="text-slate-400">Address:</span> <p className="font-semibold text-brand-black leading-relaxed">{formData.pickupAddress1}{formData.pickupAddress2 ? `, ${formData.pickupAddress2}` : ""}, {formData.pickupCity}, {formData.pickupState} ΓÇö {formData.pickupPincode}</p></div>
                     </div>
                   </section>
 
@@ -876,29 +871,29 @@ const Booking = () => {
                    <div className="space-y-3">
                       <div className="flex justify-between text-sm">
                          <span className="text-slate-500">Shipping charge ({state.weight}kg)</span>
-                         <span className="font-medium text-brand-black">₹{Math.round(state.totalPrice - (state.pickupSurcharge || 0) - (state.packaging === 'standard' ? 150 : state.packaging === 'premium' ? 350 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
+                         <span className="font-medium text-brand-black">Γé╣{Math.round(state.totalPrice - (state.pickupSurcharge || 0) - (state.packaging === 'standard' ? 150 : state.packaging === 'premium' ? 350 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
                       </div>
                       {state.packaging !== 'none' && (
                          <div className="flex justify-between text-sm">
                             <span className="text-slate-500">Packaging ({state.packaging} box)</span>
-                            <span className="font-medium text-brand-black">+₹{state.packaging === 'standard' ? '150' : '350'}</span>
+                            <span className="font-medium text-brand-black">+Γé╣{state.packaging === 'standard' ? '150' : '350'}</span>
                          </div>
                       )}
                       {state.insurance && (
                          <div className="flex justify-between text-sm">
                             <span className="text-slate-500">Transit Insurance</span>
-                            <span className="font-medium text-brand-black">+₹199</span>
+                            <span className="font-medium text-brand-black">+Γé╣199</span>
                          </div>
                       )}
                       {state.pickupSurcharge > 0 && (
                          <div className="flex justify-between text-sm">
                             <span className="text-slate-500">Pickup surcharge ({state.pickupCity})</span>
-                            <span className="font-medium text-brand-black">+₹{state.pickupSurcharge}</span>
+                            <span className="font-medium text-brand-black">+Γé╣{state.pickupSurcharge}</span>
                          </div>
                       )}
                       <div className="pt-4 border-t border-slate-200 flex justify-between items-end">
                          <span className="font-bold text-brand-black">Total Payable</span>
-                         <span className="text-3xl font-bold text-green-primary leading-none">₹{state.totalPrice.toLocaleString()}</span>
+                         <span className="text-3xl font-bold text-green-primary leading-none">Γé╣{state.totalPrice.toLocaleString()}</span>
                       </div>
                    </div>
                 </div>
@@ -945,8 +940,8 @@ const Booking = () => {
                      <span>{state.pickupCity || 'Chennai'}</span>
                      <ArrowLeft className="w-3 h-3 rotate-180 text-slate-400" />
                      <span className="truncate max-w-[100px]">{state.destination}</span>
-                     <span className="mx-1 text-slate-300">·</span>
-                     <span className="text-green-dark">₹{state.totalPrice.toLocaleString()}</span>
+                     <span className="mx-1 text-slate-300">┬╖</span>
+                     <span className="text-green-dark">Γé╣{state.totalPrice.toLocaleString()}</span>
                   </div>
                   {isSummaryExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                </div>
@@ -957,14 +952,14 @@ const Booking = () => {
                     <div className="flex justify-between items-start">
                        <div>
                           <p className="text-[12px] text-slate-400 uppercase font-black">Shipment</p>
-                          <p className="text-[14px] font-bold">{state.itemType} · {state.carrier}</p>
+                          <p className="text-[14px] font-bold">{state.itemType} ┬╖ {state.carrier}</p>
                        </div>
                        <p className="text-[12px] font-mono text-slate-400">REF-2025-AX92</p>
                     </div>
                     <div className="space-y-1">
                        <div className="flex justify-between text-[13px] text-slate-500">
                           <span>Shipping charge</span>
-                          <span>₹{state.totalPrice.toLocaleString()}</span>
+                          <span>Γé╣{state.totalPrice.toLocaleString()}</span>
                        </div>
                     </div>
                  </div>
@@ -983,7 +978,7 @@ const Booking = () => {
                            </button>
                            <h1 className="text-[22px] font-medium text-brand-black">Payment</h1>
                         </div>
-                        <p className="text-slate-400 text-[13px] ml-9">Complete your booking — you won't be charged until you confirm</p>
+                        <p className="text-slate-400 text-[13px] ml-9">Complete your booking ΓÇö you won't be charged until you confirm</p>
                      </div>
 
                      {/* Payment Method Tabs */}
@@ -1181,7 +1176,7 @@ const Booking = () => {
                                 disabled={isCreatingBooking || !cardNumber || !cardExpiry || !cardCvv}
                                 className="w-full h-[48px] bg-[#16A34A] hover:bg-[#15803D] text-white rounded-[10px] font-medium text-[15px]"
                               >
-                                 {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay ₹${state.totalPrice.toLocaleString()} →`}
+                                 {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay Γé╣${state.totalPrice.toLocaleString()} ΓåÆ`}
                               </Button>
                            </div>
                         )}
@@ -1219,7 +1214,7 @@ const Booking = () => {
                                    disabled={isCreatingBooking}
                                    className="w-full h-[48px] bg-[#16A34A] hover:bg-[#15803D] text-white rounded-[10px] font-medium text-[15px]"
                                  >
-                                    {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : "Proceed to bank →"}
+                                    {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : "Proceed to bank ΓåÆ"}
                                  </Button>
                               </div>
                            </div>
@@ -1258,23 +1253,23 @@ const Booking = () => {
                                  <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
                                  <span>{state.destination}</span>
                               </div>
-                              <p className="text-[12px] text-slate-400 mt-1">{state.itemType} · {state.carrier}</p>
-                              <p className="text-[11px] text-slate-400">{state.planDays || '12–15 business days'}</p>
+                              <p className="text-[12px] text-slate-400 mt-1">{state.itemType} ┬╖ {state.carrier}</p>
+                              <p className="text-[11px] text-slate-400">{state.planDays || '12ΓÇô15 business days'}</p>
                            </div>
 
                            <div className="border-t border-slate-100 pt-4 space-y-2">
                               {/* Price Rows */}
                               <div className="flex justify-between items-center h-8 text-[13px]">
-                                 <span className="text-slate-500">Shipping charge ({state.weight}kg · 50% off)</span>
-                                 <span className="text-brand-black">₹{(state.totalPrice - (state.packaging === 'premium' ? 350 : state.packaging === 'standard' ? 150 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
+                                 <span className="text-slate-500">Shipping charge ({state.weight}kg ┬╖ 50% off)</span>
+                                 <span className="text-brand-black">Γé╣{(state.totalPrice - (state.packaging === 'premium' ? 350 : state.packaging === 'standard' ? 150 : 0) - (state.insurance ? 199 : 0)).toLocaleString()}</span>
                               </div>
                               <div className="flex justify-between items-center h-8 text-[13px]">
                                  <span className="text-slate-500">Packaging</span>
-                                 <span className="text-brand-black">₹{state.packaging === 'premium' ? 350 : state.packaging === 'standard' ? 150 : 0}</span>
+                                 <span className="text-brand-black">Γé╣{state.packaging === 'premium' ? 350 : state.packaging === 'standard' ? 150 : 0}</span>
                               </div>
                               <div className="flex justify-between items-center h-8 text-[13px]">
                                  <span className="text-slate-500">Insurance</span>
-                                 <span className="text-brand-black">₹{state.insurance ? 199 : 0}</span>
+                                 <span className="text-brand-black">Γé╣{state.insurance ? 199 : 0}</span>
                               </div>
                               <div className="flex justify-between items-center h-8 text-[13px]">
                                  <span className="text-slate-500">Pickup surcharge</span>
@@ -1284,7 +1279,7 @@ const Booking = () => {
 
                            <div className="border-t border-slate-100 pt-4 flex justify-between items-center">
                               <span className="text-[15px] font-semibold text-brand-black">Total payable</span>
-                              <span className="text-[22px] font-bold text-[#15803D]">₹{state.totalPrice.toLocaleString()}</span>
+                              <span className="text-[22px] font-bold text-[#15803D]">Γé╣{state.totalPrice.toLocaleString()}</span>
                            </div>
 
                            <div className="space-y-3">
@@ -1325,7 +1320,7 @@ const Booking = () => {
             disabled={isCreatingBooking}
             className="flex-1 bg-[#16A34A] hover:bg-[#15803D] text-white h-14 rounded-xl font-bold text-lg shadow-xl shadow-green-primary/20"
            >
-             {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay ₹${state.totalPrice.toLocaleString()}`}
+             {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay Γé╣${state.totalPrice.toLocaleString()}`}
            </Button>
            {submitError && (
              <p className="text-sm text-red-500 text-center mt-3">{submitError}</p>
