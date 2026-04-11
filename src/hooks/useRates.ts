@@ -13,7 +13,9 @@ export function useRates(input: RateRequest | null) {
     queryKey: ["rates", input],
     queryFn: () => api.post<RateResult[]>("/rates/calculate", input),
     enabled: !!input && !!input.destination && input.weight > 0 && !!input.itemType,
-    staleTime: 0, // always refetch — rates depend on live DB config
+    staleTime: 5000, // small cache window to prevent double-loads while typing
+    placeholderData: (previousData) => previousData, // keep old rates visible while loading
     retry: false,
   });
 }
+

@@ -146,6 +146,11 @@ export async function calculateRates(
   const stepKey      = `steps:${chargeable}`;
   const bandKey      = `bands:${chargeable}`;
 
+  const targetWeights = [chargeable];
+  if (girth > 300 && !targetWeights.includes(40)) {
+    targetWeights.push(40);
+  }
+
   // ── Single wave: all 6 queries in parallel ────────────────────────────────
   const start = Date.now();
   const [zoneRows, surchargeRow, surchargeConfigRows, fscRows, stepRows, bandRows] = await Promise.all([
@@ -196,10 +201,10 @@ export async function calculateRates(
 
     withCache<StepCacheRow[]>(stepKey, TTL_30M, () =>
       sql<StepCacheRow[]>`
-        SELECT carrier_id, zone_code, shipment_type, price_inr
+        SELECT carrier_id, zone_code, shipment_type, price_inr, weight_kg
         FROM rate_card_steps
         WHERE carrier_id = ANY(${allCarriers}::text[])
-          AND weight_kg = ${chargeable}
+          AND weight_kg = ANY(${targetWeights}::numeric[])
           AND (effective_to IS NULL OR effective_to >= ${today}::date)
       `
     ),
@@ -209,13 +214,14 @@ export async function calculateRates(
         SELECT carrier_id, zone_code, shipment_type, price_per_kg, base_price_inr, band_type, weight_min_kg
         FROM rate_card_bands
         WHERE carrier_id = ANY(${allCarriers}::text[])
-          AND weight_min_kg <= ${chargeable}
-          AND (weight_max_kg IS NULL OR weight_max_kg >= ${chargeable})
+          AND weight_min_kg <= ANY(${targetWeights}::numeric[])
+          AND (weight_max_kg IS NULL OR weight_max_kg >= ANY(${targetWeights}::numeric[]))
           AND (effective_to IS NULL OR effective_to >= ${today}::date)
         ORDER BY weight_min_kg DESC
       `
     ),
   ]);
+
 
   const duration = Date.now() - start;
   if (duration > 1500) {
@@ -251,16 +257,17 @@ export async function calculateRates(
   });
   if (activeCarriers.length === 0) return [];
 
-  const pairKey = (c: string, z: string, t: string) => `${c}:${z}:${t}`;
+  const pairKey = (c: string, z: string, t: string, w: number) => `${c}:${z}:${t}:${w}`;
   const stepLookup = new Map<string, number>();
   for (const row of stepRows) {
-    const k = pairKey(row.carrier_id, row.zone_code, row.shipment_type);
+    const k = pairKey(row.carrier_id, row.zone_code, row.shipment_type, Number(row.weight_kg));
     if (!stepLookup.has(k)) stepLookup.set(k, Number(row.price_inr));
   }
 
   const bandLookup = new Map<string, BandCacheRow>();
   for (const row of bandRows) {
-    const k = pairKey(row.carrier_id, row.zone_code, row.shipment_type);
+    // Note: weight_min_kg is a unique enough key for band start for our purposes
+    const k = pairKey(row.carrier_id, row.zone_code, row.shipment_type, Number(row.weight_min_kg));
     if (!bandLookup.has(k)) bandLookup.set(k, row);
   }
 
@@ -271,72 +278,52 @@ export async function calculateRates(
     const zone = zoneMap.get(carrier)!;
     const cfg = cfgMap[carrier] ?? {};
 
-    // DHL: declared 'document' above 2.0 kg falls to the package table (Table B).
-    // UPS: document rate table only covers 0.5–5.0 kg (per UPS-2026.pdf pages 1 & 3).
-    //      Above 5.0 kg, use package rates.
-    // FedEx: Pak (document) table only covers 0.5–2.5 kg (per FDX EXPORT-2026.pdf).
-    //        Above 2.5 kg, use package rates.
+    // Apply UPS Girth Rule: >300cm girth means min 40kg chargeable
+    let effectiveChargeable = chargeable;
+    if (carrier === 'ups' && girth > 300) {
+      effectiveChargeable = Math.max(chargeable, 40);
+    }
+
+    // Step 1: Base rate lookup
     const effectiveType: 'document' | 'package' =
-      (carrier === 'dhl'   && input.shipmentType === 'document' && chargeable > 2.0) ||
-      (carrier === 'ups'   && input.shipmentType === 'document' && chargeable > 5.0) ||
-      (carrier === 'fedex' && input.shipmentType === 'document' && chargeable > 2.5)
+      (carrier === 'dhl'   && input.shipmentType === 'document' && effectiveChargeable > 2.0) ||
+      (carrier === 'ups'   && input.shipmentType === 'document' && effectiveChargeable > 5.0) ||
+      (carrier === 'fedex' && input.shipmentType === 'document' && effectiveChargeable > 2.5)
         ? 'package'
         : input.shipmentType;
 
-    const k = pairKey(carrier, zone, effectiveType);
+    const k = pairKey(carrier, zone, effectiveType, effectiveChargeable);
 
     let priceInr: number | null = null;
     if (stepLookup.has(k)) {
       priceInr = stepLookup.get(k)!;
-    } else if (bandLookup.has(k)) {
-      const band = bandLookup.get(k)!;
-      const perKg = Number(band.price_per_kg);
-      const base  = Number(band.base_price_inr);
-      const wMin  = Number(band.weight_min_kg);
-      const rawBand =
-        band.band_type === "additive"
-          ? base + (chargeable - wMin) * perKg
-          : chargeable * perKg;
-      // Clamp: multiplicative bands can dip below the last step price at the
-      // crossover point (e.g. DHL 30.1–33.9 kg). base_price_inr holds the
-      // 30 kg (DHL) / 20 kg (UPS) step price as the minimum floor.
-      priceInr = band.band_type === "multiplicative"
-        ? Math.max(rawBand, base)
-        : rawBand;
+    } else {
+      // Find the correct band for this weight. We use pre-fetched bandRows.
+      const bands = bandRows.filter(r => 
+        r.carrier_id === carrier && 
+        r.zone_code === zone && 
+        r.shipment_type === effectiveType &&
+        Number(r.weight_min_kg) <= effectiveChargeable
+      );
+      
+      if (bands.length > 0) {
+        // bands are sorted by weight_min_kg DESC in the query, so bands[0] is the closest band
+        const band = bands[0];
+        const perKg = Number(band.price_per_kg);
+        const base  = Number(band.base_price_inr);
+        const wMin  = Number(band.weight_min_kg);
+        
+        const rawBand = band.band_type === "additive"
+          ? base + (effectiveChargeable - wMin) * perKg
+          : effectiveChargeable * perKg;
+
+        // Clamp: multiplicative bands should not fall below the step price or previous band's base
+        priceInr = band.band_type === "multiplicative" ? Math.max(rawBand, base) : rawBand;
+      }
     }
 
     if (priceInr === null) continue;
 
-    // Effective chargeable weight for this carrier (may be overridden by UPS girth rule)
-    let effectiveChargeable = chargeable;
-
-    // UPS girth rule (PDF): if L+2W+2H > 300cm, minimum 40kg chargeable weight.
-    // UPS rate_card_steps only cover up to 20kg; 40kg always falls in a band.
-    if (carrier === 'ups' && girth > 300 && chargeable < 40) {
-      effectiveChargeable = 40;
-      const girthBandRows = await sql<{ price_per_kg: number; base_price_inr: number; band_type: string; weight_min_kg: number }[]>`
-        SELECT price_per_kg, base_price_inr, band_type, weight_min_kg
-        FROM rate_card_bands
-        WHERE carrier_id    = 'ups'
-          AND zone_code     = ${zone}
-          AND shipment_type = ${effectiveType}
-          AND weight_min_kg <= 40
-          AND (weight_max_kg IS NULL OR weight_max_kg >= 40)
-          AND (effective_to IS NULL OR effective_to >= ${today}::date)
-        ORDER BY weight_min_kg DESC
-        LIMIT 1
-      `;
-      const gb = girthBandRows[0];
-      if (gb) {
-        const perKg = Number(gb.price_per_kg);
-        const base  = Number(gb.base_price_inr);
-        const wMin  = Number(gb.weight_min_kg);
-        const rawBand = gb.band_type === 'additive'
-          ? base + (40 - wMin) * perKg
-          : 40 * perKg;
-        priceInr = gb.band_type === 'multiplicative' ? Math.max(rawBand, base) : rawBand;
-      }
-    }
 
     // Step 1: margin (Uniex markup on carrier base — internal, never shown to customer)
     const marginPct = Number(cfg['margin_pct'] ?? 20);

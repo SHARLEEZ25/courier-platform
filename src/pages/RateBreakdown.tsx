@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useRates } from "@/hooks/useRates";
+import { useDebounce } from "@/hooks/useDebounce";
 import { usePincode } from "@/hooks/usePincode";
 import { useCreateBooking } from "@/hooks/useBooking";
 import type { ItemType, CarrierSlug } from "@/types/api";
@@ -141,12 +142,47 @@ const RateBreakdown = () => {
   const [specialInstruction, setSpecialInstruction] = useState("");
   const [submitError, setSubmitError] = useState("");
 
-  const chargeableWeight = actualWeight;
-
-  // ── API hooks ────────────────────────────────────────────────────────────────
+  // ── Live Calculation Engine (Matches Backend PDF Rules) ─────────────────────
   const parsedDims = dims.l && dims.w && dims.h
     ? { l: parseFloat(dims.l), w: parseFloat(dims.w), h: parseFloat(dims.h) }
     : undefined;
+
+  const volumetricWeight = parsedDims ? (parsedDims.l * parsedDims.w * parsedDims.h) / 5000 : 0;
+  
+  // Base chargeable: Max of actual or volumetric, rounded to nearest 0.5kg
+  const baseChargeable = Math.ceil(Math.max(actualWeight, volumetricWeight) * 2) / 2;
+
+  // UPS Girth Rule: L + 2W + 2H
+  const girthCm = parsedDims ? parsedDims.l + 2 * (parsedDims.w + parsedDims.h) : 0;
+
+  // Carrier-specific local chargeable weight
+  // This updates INSTANTLY as user types, before API responds.
+  const localChargeableWeight = selectedPlanId === 'ups' && girthCm > 300 
+    ? Math.max(baseChargeable, 40) 
+    : baseChargeable;
+
+  // Status flags for UI
+  const isUpsOversize = selectedPlanId === 'ups' && girthCm > 400;
+  const isUpsGirthMinApplied = selectedPlanId === 'ups' && girthCm > 300 && baseChargeable < 40;
+
+  // ── Debounced Rate Request ──────────────────────────────────────────────────
+  const rateRequest = {
+    origin: state.origin,
+    destination: state.destination,
+    weight: actualWeight,
+    dims: parsedDims,
+    shipmentType,
+    dhlService,
+    upsOptions,
+    carrier: selectedPlanId,
+    itemType: state.itemType
+  };
+
+  const debouncedRequest = useDebounce(rateRequest, 500);
+
+  const { data: rates, isLoading: ratesLoading } = useRates(
+    state.destination ? debouncedRequest : null
+  );
 
   // Carrier-adaptive weight slider max (per 2026 PDFs)
   const CARRIER_WEIGHT_MAX: Record<string, number> = {
@@ -163,10 +199,9 @@ const RateBreakdown = () => {
     ups: { doc: "Documents", pkg: "Package", cutoffKg: 5.0 },
   };
   const carrierTypeLabels = selectedPlanId ? (SHIPMENT_TYPE_LABELS[selectedPlanId] ?? { doc: "Documents", pkg: "Package", cutoffKg: 2.0 }) : { doc: "Documents", pkg: "Package", cutoffKg: 2.0 };
-  const docCutoffExceeded = shipmentType === "document" && chargeableWeight > carrierTypeLabels.cutoffKg;
-
-  // UPS girth (L + 2W + 2H) for oversize warnings (per UPS 2026 PDF)
-  const girthCm = parsedDims ? parsedDims.l + 2 * parsedDims.w + 2 * parsedDims.h : 0;
+  
+  // Use localChargeableWeight for immediate UI response
+  const docCutoffExceeded = shipmentType === "document" && localChargeableWeight > carrierTypeLabels.cutoffKg;
 
   // Carrier service label for identity banner
   const CARRIER_SERVICE: Record<string, string> = {
@@ -196,24 +231,9 @@ const RateBreakdown = () => {
     ],
   };
 
-  const { data: rates, isLoading: ratesLoading } = useRates(
-    state.destination ? {
-      origin: state.origin,
-      destination: state.destination,
-      weight: actualWeight,
-      dims: parsedDims,
-      itemType: (state.itemType as ItemType) ?? "other",
-      shipmentType,
-      packaging: "none",
-      insurance: false,
-      pickupPincode: /^\d{6}$/.test(pickupPincode) ? pickupPincode : undefined,
-      dhlService,
-      upsOptions,
-    } : null
-  );
-
   const { data: pincodeData, isLoading: pincodeLoading } = usePincode(pickupPincode);
   const { mutate: createBooking, isPending: isProcessing } = useCreateBooking();
+
 
   // Auto-select first carrier when rates load or if preselected not in results
   useEffect(() => {
@@ -400,17 +420,16 @@ const RateBreakdown = () => {
                             </button>
                           ))}
                         </div>
-                        {shipmentType === "document" && !docCutoffExceeded && (
-                          <p className="text-[11px] text-slate-400">
-                            {selectedPlanId === "dhl" && "Document rate applies up to 2 kg chargeable weight."}
-                            {selectedPlanId === "fedex" && "Pak rate applies up to 2.5 kg chargeable weight."}
-                            {selectedPlanId === "ups" && "Document rate applies up to 5 kg chargeable weight."}
-                          </p>
-                        )}
-                        {docCutoffExceeded && (
-                          <p className="text-[11px] text-amber-600 flex items-center gap-1.5 mt-1">
-                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                            Weight exceeds {carrierTypeLabels.cutoffKg} kg — package rates are applied automatically.
+                        {shipmentType === "document" && (
+                          <p className={cn(
+                            "text-[11px] mt-1 flex items-center gap-1.5",
+                            docCutoffExceeded ? "text-amber-600 font-medium" : "text-slate-400"
+                          )}>
+                            {docCutoffExceeded && <AlertTriangle className="w-3.5 h-3.5" />}
+                            {selectedPlanId === "dhl" && `Document rate: Up to 2.0 kg. (Current: ${localChargeableWeight} kg)`}
+                            {selectedPlanId === "fedex" && `Pak rate: Up to 2.5 kg. (Current: ${localChargeableWeight} kg)`}
+                            {selectedPlanId === "ups" && `Document rate: Up to 5.0 kg. (Current: ${localChargeableWeight} kg)`}
+                            {docCutoffExceeded && " — Package rates applied."}
                           </p>
                         )}
                       </div>
@@ -419,7 +438,12 @@ const RateBreakdown = () => {
                       <div>
                         <div className="flex justify-between items-end mb-4">
                           <h3 className="text-base font-bold text-brand-black">Weight & Dimensions</h3>
-                          <div className="text-xl font-bold text-green-primary">{actualWeight}<span className="text-sm font-normal text-slate-400 ml-1">kg</span></div>
+                          <div className="flex flex-col items-end">
+                            <div className="text-xl font-bold text-green-primary">
+                              {actualWeight}<span className="text-sm font-normal text-slate-400 ml-1">kg</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 uppercase tracking-tighter">Actual Weight</div>
+                          </div>
                         </div>
 
                         <div className="relative mb-6">
@@ -449,27 +473,59 @@ const RateBreakdown = () => {
                             <Input type="number" placeholder="Width" value={dims.w} onChange={(e) => setDims({ ...dims, w: e.target.value })} className="h-10 text-center" />
                             <Input type="number" placeholder="Height" value={dims.h} onChange={(e) => setDims({ ...dims, h: e.target.value })} className="h-10 text-center" />
                           </div>
-                          {/* Carrier-specific dimension validation */}
-                          {selectedPlanId === 'dhl' && parsedDims && parsedDims.l > 300 && (
-                            <p className="text-[11px] text-red-500 mt-1">Length exceeds DHL's 300 cm limit — shipment cannot be quoted.</p>
-                          )}
-                          {selectedPlanId === 'ups' && parsedDims && (
-                            girthCm > 400
-                              ? <p className="text-[11px] text-amber-600 mt-1">Girth {Math.round(girthCm)} cm — oversize fee of ₹9,450 will apply (UPS: &gt;400 cm).</p>
-                              : girthCm > 300
-                                ? <p className="text-[11px] text-amber-600 mt-1">Girth {Math.round(girthCm)} cm — minimum 40 kg chargeable weight applies (UPS: &gt;300 cm).</p>
-                                : <p className="text-[11px] text-slate-400 mt-1">Girth: {Math.round(girthCm)} cm (L + 2W + 2H)</p>
-                          )}
-                          {selectedPlanId === 'fedex' && parsedDims && (
-                            <p className="text-[11px] text-slate-400 mt-1">
-                              Volumetric weight: {Math.ceil((parsedDims.l * parsedDims.w * parsedDims.h) / 5000 * 2) / 2} kg
-                            </p>
-                          )}
+                          {/* Carrier-specific dimension validation & Live Math */}
+                          <div className="space-y-2 mt-3">
+                            {parsedDims && (
+                              <div className="bg-slate-50/80 border border-slate-100 rounded-lg p-3 space-y-2">
+                                <div className="flex justify-between items-center text-[11px]">
+                                  <span className="text-slate-500 font-medium">Volumetric Math</span>
+                                  <span className="text-slate-400">({parsedDims.l} × {parsedDims.w} × {parsedDims.h}) / 5000</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">Volumetric Weight</span>
+                                  <span className="text-[13px] font-bold text-brand-black">{volumetricWeight.toFixed(2)} kg</span>
+                                </div>
+                                
+                                {selectedPlanId === 'ups' && (
+                                  <div className="pt-2 border-t border-slate-200">
+                                    <div className="flex justify-between items-center mb-1">
+                                      <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">UPS Girth</span>
+                                      <span className={cn(
+                                        "text-[13px] font-bold",
+                                        girthCm > 400 ? "text-red-500" : girthCm > 300 ? "text-amber-600" : "text-brand-black"
+                                      )}>
+                                        {Math.round(girthCm)} cm
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 leading-tight">Formula: L + 2W + 2H</p>
+                                    
+                                    {isUpsGirthMinApplied && (
+                                      <p className="text-[10px] text-amber-600 font-semibold mt-1 flex items-center gap-1">
+                                        <Info className="w-3 h-3" /> Min 40 kg applied (Girth &gt; 300)
+                                      </p>
+                                    )}
+                                    {isUpsOversize && (
+                                      <p className="text-[10px] text-red-500 font-semibold mt-1 flex items-center gap-1">
+                                        <AlertTriangle className="w-3 h-3" /> Oversize fee applies (Girth &gt; 400)
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {selectedPlanId === 'dhl' && parsedDims && parsedDims.l > 300 && (
+                              <div className="flex gap-2 p-2 bg-red-50 border border-red-100 rounded-lg text-red-600 text-[11px]">
+                                <AlertTriangle className="w-4 h-4 shrink-0" />
+                                <span>Length exceeds DHL's 300 cm limit. Please adjust or contact support.</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="bg-slate-50 rounded-lg p-4 flex justify-between items-center border border-slate-100 mt-2">
-                          <div className="text-[13px] font-medium text-slate-500">Chargeable weight</div>
-                          <div className="text-[13px] font-medium text-green-primary">{selectedRate ? selectedRate.chargeableWeightKg : chargeableWeight} kg</div>
+                        <div className="bg-green-primary/5 rounded-lg p-4 flex justify-between items-center border border-green-primary/20 mt-2 shadow-sm">
+                          <div className="text-[13px] font-bold text-green-primary uppercase tracking-wider">Chargeable Weight</div>
+                          <div className="text-lg font-bold text-green-primary">{localChargeableWeight} kg</div>
                         </div>
                       </div>
 
@@ -640,18 +696,25 @@ const RateBreakdown = () => {
                     </div>
 
                     {/* All Options Selection List */}
-                    <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-                      <h3 className="text-[13px] font-bold text-slate-600 px-2 pt-2 mb-4">
-                        All options — {COUNTRY_LABELS[state.destination] ?? state.destination} · {chargeableWeight} kg
+                    <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+                      <h3 className="text-[13px] font-bold text-slate-600 px-2 pt-2 mb-4 flex items-center justify-between">
+                        <span>All options — {COUNTRY_LABELS[state.destination] ?? state.destination} · {localChargeableWeight} kg</span>
+                        {ratesLoading && (
+                          <span className="flex items-center gap-1.5 text-[10px] text-green-primary animate-pulse">
+                            <RotateCcw className="w-3 h-3 animate-spin" />
+                            Syncing...
+                          </span>
+                        )}
                       </h3>
 
-                      {ratesLoading && (
+                      {ratesLoading && !rates && (
                         <div className="space-y-2 px-2 pb-2">
                           {[0, 1, 2].map(i => (
                             <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />
                           ))}
                         </div>
                       )}
+
 
                       <div className="space-y-1 mb-4">
                         {(rates ?? []).map((result, idx) => {
