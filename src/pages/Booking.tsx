@@ -874,36 +874,36 @@ const Booking = () => {
                          <>
                             <div className="flex justify-between text-sm">
                                <span className="text-slate-500">Base Shipping Rate ({state.weight}kg)</span>
-                               <span className="font-medium text-brand-black">₹{state.rateDetails.baseRateInr?.toLocaleString() || 0}</span>
+                               <span className="font-medium text-brand-black">₹{Math.round(state.rateDetails.baseRateInr || 0).toLocaleString()}</span>
                             </div>
                             {(state.rateDetails.fscInr > 0) && (
                                <div className="flex justify-between text-sm mt-1">
-                                  <span className="text-slate-500">Fuel Surcharge (FSC)</span>
-                                  <span className="font-medium text-brand-black">+₹{state.rateDetails.fscInr.toLocaleString()}</span>
+                                  <span className="text-slate-500">Fuel Surcharge (FSC) ({state.rateDetails.fscPct}%)</span>
+                                  <span className="font-medium text-brand-black">+₹{Math.round(state.rateDetails.fscInr).toLocaleString()}</span>
                                </div>
                             )}
                             {(state.rateDetails.marginInr > 0) && (
                                <div className="flex justify-between text-sm mt-1">
-                                  <span className="text-slate-500">Platform Margin</span>
-                                  <span className="font-medium text-brand-black">+₹{state.rateDetails.marginInr.toLocaleString()}</span>
+                                  <span className="text-slate-500">Platform Margin ({state.rateDetails.marginPct}%)</span>
+                                  <span className="font-medium text-brand-black">+₹{Math.round(state.rateDetails.marginInr).toLocaleString()}</span>
                                </div>
                             )}
                             {(state.rateDetails.demandSurchargeInr > 0) && (
                                <div className="flex justify-between text-sm mt-1">
                                   <span className="text-slate-500">Demand Surcharge</span>
-                                  <span className="font-medium text-brand-black">+₹{state.rateDetails.demandSurchargeInr.toLocaleString()}</span>
+                                  <span className="font-medium text-brand-black">+₹{Math.round(state.rateDetails.demandSurchargeInr).toLocaleString()}</span>
                                </div>
                             )}
                             {((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0) > 0) && (
                                <div className="flex justify-between text-sm mt-1">
                                   <span className="text-slate-500">Carrier Extras</span>
-                                  <span className="font-medium text-brand-black">+₹{((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0)).toLocaleString()}</span>
+                                  <span className="font-medium text-brand-black">+₹{Math.round((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0)).toLocaleString()}</span>
                                </div>
                             )}
                             {(state.rateDetails.gstInr > 0) && (
                                <div className="flex justify-between text-sm mt-1">
                                   <span className="text-slate-500">GST (18%)</span>
-                                  <span className="font-medium text-brand-black">+₹{state.rateDetails.gstInr.toLocaleString()}</span>
+                                  <span className="font-medium text-brand-black">+₹{Math.round(state.rateDetails.gstInr).toLocaleString()}</span>
                                </div>
                             )}
                          </>
@@ -1302,36 +1302,36 @@ const Booking = () => {
                                 <>
                                   <div className="flex justify-between items-center h-8 text-[13px]">
                                     <span className="text-slate-500">Base Shipping Rate ({state.weight}kg)</span>
-                                    <span className="text-brand-black">₹{state.rateDetails.baseRateInr?.toLocaleString() || 0}</span>
+                                    <span className="text-brand-black">₹{Math.round(state.rateDetails.baseRateInr || 0).toLocaleString()}</span>
                                   </div>
                                   {(state.rateDetails.fscInr > 0) && (
                                     <div className="flex justify-between items-center h-8 text-[13px]">
-                                      <span className="text-slate-500">Fuel Surcharge (FSC)</span>
-                                      <span className="text-brand-black">+₹{state.rateDetails.fscInr.toLocaleString()}</span>
+                                      <span className="text-slate-500">Fuel Surcharge (FSC) ({state.rateDetails.fscPct}%)</span>
+                                      <span className="text-brand-black">+₹{Math.round(state.rateDetails.fscInr).toLocaleString()}</span>
                                     </div>
                                   )}
                                   {(state.rateDetails.marginInr > 0) && (
                                     <div className="flex justify-between items-center h-8 text-[13px]">
-                                      <span className="text-slate-500">Platform Margin</span>
-                                      <span className="text-brand-black">+₹{state.rateDetails.marginInr.toLocaleString()}</span>
+                                      <span className="text-slate-500">Platform Margin ({state.rateDetails.marginPct}%)</span>
+                                      <span className="text-brand-black">+₹{Math.round(state.rateDetails.marginInr).toLocaleString()}</span>
                                     </div>
                                   )}
                                   {(state.rateDetails.demandSurchargeInr > 0) && (
                                     <div className="flex justify-between items-center h-8 text-[13px]">
                                       <span className="text-slate-500">Demand Surcharge</span>
-                                      <span className="text-brand-black">+₹{state.rateDetails.demandSurchargeInr.toLocaleString()}</span>
+                                      <span className="text-brand-black">+₹{Math.round(state.rateDetails.demandSurchargeInr).toLocaleString()}</span>
                                     </div>
                                   )}
                                   {((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0) > 0) && (
                                     <div className="flex justify-between items-center h-8 text-[13px]">
                                       <span className="text-slate-500">Carrier Extras</span>
-                                      <span className="text-brand-black">+₹{((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0)).toLocaleString()}</span>
+                                      <span className="text-brand-black">+₹{Math.round((state.rateDetails.premiumServiceInr || 0) + (state.rateDetails.peakSurchargeInr || 0) + (state.rateDetails.usInboundInr || 0) + (state.rateDetails.upsFixedInr || 0)).toLocaleString()}</span>
                                     </div>
                                   )}
                                   {(state.rateDetails.gstInr > 0) && (
                                     <div className="flex justify-between items-center h-8 text-[13px]">
                                       <span className="text-slate-500">GST (18%)</span>
-                                      <span className="text-brand-black">+₹{state.rateDetails.gstInr.toLocaleString()}</span>
+                                      <span className="text-brand-black">+₹{Math.round(state.rateDetails.gstInr).toLocaleString()}</span>
                                     </div>
                                   )}
                                 </>
