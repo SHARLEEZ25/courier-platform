@@ -22,7 +22,12 @@
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npm run:*)",
+      "Bash(git merge claude/ui-fix-address --no-ff -m ':*)",
+      "Bash(git stash:*)",
+      "Bash(git push:*)"
     ]
   }
 }
