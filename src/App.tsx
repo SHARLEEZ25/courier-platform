@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,6 +18,11 @@ import Booking from "./pages/Booking.tsx";
 import MembershipCheckout from "./pages/MembershipCheckout.tsx";
 import Login from "./pages/Login.tsx";
 import Signup from "./pages/Signup.tsx";
+import AdminLayout from "./pages/admin/AdminLayout.tsx";
+import AdminLogin from "./pages/admin/AdminLogin.tsx";
+import AdminBookings from "./pages/admin/AdminBookings.tsx";
+import AdminBookingDetail from "./pages/admin/AdminBookingDetail.tsx";
+import AdminConfig from "./pages/admin/AdminConfig.tsx";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +47,14 @@ const App = () => (
             <Route path="/membership-checkout" element={<MembershipCheckout />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            {/* Admin panel — login is outside layout (no sidebar) */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="/admin/bookings" replace />} />
+              <Route path="bookings" element={<AdminBookings />} />
+              <Route path="bookings/:id" element={<AdminBookingDetail />} />
+              <Route path="config" element={<AdminConfig />} />
+            </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

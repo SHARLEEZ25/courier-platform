@@ -12,6 +12,8 @@ const EnvSchema = z.object({
   // Set this in AfterShip dashboard → Settings → Notifications → Webhook → Secret
   // Used to verify every inbound webhook request is genuinely from AfterShip
   AFTERSHIP_WEBHOOK_SECRET: z.string().default(""),
+  // Comma-separated Firebase UIDs that have admin access, e.g. "uid1,uid2"
+  ADMIN_UIDS: z.string().default(""),
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
