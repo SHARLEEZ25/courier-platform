@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useDestinations } from "@/hooks/useDestinations";
+import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronsUpDown, ChevronDown, MapPin, Search as SearchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
   const isHorizontal = variant === "horizontal";
   const isCompact = variant === "compact";
   const [openDest, setOpenDest] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const origin = "India";
   const [destination, setDestination] = useState(initialData?.destination || "");
   const [weight, setWeight] = useState(initialData?.weight?.toString() || "2.5");
@@ -87,7 +89,11 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
 
   const handleCalculate = () => {
     if (validate()) {
+      setIsSearching(true);
       onCalculate({ origin, destination, weight: parseFloat(weight), itemType });
+
+      // Reset searching after animation duration
+      setTimeout(() => setIsSearching(false), 2000);
 
       // Scroll to top to focus on results since hero is being replaced
       setTimeout(() => {
@@ -215,9 +221,208 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
     </div>
   );
 
+  // --- Notion-style mascot animation state ---
+  const [jetPhase, setJetPhase] = useState<"idle" | "speak" | "nudge" | "reset">("idle");
+  const [showJetBubble, setShowJetBubble] = useState(false);
+  const [jetMsgIdx, setJetMsgIdx] = useState(0);
+  const [showCourierBubble, setShowCourierBubble] = useState(false);
+  const [courierMsgIdx, setCourierMsgIdx] = useState(0);
+  const [isEntryDone, setIsEntryDone] = useState(false);
+
+  const jetMessages = [
+    "Choose your destination below",
+    "Then hit Search for prices!"
+  ];
+  const courierMessages = [
+    "Want an instant quote? 💰",
+    "Fill the simple form below ↓"
+  ];
+
+  // Typewriter inline component
+  const TypewriterText = ({ text, speed = 40 }: { text: string; speed?: number }) => {
+    const [display, setDisplay] = useState("");
+    useEffect(() => {
+      setDisplay("");
+      let i = 0;
+      const timer = setInterval(() => {
+        setDisplay(text.slice(0, i + 1));
+        i++;
+        if (i >= text.length) clearInterval(timer);
+      }, speed);
+      return () => clearInterval(timer);
+    }, [text]);
+    return <span>{display}</span>;
+  };
+
+  // Unified mascot animation loop (Starts AFTER landing)
+  useEffect(() => {
+    if (!isHorizontal || isSearching || !isEntryDone) return;
+
+    let isMounted = true;
+
+    const runCycle = async () => {
+      if (!isMounted) return;
+
+      // Reset states
+      setShowJetBubble(false);
+      setShowCourierBubble(false);
+
+      // 1. Jet speaks first message
+      await new Promise(r => setTimeout(r, 1000));
+      if (!isMounted) return;
+      setJetMsgIdx(0);
+      setShowJetBubble(true);
+
+      // 2. Wait, then switch to second jet message
+      await new Promise(r => setTimeout(r, 4000));
+      if (!isMounted) return;
+      setShowJetBubble(false); // Hide briefly for smooth reset
+      await new Promise(r => setTimeout(r, 300));
+      if (!isMounted) return;
+      setJetMsgIdx(1);
+      setShowJetBubble(true);
+
+      // 3. Wait, then hide jet and show courier (First message)
+      await new Promise(r => setTimeout(r, 4000));
+      if (!isMounted) return;
+      setShowJetBubble(false);
+      await new Promise(r => setTimeout(r, 800));
+      if (!isMounted) return;
+      setCourierMsgIdx(0);
+      setShowCourierBubble(true);
+      
+      // 4. Wait, then switch to second courier message
+      await new Promise(r => setTimeout(r, 4000));
+      if (!isMounted) return;
+      setShowCourierBubble(false);
+      await new Promise(r => setTimeout(r, 300));
+      if (!isMounted) return;
+      setCourierMsgIdx(1);
+      setShowCourierBubble(true);
+      
+      // 5. Wait, then reset courier
+      await new Promise(r => setTimeout(r, 4000));
+      if (!isMounted) return;
+      setShowCourierBubble(false);
+    };
+
+    runCycle();
+    const interval = setInterval(runCycle, 16000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [isHorizontal, isSearching, isEntryDone]);
+
+
   if (isHorizontal) {
     return (
       <div className="w-full max-w-[1020px] mx-auto relative">
+        {/* === Notion-Style Mascot Layer === */}
+        <div className="absolute inset-x-0 top-[-70px] h-[90px] pointer-events-none z-30">
+
+          {/* ✈️ Navigator Jet — Left, faces right → "International" */}
+          <motion.div
+            initial={{ x: -40, y: 20, rotate: -10, opacity: 0, scale: 0.8 }}
+            animate={isSearching ? {
+              x: [0, 1300],
+              y: [0, -80],
+              rotate: [0, 12],
+              opacity: [1, 1, 0]
+            } : {
+              x: 0,
+              y: isEntryDone ? [0, -5, 0] : 0,
+              rotate: 0,
+              opacity: 1,
+              scale: 1
+            }}
+            onAnimationComplete={(definition: any) => {
+              if (definition.opacity === 1 && !isSearching) {
+                setIsEntryDone(true);
+              }
+            }}
+            transition={isSearching ? {
+              duration: 1.5,
+              ease: [0.4, 0, 0.2, 1],
+            } : {
+              y: isEntryDone ? { duration: 3.5, repeat: Infinity, ease: "easeInOut" } : { duration: 1, ease: "easeOut" },
+              x: { duration: 1, ease: "easeOut" },
+              rotate: { duration: 1, ease: "easeOut" },
+              scale: { duration: 1, ease: "easeOut" },
+              opacity: { duration: 0.8 }
+            }}
+            className="absolute left-[12px] bottom-[-14px] w-40 h-40 flex items-end"
+          >
+
+            {/* Speech bubble */}
+            <AnimatePresence>
+              {showJetBubble && !isSearching && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                  className="absolute -top-9 left-4 bg-white border border-gray-100 rounded-xl shadow-lg px-3 py-1.5 whitespace-nowrap"
+                >
+                  <span className="text-[11px] font-bold text-gray-800">
+                    <TypewriterText text={jetMessages[jetMsgIdx]} speed={45} />
+                  </span>
+                  {/* Bubble tail */}
+                  <div className="absolute left-4 -bottom-[7px] w-3 h-3 bg-white border-b border-r border-gray-100 rotate-45" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <img
+              src="/Gemini_Generated_Image_11osmg11osmg11os-removebg-preview.png"
+              alt="Navigator Jet"
+              className="w-full h-full object-contain"
+              style={{
+                filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.15))",
+                transform: "rotate(-40deg) translateX(-8px)",
+                transformOrigin: "bottom center"
+              }}
+            />
+          </motion.div>
+
+          {/* 📦 Evaluator Courier — Right, points to "Business" */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1 }}
+            transition={{ opacity: { duration: 0.5 } }}
+            className="absolute -right-6 bottom-[-14px] w-32 h-36"
+          >
+            {/* Speech bubble */}
+            <AnimatePresence>
+              {showCourierBubble && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                  className="absolute -top-9 right-2 bg-white border border-gray-100 rounded-xl shadow-lg px-3 py-1.5 whitespace-nowrap"
+                >
+                  <span className="text-[11px] font-bold text-gray-800">
+                    <TypewriterText text={courierMessages[courierMsgIdx]} speed={45} />
+                  </span>
+                  {/* Bubble tail */}
+                  <div className="absolute right-4 -bottom-[7px] w-3 h-3 bg-white border-b border-r border-gray-100 rotate-45" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+
+
+            <img
+              src="/Gemini_Generated_Image_ficrl8ficrl8ficr-removebg-preview.png"
+              alt="Evaluator Courier"
+              className="w-full h-full object-contain"
+              style={{ filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.12))" }}
+            />
+          </motion.div>
+        </div>
+
         <div className="bg-white p-1 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.05)] border border-gray-100 flex flex-col md:flex-row items-stretch relative z-10">
 
           {/* From — locked to India */}
