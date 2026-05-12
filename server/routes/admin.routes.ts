@@ -651,6 +651,63 @@ adminRoutes.post("/fuel-surcharges", async (c) => {
   }
 });
 
+/**
+ * DELETE /api/admin/fuel-surcharges/:id
+ * Remove an FSC row entirely.
+ */
+adminRoutes.delete("/fuel-surcharges/:id", async (c) => {
+  const id = c.req.param("id");
+  try {
+    const rows = await sql`
+      DELETE FROM fuel_surcharges WHERE id = ${id}::uuid RETURNING id
+    `;
+    if (rows.length === 0) return c.json(err("FSC row not found"), 404);
+    return c.json(ok({ deleted: id }));
+  } catch (e) {
+    console.error("[admin] delete fsc error:", e);
+    return c.json(err("Failed to delete FSC row"), 500);
+  }
+});
+
+/**
+ * PATCH /api/admin/fuel-surcharges/:id
+ * Edit an existing FSC row's percent and/or effective_to date.
+ * Body: { fsc_percent: number; effective_to?: string | null }
+ */
+adminRoutes.patch("/fuel-surcharges/:id", async (c) => {
+  const id = c.req.param("id");
+  let body: { fsc_percent?: unknown; effective_to?: unknown };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json(err("Invalid JSON body"), 400);
+  }
+
+  if (typeof body.fsc_percent !== "number" || body.fsc_percent < 0 || body.fsc_percent > 100) {
+    return c.json(err("fsc_percent must be a number between 0 and 100"), 400);
+  }
+
+  const effectiveTo =
+    typeof body.effective_to === "string" && body.effective_to.trim()
+      ? body.effective_to.trim()
+      : null;
+
+  try {
+    const rows = await sql`
+      UPDATE fuel_surcharges
+      SET fsc_percent = ${body.fsc_percent as number},
+          effective_to = ${effectiveTo ? sql`${effectiveTo}::date` : sql`NULL`}
+      WHERE id = ${id}::uuid
+      RETURNING id, carrier_id, fsc_percent::float AS fsc_percent, effective_from, effective_to, created_at
+    `;
+    if (rows.length === 0) return c.json(err("FSC row not found"), 404);
+    return c.json(ok(rows[0]));
+  } catch (e) {
+    console.error("[admin] patch fsc error:", e);
+    return c.json(err("Failed to update FSC row"), 500);
+  }
+});
+
 // ── Legacy rate-calc tools (kept, now auth-protected) ─────────────────────────
 
 /**
@@ -793,6 +850,57 @@ adminRoutes.get("/item-types", async (c) => {
     ORDER BY display_name ASC
   `;
   return c.json({ ok: true, types });
+});
+
+/**
+ * GET /api/admin/rate-cards/:carrier
+ * Returns all rate_card_steps and rate_card_bands for a carrier.
+ * Used by the admin config panel to display the PDF rate card as a matrix.
+ */
+adminRoutes.get("/rate-cards/:carrier", async (c) => {
+  const carrier = c.req.param("carrier");
+  if (!["dhl", "fedex", "ups"].includes(carrier)) {
+    return c.json({ error: "Invalid carrier" }, 400);
+  }
+
+  type RateCardStep = { zone_code: string; shipment_type: string; weight_kg: number; price_inr: number };
+  type RateCardBand = { zone_code: string; shipment_type: string; weight_min_kg: number; weight_max_kg: number | null; price_per_kg: number; base_price_inr: number | null; band_type: string };
+
+  type ZoneCountry = { country: string; zone: string };
+  const serviceType = carrier === "fedex" ? "IP" : "standard";
+
+  const [steps, bands, countries] = await Promise.all([
+    sql<RateCardStep[]>`
+      SELECT zone_code, shipment_type,
+             weight_kg::float AS weight_kg,
+             price_inr::float AS price_inr
+      FROM rate_card_steps
+      WHERE carrier_id = ${carrier}
+        AND (effective_to IS NULL OR effective_to >= CURRENT_DATE)
+      ORDER BY shipment_type, weight_kg, zone_code
+    `,
+    sql<RateCardBand[]>`
+      SELECT zone_code, shipment_type,
+             weight_min_kg::float AS weight_min_kg,
+             weight_max_kg::float AS weight_max_kg,
+             price_per_kg::float AS price_per_kg,
+             base_price_inr::float AS base_price_inr,
+             band_type
+      FROM rate_card_bands
+      WHERE carrier_id = ${carrier}
+      ORDER BY shipment_type, weight_min_kg, zone_code
+    `,
+    sql<ZoneCountry[]>`
+      SELECT DISTINCT destination_country AS country, zone_code AS zone
+      FROM carrier_zones
+      WHERE carrier_id = ${carrier}
+        AND origin_country = 'India'
+        AND service_type = ${serviceType}
+      ORDER BY destination_country
+    `,
+  ]);
+
+  return c.json(ok({ steps, bands, countries }));
 });
 
 export default adminRoutes;
