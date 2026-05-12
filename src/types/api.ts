@@ -278,6 +278,21 @@ export interface AdminBookingsResponse {
   total: number;
 }
 
+export interface AdminDashboardStats {
+  bookings_today: number;
+  bookings_this_week: number;
+  pending_count: number;
+  inscanned_count: number;
+  outscanned_count: number;
+  delivered_count: number;
+  revenue_today: number;
+  revenue_this_week: number;
+  unassigned_pickups: number;
+  cancelled_count: number;
+  outscan_queue_count: number;
+  ndr_count: number;
+}
+
 /** Surcharge config grouped by carrier: { dhl: { margin_pct: 20, demand_active: false, ... } } */
 export type AdminSurchargeConfig = Record<string, Record<string, number | boolean | null>>;
 
@@ -288,4 +303,57 @@ export interface AdminFuelSurcharge {
   effective_from: string;
   effective_to: string | null;
   created_at: string;
+}
+
+export interface AdminStaff {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  role: "pickup_agent" | "ops_staff" | "admin";
+  is_active: boolean;
+  active_bookings_count: number;
+  created_at: string;
+}
+
+export interface AdminLead {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  source: "chat" | "contact_form" | "quote";
+  message: string | null;
+  status: "new" | "contacted" | "converted" | "lost";
+  created_at: string;
+}
+
+export interface AdminNDRRecord {
+  id: string;
+  booking_id: string;
+  booking_ref: string;
+  customer_name: string;
+  awb: string | null;
+  carrier_id: string;
+  destination_country: string;
+  last_attempt_at: string;
+  ndr_reason: string | null;
+  status: "unresolved" | "reattempt_scheduled" | "resolved";
+  attempt_count: number;
+}
+
+export interface AdminRemarketingRecord {
+  booking_id: string;
+  booking_ref: string;
+  customer_email: string;
+  delivered_at: string;
+  email_status: "pending" | "sent" | "failed";
+  sent_at: string | null;
+}
+
+export interface InscanPayload {
+  actual_weight_kg: number;
+}
+
+export interface AssignTrackingPayload {
+  tracking_number: string;
 }

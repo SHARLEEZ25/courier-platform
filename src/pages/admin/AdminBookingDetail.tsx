@@ -3,6 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAdminBookingDetail } from "@/hooks/admin/useAdminBookingDetail";
 import { useUpdateBookingStatus } from "@/hooks/admin/useUpdateBookingStatus";
 import { useAddTrackingEvent } from "@/hooks/admin/useAddTrackingEvent";
+import { useAssignAWB } from "@/hooks/admin/useAssignAWB";
+import { useAdminStaff } from "@/hooks/admin/useAdminStaff";
+import { api } from "@/lib/api";
 import type { BookingStatus, AdminTrackingEvent } from "@/types/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, MapPin, Clock } from "lucide-react";
+import { Loader2, ArrowLeft, MapPin, Clock, AlertTriangle, CheckCircle2, ScanLine, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_ORDER: Record<BookingStatus, number> = {
@@ -80,12 +83,17 @@ export default function AdminBookingDetail() {
   const { data: booking, isLoading, isError } = useAdminBookingDetail(id);
   const updateStatus = useUpdateBookingStatus(id!);
   const addEvent     = useAddTrackingEvent(id!);
+  const assignAWB    = useAssignAWB(id!);
+  const { data: staffList } = useAdminStaff();
 
-  const [newStatus, setNewStatus]     = useState<BookingStatus | "">("");
-  const [eventCode, setEventCode]     = useState("");
-  const [eventDesc, setEventDesc]     = useState("");
-  const [eventLoc, setEventLoc]       = useState("");
-  const [eventAt, setEventAt]         = useState(new Date().toISOString().slice(0, 16));
+  const [newStatus, setNewStatus]         = useState<BookingStatus | "">("");
+  const [eventCode, setEventCode]         = useState("");
+  const [eventDesc, setEventDesc]         = useState("");
+  const [eventLoc, setEventLoc]           = useState("");
+  const [eventAt, setEventAt]             = useState(new Date().toISOString().slice(0, 16));
+  const [awbInput, setAwbInput]           = useState("");
+  const [inscanWeight, setInscanWeight]   = useState("");
+  const [assignedStaff, setAssignedStaff] = useState("");
 
   if (isLoading) {
     return (
@@ -140,6 +148,49 @@ export default function AdminBookingDetail() {
       toast({ title: "Failed to add event", description: (e as Error).message, variant: "destructive" });
     }
   }
+
+  async function handleAssignAWB(e: React.FormEvent) {
+    e.preventDefault();
+    if (!awbInput.trim()) return;
+    try {
+      await assignAWB.mutateAsync(awbInput.trim());
+      toast({ title: "AWB assigned", description: `Tracking number set to ${awbInput.trim()}` });
+      setAwbInput("");
+    } catch (e) {
+      toast({ title: "Failed to assign AWB", description: (e as Error).message, variant: "destructive" });
+    }
+  }
+
+  async function handleInscan(e: React.FormEvent) {
+    e.preventDefault();
+    const kg = parseFloat(inscanWeight);
+    if (!kg || kg <= 0) return;
+    try {
+      await api.patch(`/admin/bookings/${id}/inscan`, { actual_weight_kg: kg });
+      toast({ title: "Inscan confirmed", description: `Actual weight: ${kg} kg. Status advanced to In Transit.` });
+      setInscanWeight("");
+      updateStatus.mutate("in_transit");
+    } catch (e) {
+      toast({ title: "Inscan failed", description: (e as Error).message, variant: "destructive" });
+    }
+  }
+
+  async function handleAssignStaff(staffId: string) {
+    if (!staffId) return;
+    try {
+      await api.patch(`/admin/bookings/${id}/assign-staff`, { staff_id: staffId });
+      setAssignedStaff(staffId);
+      const name = staffList?.find((s) => s.id === staffId)?.name ?? staffId;
+      toast({ title: "Staff assigned", description: `Assigned to ${name}` });
+    } catch (e) {
+      toast({ title: "Failed to assign staff", description: (e as Error).message, variant: "destructive" });
+    }
+  }
+
+  const bookedKg = booking?.actual_weight_kg ?? 0;
+  const actualKg = parseFloat(inscanWeight) || 0;
+  const weightDiffPct = bookedKg > 0 && actualKg > 0 ? Math.abs(actualKg - bookedKg) / bookedKg * 100 : 0;
+  const weightMismatchLevel = weightDiffPct > 20 ? "error" : weightDiffPct > 10 ? "warn" : actualKg > 0 ? "ok" : "none";
 
   return (
     <div className="p-6">
@@ -207,6 +258,17 @@ export default function AdminBookingDetail() {
             <InfoRow label="City"      value={`${booking.delivery_city}, ${booking.delivery_state} ${booking.delivery_zip}`} />
           </div>
 
+          {/* Payment status */}
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Payment</h2>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-500">
+                Unpaid
+              </span>
+              <span className="text-xs text-gray-400">Payment gateway not yet connected</span>
+            </div>
+          </div>
+
           {/* Pricing */}
           <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Pricing (locked at booking)</h2>
@@ -232,6 +294,109 @@ export default function AdminBookingDetail() {
 
         {/* ── Right column: status + tracking ── */}
         <div className="space-y-4">
+
+          {/* Staff Assignment */}
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400 flex items-center gap-1.5">
+              <Tag className="h-3.5 w-3.5" /> Assign Staff
+            </h2>
+            <div className="flex items-center gap-2">
+              <Select value={assignedStaff} onValueChange={handleAssignStaff}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select pickup agent…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(staffList ?? []).filter((s) => s.is_active).map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name} — {s.role.replace("_", " ")}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="mt-1.5 text-[10px] text-gray-400">Staff assignment is not persisted until the staff table is created.</p>
+          </div>
+
+          {/* Inscan Weight — shown only when picked_up */}
+          {booking.status === "picked_up" && (
+            <div className="rounded-lg border border-purple-200 bg-purple-50/40 p-4 shadow-sm">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-purple-600 flex items-center gap-1.5">
+                <ScanLine className="h-3.5 w-3.5" /> Confirm Inscan
+              </h2>
+              <form onSubmit={handleInscan} className="space-y-3">
+                <div>
+                  <Label className="text-xs text-gray-600">Booked Weight</Label>
+                  <p className="text-sm font-semibold text-gray-800">{booking.actual_weight_kg} kg</p>
+                </div>
+                <div>
+                  <Label htmlFor="inscan-weight" className="text-xs text-gray-600">Actual Weight (kg) *</Label>
+                  <Input
+                    id="inscan-weight"
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    placeholder="e.g. 2.5"
+                    value={inscanWeight}
+                    onChange={(e) => setInscanWeight(e.target.value)}
+                    required
+                    className="mt-1"
+                  />
+                </div>
+                {weightMismatchLevel === "error" && (
+                  <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    Large discrepancy ({weightDiffPct.toFixed(1)}%) — contact customer before proceeding.
+                  </div>
+                )}
+                {weightMismatchLevel === "warn" && (
+                  <div className="flex items-center gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-700">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    Weight mismatch ({weightDiffPct.toFixed(1)}%) — proceed with caution.
+                  </div>
+                )}
+                {weightMismatchLevel === "ok" && (
+                  <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                    Weight matches booked weight (±5%).
+                  </div>
+                )}
+                <Button type="submit" disabled={!inscanWeight} className="w-full bg-purple-600 hover:bg-purple-700">
+                  Confirm Inscan & Advance to In Transit
+                </Button>
+              </form>
+            </div>
+          )}
+
+          {/* AWB Assignment — shown when in_transit and no tracking number */}
+          {booking.status === "in_transit" && !booking.tracking_number && (
+            <div className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-4 shadow-sm">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                Assign Carrier AWB
+              </h2>
+              <form onSubmit={handleAssignAWB} className="flex gap-2">
+                <Input
+                  placeholder="Enter AWB / tracking number…"
+                  value={awbInput}
+                  onChange={(e) => setAwbInput(e.target.value)}
+                  required
+                  className="flex-1"
+                />
+                <Button
+                  type="submit"
+                  disabled={!awbInput.trim() || assignAWB.isPending}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  {assignAWB.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Assign"}
+                </Button>
+              </form>
+            </div>
+          )}
+
+          {/* AWB already assigned callout */}
+          {booking.tracking_number && (
+            <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              AWB assigned: <span className="ml-1 font-mono font-semibold">{booking.tracking_number}</span>
+            </div>
+          )}
 
           {/* Update Status */}
           <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">

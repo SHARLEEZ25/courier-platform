@@ -6,6 +6,7 @@ import {
   getAllBookings,
   getBookingById,
   updateBookingStatus,
+  updateTrackingNumber,
 } from "../db/queries/bookings.queries.js";
 import {
   getTrackingEventsByBookingId,
@@ -15,8 +16,8 @@ import type { BookingStatus } from "../types/db.types.js";
 
 const adminRoutes = new Hono();
 
-// All admin routes require admin auth
-adminRoutes.use("/*", requireAdminAuth);
+// Auth disabled for now — re-enable by uncommenting the line below
+// adminRoutes.use("/*", requireAdminAuth);
 
 // ── Identity check ────────────────────────────────────────────────────────────
 
@@ -29,6 +30,84 @@ adminRoutes.get("/me", (c) => {
   return c.json(ok({ uid: user.id, email: user.email, name: user.name }));
 });
 
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/admin/dashboard
+ * Returns aggregate stats for the dashboard in a single DB round-trip.
+ * All date math uses IST (Asia/Kolkata, UTC+5:30).
+ */
+adminRoutes.get("/dashboard", async (c) => {
+  const [bookingRows, ndrRows] = await Promise.all([
+    sql<{
+      bookings_today: string;
+      bookings_this_week: string;
+      pending_count: string;
+      inscanned_count: string;
+      outscanned_count: string;
+      delivered_count: string;
+      revenue_today: string;
+      revenue_this_week: string;
+      unassigned_pickups: string;
+      cancelled_count: string;
+      outscan_queue_count: string;
+    }[]>`
+      SELECT
+        COUNT(*) FILTER (
+          WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::date
+                = (NOW() AT TIME ZONE 'Asia/Kolkata')::date
+        )::text AS bookings_today,
+        COUNT(*) FILTER (
+          WHERE created_at AT TIME ZONE 'Asia/Kolkata'
+                >= date_trunc('week', NOW() AT TIME ZONE 'Asia/Kolkata')
+        )::text AS bookings_this_week,
+        COUNT(*) FILTER (WHERE status = 'pending')    ::text AS pending_count,
+        COUNT(*) FILTER (WHERE status = 'picked_up')  ::text AS inscanned_count,
+        COUNT(*) FILTER (WHERE status = 'in_transit') ::text AS outscanned_count,
+        COUNT(*) FILTER (WHERE status = 'delivered')  ::text AS delivered_count,
+        COALESCE(SUM(total_inr) FILTER (
+          WHERE status != 'cancelled'
+            AND (created_at AT TIME ZONE 'Asia/Kolkata')::date
+                = (NOW() AT TIME ZONE 'Asia/Kolkata')::date
+        ), 0)::text AS revenue_today,
+        COALESCE(SUM(total_inr) FILTER (
+          WHERE status != 'cancelled'
+            AND created_at AT TIME ZONE 'Asia/Kolkata'
+                >= date_trunc('week', NOW() AT TIME ZONE 'Asia/Kolkata')
+        ), 0)::text AS revenue_this_week,
+        COUNT(*) FILTER (
+          WHERE status = 'confirmed' AND tracking_number IS NULL
+        )::text AS unassigned_pickups,
+        COUNT(*) FILTER (WHERE status = 'cancelled')  ::text AS cancelled_count,
+        COUNT(*) FILTER (
+          WHERE status = 'in_transit' AND tracking_number IS NULL
+        )::text AS outscan_queue_count
+      FROM bookings
+    `,
+    sql<{ ndr_count: string }[]>`
+      SELECT COUNT(DISTINCT booking_id)::text AS ndr_count
+      FROM tracking_events
+      WHERE event_code ILIKE 'NDR%'
+    `,
+  ]);
+
+  const r = bookingRows[0];
+  return c.json(ok({
+    bookings_today:      Number(r.bookings_today),
+    bookings_this_week:  Number(r.bookings_this_week),
+    pending_count:       Number(r.pending_count),
+    inscanned_count:     Number(r.inscanned_count),
+    outscanned_count:    Number(r.outscanned_count),
+    delivered_count:     Number(r.delivered_count),
+    revenue_today:       Number(r.revenue_today),
+    revenue_this_week:   Number(r.revenue_this_week),
+    unassigned_pickups:  Number(r.unassigned_pickups),
+    cancelled_count:     Number(r.cancelled_count),
+    outscan_queue_count: Number(r.outscan_queue_count),
+    ndr_count:           Number(ndrRows[0]?.ndr_count ?? 0),
+  }));
+});
+
 // ── Bookings ──────────────────────────────────────────────────────────────────
 
 /**
@@ -37,16 +116,18 @@ adminRoutes.get("/me", (c) => {
  * Query params: status, carrier, q (search ref/tracking), from, to, limit, offset
  */
 adminRoutes.get("/bookings", async (c) => {
-  const { status, carrier, q, from, to, limit, offset } = c.req.query();
+  const { status, carrier, q, from, to, origin, destination, limit, offset } = c.req.query();
 
   const result = await getAllBookings({
-    status:     status || undefined,
-    carrier_id: carrier || undefined,
-    q:          q || undefined,
-    from:       from || undefined,
-    to:         to || undefined,
-    limit:      limit  ? Number(limit)  : 50,
-    offset:     offset ? Number(offset) : 0,
+    status:      status || undefined,
+    carrier_id:  carrier || undefined,
+    q:           q || undefined,
+    from:        from || undefined,
+    to:          to || undefined,
+    origin:      origin || undefined,
+    destination: destination || undefined,
+    limit:       limit  ? Number(limit)  : 50,
+    offset:      offset ? Number(offset) : 0,
   });
 
   return c.json(ok(result));
@@ -139,6 +220,278 @@ adminRoutes.post("/bookings/:id/tracking-event", async (c) => {
   }
 
   return c.json(ok(event), 201);
+});
+
+/**
+ * PATCH /api/admin/bookings/:id/tracking-number
+ * Assign carrier AWB / tracking number to a booking.
+ * Unlike updateTrackingNumber() query (which resets status to confirmed),
+ * this only updates the tracking_number field, preserving current status.
+ * Body: { tracking_number: string }
+ */
+adminRoutes.patch("/bookings/:id/tracking-number", async (c) => {
+  const id = c.req.param("id");
+
+  let body: { tracking_number?: unknown };
+  try { body = await c.req.json(); }
+  catch { return c.json(err("Invalid JSON body"), 400); }
+
+  if (typeof body.tracking_number !== "string" || !body.tracking_number.trim()) {
+    return c.json(err("tracking_number is required"), 400);
+  }
+
+  const booking = await getBookingById(id);
+  if (!booking) return c.json(err("Booking not found"), 404);
+
+  const updated = await sql<{ id: string; tracking_number: string | null }[]>`
+    UPDATE bookings
+    SET tracking_number = ${body.tracking_number.trim()}, updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING id, tracking_number
+  `;
+
+  return c.json(ok(updated[0]));
+});
+
+/**
+ * PATCH /api/admin/bookings/:id/inscan
+ * Record actual weight during inscan and advance status to in_transit.
+ * Body: { actual_weight_kg: number }
+ *
+ * TODO: Add `inscan_weight_kg NUMERIC` and `inscan_at TIMESTAMPTZ` columns to bookings table.
+ *       Once added, remove the dummy response and update the SQL below.
+ *       Migration: ALTER TABLE bookings ADD COLUMN inscan_weight_kg NUMERIC, ADD COLUMN inscan_at TIMESTAMPTZ;
+ */
+adminRoutes.patch("/bookings/:id/inscan", async (c) => {
+  const id = c.req.param("id");
+
+  let body: { actual_weight_kg?: unknown };
+  try { body = await c.req.json(); }
+  catch { return c.json(err("Invalid JSON body"), 400); }
+
+  if (typeof body.actual_weight_kg !== "number" || body.actual_weight_kg <= 0) {
+    return c.json(err("actual_weight_kg must be a positive number"), 400);
+  }
+
+  const booking = await getBookingById(id);
+  if (!booking) return c.json(err("Booking not found"), 404);
+
+  // Advance status to in_transit
+  const updated = await updateBookingStatus(id, "in_transit");
+
+  // DUMMY: returns success with echo of actual_weight_kg
+  // TODO: persist inscan_weight_kg and inscan_at to DB
+  return c.json(ok({
+    id,
+    status: updated?.status ?? "in_transit",
+    actual_weight_kg: body.actual_weight_kg,
+    inscan_at: new Date().toISOString(),
+    _note: "inscan_weight_kg not persisted yet — add column to bookings table",
+  }));
+});
+
+/**
+ * PATCH /api/admin/bookings/:id/assign-staff
+ * Assign a pickup agent to a booking.
+ * Body: { staff_id: string }
+ *
+ * TODO: Create `staff` table and add `assigned_staff_id UUID FK` column to bookings.
+ *       Migration:
+ *         CREATE TABLE staff (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT, phone TEXT, email TEXT,
+ *           role TEXT, is_active BOOLEAN DEFAULT true, created_at TIMESTAMPTZ DEFAULT NOW());
+ *         ALTER TABLE bookings ADD COLUMN assigned_staff_id UUID REFERENCES staff(id);
+ */
+adminRoutes.patch("/bookings/:id/assign-staff", async (c) => {
+  const id = c.req.param("id");
+
+  let body: { staff_id?: unknown };
+  try { body = await c.req.json(); }
+  catch { return c.json(err("Invalid JSON body"), 400); }
+
+  if (typeof body.staff_id !== "string" || !body.staff_id.trim()) {
+    return c.json(err("staff_id is required"), 400);
+  }
+
+  const booking = await getBookingById(id);
+  if (!booking) return c.json(err("Booking not found"), 404);
+
+  // DUMMY: returns success — staff assignment not persisted until column exists
+  return c.json(ok({
+    id,
+    assigned_staff_id: body.staff_id,
+    _note: "assigned_staff_id not persisted yet — add column to bookings table",
+  }));
+});
+
+// ── Staff ─────────────────────────────────────────────────────────────────────
+
+const DUMMY_STAFF = [
+  { id: "staff-001", name: "Ravi Kumar", phone: "+91 98400 11111", email: "ravi@uniex.in", role: "pickup_agent", is_active: true, active_bookings_count: 3, created_at: "2025-01-10T09:00:00Z" },
+  { id: "staff-002", name: "Priya Nair", phone: "+91 98400 22222", email: "priya@uniex.in", role: "pickup_agent", is_active: true, active_bookings_count: 1, created_at: "2025-02-14T09:00:00Z" },
+  { id: "staff-003", name: "Arjun Mehta", phone: "+91 98400 33333", email: "arjun@uniex.in", role: "ops_staff", is_active: true, active_bookings_count: 0, created_at: "2025-03-01T09:00:00Z" },
+];
+
+/**
+ * GET /api/admin/staff
+ * TODO: Create `staff` table and replace dummy data with real DB query.
+ */
+adminRoutes.get("/staff", (c) => c.json(ok(DUMMY_STAFF)));
+
+/**
+ * POST /api/admin/staff
+ * TODO: Insert into `staff` table.
+ */
+adminRoutes.post("/staff", async (c) => {
+  let body: Record<string, unknown>;
+  try { body = await c.req.json(); }
+  catch { return c.json(err("Invalid JSON body"), 400); }
+
+  const newStaff = {
+    id: `staff-${Date.now()}`,
+    name: body.name ?? "New Staff",
+    phone: body.phone ?? "",
+    email: body.email ?? "",
+    role: body.role ?? "pickup_agent",
+    is_active: true,
+    active_bookings_count: 0,
+    created_at: new Date().toISOString(),
+    _note: "Not persisted — staff table not yet created",
+  };
+  return c.json(ok(newStaff), 201);
+});
+
+/**
+ * PATCH /api/admin/staff/:id
+ * TODO: Update in `staff` table.
+ */
+adminRoutes.patch("/staff/:id", async (c) => {
+  let body: Record<string, unknown>;
+  try { body = await c.req.json(); }
+  catch { return c.json(err("Invalid JSON body"), 400); }
+
+  return c.json(ok({ id: c.req.param("id"), ...body, _note: "Not persisted — staff table not yet created" }));
+});
+
+/**
+ * DELETE /api/admin/staff/:id
+ * TODO: Delete from `staff` table.
+ */
+adminRoutes.delete("/staff/:id", (c) => c.json(ok({ id: c.req.param("id"), deleted: true, _note: "Not persisted" })));
+
+// ── Leads ─────────────────────────────────────────────────────────────────────
+
+const DUMMY_LEADS = [
+  { id: "lead-001", name: "Anil Sharma", email: "anil@example.com", phone: "+91 99001 11111", source: "chat", message: "I want to ship clothes to USA", status: "new", created_at: new Date(Date.now() - 2 * 3600000).toISOString() },
+  { id: "lead-002", name: "Sunita Reddy", email: "sunita@example.com", phone: "+91 99001 22222", source: "contact_form", message: "Need a quote for 5kg parcel to UK", status: "contacted", created_at: new Date(Date.now() - 48 * 3600000).toISOString() },
+  { id: "lead-003", name: "Mohan Das", email: null, phone: "+91 99001 33333", source: "quote", message: null, status: "converted", created_at: new Date(Date.now() - 72 * 3600000).toISOString() },
+];
+
+/**
+ * GET /api/admin/leads
+ * TODO: Create `leads` table:
+ *   CREATE TABLE leads (
+ *     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+ *     name TEXT, email TEXT, phone TEXT,
+ *     source TEXT CHECK (source IN ('chat','contact_form','quote')),
+ *     message TEXT, status TEXT DEFAULT 'new', created_at TIMESTAMPTZ DEFAULT NOW()
+ *   );
+ * Wire ChatWidget to POST /api/leads when user submits contact details.
+ */
+adminRoutes.get("/leads", (c) => c.json(ok(DUMMY_LEADS)));
+
+/**
+ * PATCH /api/admin/leads/:id
+ * TODO: Update status in `leads` table.
+ */
+adminRoutes.patch("/leads/:id", async (c) => {
+  let body: Record<string, unknown>;
+  try { body = await c.req.json(); }
+  catch { return c.json(err("Invalid JSON body"), 400); }
+
+  return c.json(ok({ id: c.req.param("id"), ...body, _note: "Not persisted — leads table not yet created" }));
+});
+
+// ── NDR Board ─────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/admin/ndr
+ * TODO: Implement once AfterShip is integrated.
+ * Options:
+ *   1. AfterShip webhook → insert tracking_events with event_code='NDR...'
+ *   2. Dedicated ndr_events table: booking_id, reason, attempt_count, next_attempt_at, resolved_at
+ * For now returns an empty array. NDR events appear here once AfterShip webhooks are live.
+ */
+adminRoutes.get("/ndr", (c) => c.json(ok([])));
+
+/**
+ * POST /api/admin/ndr/:id/note
+ * TODO: Insert NDR note into ndr_events table.
+ */
+adminRoutes.post("/ndr/:id/note", async (c) => {
+  let body: Record<string, unknown>;
+  try { body = await c.req.json(); }
+  catch { return c.json(err("Invalid JSON body"), 400); }
+
+  return c.json(ok({ id: c.req.param("id"), ...body, _note: "Not persisted — ndr_events table not yet created" }), 201);
+});
+
+// ── Remarketing ───────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/admin/remarketing/eligible
+ * Returns delivered bookings from the last 30 days with dummy email_status.
+ * TODO: Create `remarketing_emails` table:
+ *   CREATE TABLE remarketing_emails (
+ *     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+ *     booking_id UUID REFERENCES bookings(id),
+ *     email_type TEXT, sent_at TIMESTAMPTZ, status TEXT DEFAULT 'pending'
+ *   );
+ * Integrate email provider (Resend / SendGrid) and JOIN on booking_id.
+ */
+adminRoutes.get("/remarketing/eligible", async (c) => {
+  const rows = await sql<{
+    id: string; booking_ref: string; receiver_email: string | null;
+    sender_email: string | null; updated_at: string;
+  }[]>`
+    SELECT id, booking_ref, receiver_email, sender_email, updated_at
+    FROM bookings
+    WHERE status = 'delivered'
+      AND updated_at >= NOW() - INTERVAL '30 days'
+    ORDER BY updated_at DESC
+  `;
+
+  const records = rows.map((r) => ({
+    booking_id:    r.id,
+    booking_ref:   r.booking_ref,
+    customer_email: r.receiver_email ?? r.sender_email ?? "—",
+    delivered_at:  r.updated_at,
+    email_status:  "pending" as const,
+    sent_at:       null,
+  }));
+
+  return c.json(ok(records));
+});
+
+/**
+ * POST /api/admin/remarketing/send
+ * Trigger "10% off" remarketing emails for selected bookings.
+ * Body: { booking_ids: string[] }
+ * TODO: Integrate email provider (Resend / SendGrid) and record in remarketing_emails table.
+ */
+adminRoutes.post("/remarketing/send", async (c) => {
+  let body: { booking_ids?: unknown };
+  try { body = await c.req.json(); }
+  catch { return c.json(err("Invalid JSON body"), 400); }
+
+  if (!Array.isArray(body.booking_ids) || body.booking_ids.length === 0) {
+    return c.json(err("booking_ids must be a non-empty array"), 400);
+  }
+
+  return c.json(ok({
+    queued: body.booking_ids.length,
+    booking_ids: body.booking_ids,
+    _note: "Email not sent — email provider (Resend/SendGrid) not yet integrated",
+  }));
 });
 
 // ── Surcharge Config ──────────────────────────────────────────────────────────

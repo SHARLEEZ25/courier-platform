@@ -20,9 +20,17 @@ import Login from "./pages/Login.tsx";
 import Signup from "./pages/Signup.tsx";
 import AdminLayout from "./pages/admin/AdminLayout.tsx";
 import AdminLogin from "./pages/admin/AdminLogin.tsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminBookings from "./pages/admin/AdminBookings.tsx";
 import AdminBookingDetail from "./pages/admin/AdminBookingDetail.tsx";
 import AdminConfig from "./pages/admin/AdminConfig.tsx";
+import AdminPickupQueue from "./pages/admin/AdminPickupQueue.tsx";
+import AdminInscan from "./pages/admin/AdminInscan.tsx";
+import AdminOutscan from "./pages/admin/AdminOutscan.tsx";
+import AdminNDR from "./pages/admin/AdminNDR.tsx";
+import AdminLeads from "./pages/admin/AdminLeads.tsx";
+import AdminStaff from "./pages/admin/AdminStaff.tsx";
+import AdminRemarketing from "./pages/admin/AdminRemarketing.tsx";
 
 const queryClient = new QueryClient();
 
@@ -50,10 +58,18 @@ const App = () => (
             {/* Admin panel — login is outside layout (no sidebar) */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Navigate to="/admin/bookings" replace />} />
-              <Route path="bookings" element={<AdminBookings />} />
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard"   element={<AdminDashboard />} />
+              <Route path="bookings"   element={<AdminBookings />} />
               <Route path="bookings/:id" element={<AdminBookingDetail />} />
-              <Route path="config" element={<AdminConfig />} />
+              <Route path="pickups"    element={<AdminPickupQueue />} />
+              <Route path="inscan"     element={<AdminInscan />} />
+              <Route path="outscan"    element={<AdminOutscan />} />
+              <Route path="ndr"        element={<AdminNDR />} />
+              <Route path="leads"      element={<AdminLeads />} />
+              <Route path="staff"      element={<AdminStaff />} />
+              <Route path="remarketing" element={<AdminRemarketing />} />
+              <Route path="config"     element={<AdminConfig />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

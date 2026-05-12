@@ -40,12 +40,15 @@ const Navbar = () => {
       style={{ height: 85 }}
     >
       <div className="container h-full flex items-center justify-between">
-        <Link to="/" className="flex items-center py-2">
-          <img
-            src="/logos/logoforbrand.png"
-            alt="Uniex Courier"
-            className="h-[55px] md:h-[70px] w-auto object-contain"
-          />
+        <Link to="/" className="flex items-center py-2 gap-0">
+          <div className="flex flex-col leading-tight">
+            <span className="text-[22px] md:text-[26px] font-black tracking-tight text-green-primary">
+              Courier Aggregator
+            </span>
+            <span className="text-[10px] md:text-[11px] font-semibold text-gray-400 tracking-[0.12em] uppercase">
+              International Shipping
+            </span>
+          </div>
         </Link>
 
         {/* Desktop nav */}

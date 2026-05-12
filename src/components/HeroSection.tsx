@@ -30,16 +30,16 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onCalculate }) => {
           animate={{ opacity: 1, scale: 1 }}
           className="mb-6"
         >
-          <div className="inline-flex items-center gap-4 px-5 py-2.5 rounded-full bg-[#f0f9f1] border border-[#e2f2e5] text-[13px] font-medium text-[#2d6a3e] shadow-sm">
-            <div className="flex items-center gap-1.5 border-r border-[#d4e9d7] pr-4">
-              <Check className="w-3.5 h-3.5 text-[#166534]" />
+          <div className="inline-flex items-center gap-4 px-5 py-2.5 rounded-full bg-[#fdf0fc] border border-[#f0b3e8] text-[13px] font-medium text-[#8c2e7c] shadow-sm">
+            <div className="flex items-center gap-1.5 border-r border-[#e080d3] pr-4">
+              <Check className="w-3.5 h-3.5 text-[#6d2461]" />
               <span>18 years</span>
             </div>
-            <div className="border-r border-[#d4e9d7] pr-4">
+            <div className="border-r border-[#e080d3] pr-4">
               <span>50,000 + shipments delivered</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#34d399] animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+              <div className="w-2 h-2 rounded-full bg-[#c94db8] animate-pulse shadow-[0_0_8px_rgba(201,77,184,0.5)]" />
               <span>No calls needed</span>
             </div>
           </div>

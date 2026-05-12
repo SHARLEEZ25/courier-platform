@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAdminBookings, type AdminBookingsFilters } from "@/hooks/admin/useAdminBookings";
 import { useDebounce } from "@/hooks/useDebounce";
 import type { BookingStatus, AdminBookingListItem } from "@/types/api";
@@ -45,19 +45,29 @@ function StatusBadge({ status }: { status: BookingStatus }) {
 
 export default function AdminBookings() {
   const navigate = useNavigate();
-  const [rawQ, setRawQ]       = useState("");
-  const [status, setStatus]   = useState<BookingStatus | "all">("all");
-  const [carrier, setCarrier] = useState("all");
-  const [from, setFrom]       = useState("");
-  const [to, setTo]           = useState("");
-  const [offset, setOffset]   = useState(0);
+  const [searchParams] = useSearchParams();
 
-  const q = useDebounce(rawQ, 400);
+  // Initialise status from URL search param (set by dashboard alert links)
+  const [rawQ, setRawQ]             = useState("");
+  const [status, setStatus]         = useState<BookingStatus | "all">(
+    (searchParams.get("status") as BookingStatus) ?? "all"
+  );
+  const [carrier, setCarrier]       = useState("all");
+  const [from, setFrom]             = useState("");
+  const [to, setTo]                 = useState("");
+  const [rawOrigin, setRawOrigin]   = useState("");
+  const [rawDest, setRawDest]       = useState("");
+  const [offset, setOffset]         = useState(0);
+
+  const q           = useDebounce(rawQ,      400);
+  const origin      = useDebounce(rawOrigin, 400);
+  const destination = useDebounce(rawDest,   400);
 
   const filters: AdminBookingsFilters = {
-    status:  status  === "all" ? "" : status,
-    carrier: carrier === "all" ? "" : carrier,
-    q, from, to, limit: PAGE_SIZE, offset,
+    status:      status  === "all" ? "" : status,
+    carrier:     carrier === "all" ? "" : carrier,
+    q, from, to, origin, destination,
+    limit: PAGE_SIZE, offset,
   };
   const { data, isLoading, isError, error } = useAdminBookings(filters);
 
@@ -67,6 +77,8 @@ export default function AdminBookings() {
   const pages    = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function resetOffset() { setOffset(0); }
+
+  const hasFilters = rawQ || status !== "all" || carrier !== "all" || from || to || rawOrigin || rawDest;
 
   return (
     <div className="p-6">
@@ -133,13 +145,31 @@ export default function AdminBookings() {
           title="To date"
         />
 
+        {/* Route filters */}
+        <Input
+          placeholder="Origin country"
+          value={rawOrigin}
+          onChange={(e) => { setRawOrigin(e.target.value); resetOffset(); }}
+          className="h-8 w-32 text-sm"
+        />
+        <Input
+          placeholder="Destination"
+          value={rawDest}
+          onChange={(e) => { setRawDest(e.target.value); resetOffset(); }}
+          className="h-8 w-32 text-sm"
+        />
+
         {/* Clear */}
-        {(rawQ || status !== "all" || carrier !== "all" || from || to) && (
+        {hasFilters && (
           <Button
             variant="ghost"
             size="sm"
             className="h-8 text-xs"
-            onClick={() => { setRawQ(""); setStatus("all"); setCarrier("all"); setFrom(""); setTo(""); resetOffset(); }}
+            onClick={() => {
+              setRawQ(""); setStatus("all"); setCarrier("all");
+              setFrom(""); setTo(""); setRawOrigin(""); setRawDest("");
+              resetOffset();
+            }}
           >
             Clear
           </Button>
@@ -175,6 +205,7 @@ export default function AdminBookings() {
                 <th className="px-4 py-3">Route</th>
                 <th className="px-4 py-3 text-right">Weight</th>
                 <th className="px-4 py-3 text-right">Total</th>
+                <th className="px-4 py-3">Payment</th>
                 <th className="px-4 py-3">Status</th>
               </tr>
             </thead>
@@ -203,6 +234,11 @@ export default function AdminBookings() {
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-gray-900">
                     ₹{b.total_inr.toLocaleString("en-IN")}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-500">
+                      Unpaid
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={b.status} />

@@ -96,9 +96,11 @@ export function generateBookingRef(): string {
 export interface GetAllBookingsFilters {
   status?: string;
   carrier_id?: string;
-  q?: string;      // search by booking_ref or tracking_number
-  from?: string;   // ISO date string
-  to?: string;     // ISO date string
+  q?: string;           // search by booking_ref or tracking_number
+  from?: string;        // ISO date string
+  to?: string;          // ISO date string
+  origin?: string;      // origin_country partial match
+  destination?: string; // destination_country partial match
   limit?: number;
   offset?: number;
 }
@@ -110,7 +112,7 @@ export interface GetAllBookingsFilters {
 export async function getAllBookings(
   filters: GetAllBookingsFilters = {}
 ): Promise<{ bookings: DbBooking[]; total: number }> {
-  const { status, carrier_id, q, from, to, limit = 50, offset = 0 } = filters;
+  const { status, carrier_id, q, from, to, origin, destination, limit = 50, offset = 0 } = filters;
 
   // Build WHERE clauses dynamically
   const conditions: ReturnType<typeof sql>[] = [];
@@ -129,6 +131,12 @@ export async function getAllBookings(
   }
   if (to) {
     conditions.push(sql`created_at < (${to}::date + INTERVAL '1 day')`);
+  }
+  if (origin) {
+    conditions.push(sql`origin_country ILIKE ${"%" + origin + "%"}`);
+  }
+  if (destination) {
+    conditions.push(sql`destination_country ILIKE ${"%" + destination + "%"}`);
   }
 
   const whereClause =
