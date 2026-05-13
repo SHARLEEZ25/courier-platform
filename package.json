@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "server:dev": "tsx watch server/index.ts",
     "server:build": "tsc -p server/tsconfig.json",
-    "server:start": "node dist/server/index.js",
+    "server:start": "node dist/server/server/index.js",
     "db:seed": "tsx server/db/seed.ts"
   },
   "dependencies": {
