@@ -379,30 +379,37 @@ const Booking = () => {
       <TopBar />
       <Navbar />
 
-      <main className={cn("flex-grow pt-6 pb-24", currentStep === 3 ? "bg-white" : "bg-slate-50/50")}>
+      <main className={cn("flex-grow pt-6", currentStep === 3 ? "bg-white pb-32 lg:pb-24" : "bg-slate-50/50 pb-24")}>
         <div className="container max-w-[1100px] mx-auto px-4">
           
           {/* Step Indicator (Steps 1 & 2) */}
           {currentStep < 3 && (
-            <div className="flex flex-col items-center mb-12">
-              <div className="flex items-center justify-between relative px-4 w-full max-w-[800px] mx-auto pt-6 mb-8">
-                 <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-slate-200 -translate-y-1/2 z-0" />
-                 {STEPS.map((step) => (
-                    <div key={step.id} className="relative z-10 flex flex-col items-center gap-2 bg-slate-50 px-4">
-                       <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
-                          currentStep > step.id ? "bg-green-primary border-green-primary text-white" :
-                          currentStep === step.id ? "bg-white border-green-primary text-brand-black" :
-                          "bg-white border-slate-200 text-slate-400"
-                       )}>
-                          {currentStep > step.id ? <Check className="w-5 h-5" /> : step.id}
-                       </div>
-                       <span className={cn(
-                          "text-[12px] font-semibold whitespace-nowrap",
-                          currentStep >= step.id ? "text-brand-black" : "text-slate-400"
-                       )}>{step.label}</span>
+            <div className="flex flex-col items-center mb-8 sm:mb-12">
+              <div className="flex items-center w-full max-w-[600px] mx-auto pt-6 mb-6">
+                {STEPS.map((step, idx) => (
+                  <React.Fragment key={step.id}>
+                    <div className="flex flex-col items-center gap-1.5 shrink-0">
+                      <div className={cn(
+                        "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 text-sm sm:text-base",
+                        currentStep > step.id ? "bg-green-primary border-green-primary text-white" :
+                        currentStep === step.id ? "bg-white border-green-primary text-brand-black" :
+                        "bg-white border-slate-200 text-slate-400"
+                      )}>
+                        {currentStep > step.id ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : step.id}
+                      </div>
+                      <span className={cn(
+                        "text-[10px] sm:text-[12px] font-semibold text-center leading-tight max-w-[72px] sm:max-w-none",
+                        currentStep >= step.id ? "text-brand-black" : "text-slate-400"
+                      )}>{step.label}</span>
                     </div>
-                 ))}
+                    {idx < STEPS.length - 1 && (
+                      <div className={cn(
+                        "flex-1 h-[1px] mx-2 sm:mx-3 mb-5",
+                        currentStep > step.id ? "bg-green-primary" : "bg-slate-200"
+                      )} />
+                    )}
+                  </React.Fragment>
+                ))}
               </div>
 
               {/* Legacy Sub-step indicator (for Step 1 only) */}
@@ -1229,9 +1236,9 @@ const Booking = () => {
                         {paymentTab === 'netbanking' && (
                            <div className="space-y-8 animate-in fade-in duration-300 pt-2">
                               {/* Bank Grid */}
-                              <div className="grid grid-cols-3 gap-3">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                  {POPULAR_BANKS.map(bank => (
-                                   <div 
+                                   <div
                                      key={bank.id}
                                      className="bg-white border border-slate-100 rounded-[8px] p-3 flex flex-col items-center justify-center gap-2 hover:border-[#16A34A] hover:bg-green-50/10 cursor-pointer transition-all h-[72px]"
                                    >

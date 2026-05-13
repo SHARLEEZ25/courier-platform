@@ -61,8 +61,8 @@ const Contact = () => {
 
       <main>
         {/* SECTION 1 — PAGE HERO */}
-        <section className="bg-white pt-[72px] pb-[80px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section className="bg-white pt-[72px] pb-[80px] max-md:pt-[40px] max-md:pb-[48px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
               <div className="text-[12px] font-medium text-[#9CA3AF] mb-[12px]">
                 Home <span className="mx-1">›</span> <span className="text-[#374151]">Contact</span>
@@ -70,7 +70,7 @@ const Contact = () => {
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">
                 GET IN TOUCH
               </p>
-              <h1 className="text-[40px] md:text-[52px] font-extrabold text-[#0D0D0D] leading-[1.1] tracking-[-0.03em] max-w-[560px] mb-[16px]">
+              <h1 className="text-[28px] md:text-[40px] lg:text-[52px] font-extrabold text-[#0D0D0D] leading-[1.1] tracking-[-0.03em] max-w-[560px] mb-[16px]">
                 We're here whenever<br />you need us.
               </h1>
               <p className="text-[17px] font-normal text-[#6B7280] leading-[1.75] max-w-[480px]">
@@ -81,9 +81,9 @@ const Contact = () => {
         </section>
 
         {/* SECTION 2 — CONTACT DETAILS + FORM */}
-        <section className="bg-white pb-[100px] max-md:pb-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
-            <div className="flex flex-col lg:flex-row items-start gap-[60px] lg:gap-[80px]">
+        <section className="bg-white pb-[100px] max-md:pb-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
+            <div className="flex flex-col lg:flex-row items-start gap-[32px] lg:gap-[80px]">
               
               {/* LEFT COLUMN: Contact Details */}
               <div className="w-full lg:w-[38%] shrink-0">
@@ -365,9 +365,9 @@ const Contact = () => {
         </section>
 
         {/* SECTION 3 — OFFICE MAP */}
-        <section className="bg-[#F1F8F1] py-[80px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
-            <div className="flex flex-col md:flex-row items-center gap-[60px] lg:gap-[100px]">
+        <section className="bg-[#F1F8F1] py-[80px] max-md:py-[48px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
+            <div className="flex flex-col md:flex-row items-center gap-[32px] lg:gap-[100px]">
               
               <motion.div {...fadeUpProps} className="w-full md:w-[45%] shrink-0">
                 <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">OUR LOCATION</p>
@@ -438,8 +438,8 @@ const Contact = () => {
         </section>
 
         {/* SECTION 4 — QUICK CONTACT CARDS */}
-        <section className="bg-white py-[80px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section className="bg-white py-[80px] max-md:py-[48px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <motion.div {...fadeUpProps} className="text-center mb-[48px]">
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">QUICK LINKS</p>
               <h2 className="text-[36px] font-bold text-[#0D0D0D] leading-[1.2] tracking-[-0.02em] mb-[16px]">Not sure where to start?</h2>
@@ -502,8 +502,8 @@ const Contact = () => {
         </section>
 
         {/* SECTION 5 — FAQ STRIP */}
-        <section className="bg-[#F1F8F1] py-[80px]">
-          <div className="max-w-[800px] mx-auto px-[24px]">
+        <section className="bg-[#F1F8F1] py-[80px] max-md:py-[48px]">
+          <div className="max-w-[800px] mx-auto px-4 md:px-6">
             <motion.div {...fadeUpProps} className="text-center mb-[48px]">
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">COMMON QUESTIONS</p>
               <h2 className="text-[32px] md:text-[36px] font-bold text-[#0D0D0D] leading-[1.2] tracking-[-0.02em]">Quick answers before<br />you reach out.</h2>
@@ -550,13 +550,13 @@ const Contact = () => {
         </section>
 
         {/* SECTION 6 — BOTTOM CTA BANNER */}
-        <section className="bg-[#0D0D0D] py-[80px]">
-          <div className="max-w-[800px] mx-auto px-[24px] text-center">
+        <section className="bg-[#0D0D0D] py-[56px] md:py-[80px]">
+          <div className="max-w-[800px] mx-auto px-4 md:px-6 text-center">
             <motion.div {...fadeUpProps}>
               <div className="inline-flex items-center justify-center bg-[#1A1A1A] border border-[#2E7D32] text-[#4CAF50] rounded-full px-[16px] py-[6px] text-[11px] font-bold uppercase tracking-[0.08em] mb-[24px]">
                 STILL HAVE QUESTIONS?
               </div>
-              <h2 className="text-[36px] md:text-[44px] font-extrabold text-white leading-[1.15] tracking-[-0.02em] mb-[12px]">
+              <h2 className="text-[26px] sm:text-[36px] md:text-[44px] font-extrabold text-white leading-[1.15] tracking-[-0.02em] mb-[12px]">
                 Talk to our team.<br />We respond fast.
               </h2>
               <p className="text-[13px] text-[#9CA3AF]">

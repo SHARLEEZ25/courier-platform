@@ -1276,7 +1276,7 @@ const RateBreakdown = () => {
                                   <div className="space-y-6">
                                     <div>
                                       <label className="text-[12px] font-bold text-slate-400 uppercase mb-3 block">Select your bank</label>
-                                      <div className="grid grid-cols-3 gap-2 mb-4">
+                                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
                                         {POPULAR_BANKS.map(bank => (
                                           <button
                                             key={bank.id}
