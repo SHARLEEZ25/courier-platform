@@ -92,3 +92,72 @@ export function generateBookingRef(): string {
   const rand = Math.floor(100000 + Math.random() * 900000);
   return `UNX-${year}-${rand}`;
 }
+
+export interface GetAllBookingsFilters {
+  status?: string;
+  carrier_id?: string;
+  q?: string;           // search by booking_ref or tracking_number
+  from?: string;        // ISO date string
+  to?: string;          // ISO date string
+  origin?: string;      // origin_country partial match
+  destination?: string; // destination_country partial match
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Admin: list all bookings with optional filters and pagination.
+ * Returns bookings newest-first plus a total count.
+ */
+export async function getAllBookings(
+  filters: GetAllBookingsFilters = {}
+): Promise<{ bookings: DbBooking[]; total: number }> {
+  const { status, carrier_id, q, from, to, origin, destination, limit = 50, offset = 0 } = filters;
+
+  // Build WHERE clauses dynamically
+  const conditions: ReturnType<typeof sql>[] = [];
+
+  if (status) {
+    conditions.push(sql`status = ${status}`);
+  }
+  if (carrier_id) {
+    conditions.push(sql`carrier_id = ${carrier_id}`);
+  }
+  if (q) {
+    conditions.push(sql`(booking_ref ILIKE ${"%" + q + "%"} OR tracking_number ILIKE ${"%" + q + "%"})`);
+  }
+  if (from) {
+    conditions.push(sql`created_at >= ${from}::timestamptz`);
+  }
+  if (to) {
+    conditions.push(sql`created_at < (${to}::date + INTERVAL '1 day')`);
+  }
+  if (origin) {
+    conditions.push(sql`origin_country ILIKE ${"%" + origin + "%"}`);
+  }
+  if (destination) {
+    conditions.push(sql`destination_country ILIKE ${"%" + destination + "%"}`);
+  }
+
+  const whereClause =
+    conditions.length > 0
+      ? sql`WHERE ${conditions.reduce((acc, cond) => sql`${acc} AND ${cond}`)}`
+      : sql``;
+
+  const [rows, countRows] = await Promise.all([
+    sql<DbBooking[]>`
+      SELECT * FROM bookings
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `,
+    sql<{ count: string }[]>`
+      SELECT COUNT(*)::text AS count FROM bookings ${whereClause}
+    `,
+  ]);
+
+  return {
+    bookings: rows,
+    total: Number(countRows[0]?.count ?? 0),
+  };
+}

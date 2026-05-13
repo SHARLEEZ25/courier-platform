@@ -76,7 +76,7 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[0, 1, 2].map(i => (
-              <div key={i} className={`rounded-2xl p-8 border ${i === 0 ? "border-2 border-slate-200 md:scale-[1.03]" : "border border-slate-200"} space-y-4`}>
+              <div key={i} className={`rounded-2xl p-5 md:p-8 border ${i === 0 ? "border-2 border-slate-200 md:scale-[1.03]" : "border border-slate-200"} space-y-4`}>
                 <div className="h-5 w-20 bg-slate-100 rounded animate-pulse" />
                 <div className="h-10 w-32 bg-slate-100 rounded-lg animate-pulse" />
                 <div className="h-4 w-28 bg-slate-100 rounded animate-pulse" />
@@ -143,7 +143,7 @@ const QuoteResults: React.FC<QuoteResultsProps> = ({ origin, destination, weight
             return (
               <div
                 key={result.carrier}
-                className={`relative flex flex-col rounded-2xl p-8 transition-all duration-300 ${
+                className={`relative flex flex-col rounded-2xl p-5 md:p-8 transition-all duration-300 ${
                   isBestValue
                     ? "border-2 border-green-primary shadow-xl bg-white md:scale-[1.03] z-10"
                     : "border border-slate-200 shadow-sm bg-white"

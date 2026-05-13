@@ -320,7 +320,7 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
     return (
       <div className="w-full max-w-[1020px] mx-auto relative">
         {/* === Notion-Style Mascot Layer === */}
-        <div className="absolute inset-x-0 top-[-70px] h-[90px] pointer-events-none z-30">
+        <div className="hidden sm:block absolute inset-x-0 top-[-70px] h-[90px] pointer-events-none z-30">
 
           {/* ✈️ Navigator Jet — Left, faces right → "International" */}
           <motion.div
@@ -435,7 +435,7 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
             </div>
           </div>
 
-          <div className="w-[1px] h-10 bg-gray-100 my-auto" />
+          <div className="hidden md:block w-[1px] h-10 bg-gray-100 my-auto" />
 
           {/* To */}
           <div className="flex-1 min-w-0 px-3 py-2 hover:bg-gray-50/50 transition-colors relative group flex flex-col items-center">
@@ -452,7 +452,7 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
                   <ChevronDown className="w-3.5 h-3.5 text-gray-300 transition-colors" />
                 </div>
               </PopoverTrigger>
-              <PopoverContent className="w-[360px] p-0 shadow-2xl border-slate-200 rounded-xl overflow-hidden" align="start" sideOffset={8}>
+              <PopoverContent className="w-[min(360px,calc(100vw-32px))] p-0 shadow-2xl border-slate-200 rounded-xl overflow-hidden" align="start" sideOffset={8}>
                 <Command className="rounded-none w-full border-none">
                   <div className="flex items-center border-b border-slate-100 px-4 bg-white transition-colors">
                     <SearchIcon className="w-4 h-4 text-slate-400 mr-3 shrink-0" />
@@ -502,7 +502,7 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
             {errors.destination && <p className="absolute bottom-0.5 left-0 right-0 text-center text-[9px] text-red-500 font-bold uppercase">{errors.destination}</p>}
           </div>
 
-          <div className="w-[1px] h-10 bg-gray-100 my-auto" />
+          <div className="hidden md:block w-[1px] h-10 bg-gray-100 my-auto" />
 
           {/* Weight */}
           <div className="flex-[0.6] min-w-0 px-3 py-2 hover:bg-gray-50/50 transition-colors relative group flex flex-col items-center">
@@ -520,7 +520,7 @@ const ShippingRateCalculator: React.FC<ShippingRateCalculatorProps> = ({ variant
             {errors.weight && <p className="absolute bottom-0.5 left-0 right-0 text-center text-[8px] text-red-500 font-bold uppercase">{errors.weight}</p>}
           </div>
 
-          <div className="w-[1px] h-10 bg-gray-100 my-auto" />
+          <div className="hidden md:block w-[1px] h-10 bg-gray-100 my-auto" />
 
           {/* Category */}
           <div className="flex-[1.2] min-w-0 px-3 py-2 hover:bg-gray-50/50 transition-colors relative group flex flex-col items-center">

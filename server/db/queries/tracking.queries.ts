@@ -11,6 +11,16 @@ export async function getTrackingEvents(
   `;
 }
 
+export async function getTrackingEventsByBookingId(
+  bookingId: string
+): Promise<DbTrackingEvent[]> {
+  return sql<DbTrackingEvent[]>`
+    SELECT * FROM tracking_events
+    WHERE booking_id = ${bookingId}
+    ORDER BY event_at ASC
+  `;
+}
+
 export async function addTrackingEvent(
   event: Omit<DbTrackingEvent, "id" | "created_at">
 ): Promise<DbTrackingEvent | null> {

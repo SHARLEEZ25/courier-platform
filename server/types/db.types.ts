@@ -65,12 +65,17 @@ export interface DbPickupZone {
   tier: string;
 }
 
+export type DhlService = "standard" | "premium_900" | "premium_1200";
+export type FedexService = "IP" | "IPF";
+export type UpsDeliveryType = "DDU" | "DDP";
+
 export interface DbBooking {
   id: string;
   user_id: string | null;
   booking_ref: string;
   status: BookingStatus;
   carrier_id: string;
+  tracking_number: string | null;
   origin_country: string;
   destination_country: string;
   actual_weight_kg: number;
@@ -79,15 +84,30 @@ export interface DbBooking {
   item_type_id: string;
   packaging_type: PackagingType;
   insurance_opted: boolean;
+  // Pricing snapshot (locked at booking time)
   base_rate_inr: number;
-  fsc_inr: number;
   discount_inr: number;
+  margin_inr: number;
+  fsc_inr: number;
+  demand_surcharge_inr: number;
+  premium_service_inr: number;
+  peak_surcharge_inr: number;
+  us_inbound_inr: number;
+  ups_fixed_inr: number;
   pickup_surcharge_inr: number;
   packaging_inr: number;
   insurance_inr: number;
   subtotal_inr: number;
   gst_inr: number;
   total_inr: number;
+  // Carrier-specific options (locked at booking time)
+  dhl_service: DhlService;
+  fedex_service: FedexService;
+  ups_formal_clearance: boolean;
+  ups_delivery_type: UpsDeliveryType;
+  ups_signature: boolean;
+  ups_remote_area: boolean;
+  // Sender / pickup info
   sender_company: string;
   sender_mobile: string;
   sender_telephone: string;
@@ -100,6 +120,7 @@ export interface DbBooking {
   pickup_state: string;
   pickup_date: string;
   pickup_slot: string;
+  // Receiver / delivery info
   receiver_company: string;
   receiver_mobile: string;
   receiver_telephone: string;
@@ -113,8 +134,16 @@ export interface DbBooking {
   contents_desc: string | null;
   shipper_reference: string;
   special_instruction: string;
-  tracking_number: string | null;
   created_at: string;
+  updated_at: string;
+}
+
+export interface DbSurchargeConfig {
+  id: number;
+  carrier_id: string;
+  key: string;
+  value_num: number | null;
+  value_bool: boolean | null;
   updated_at: string;
 }
 

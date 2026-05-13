@@ -114,14 +114,14 @@ const Services = () => {
       <main>
 
         {/* SECTION 1 — PAGE HERO */}
-        <section className="bg-white pt-[72px] pb-[80px] max-md:pt-[48px] max-md:pb-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section className="bg-white pt-[72px] pb-[80px] max-md:pt-[40px] max-md:pb-[48px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
               <div className="text-[12px] font-medium text-[#9CA3AF] mb-[12px]">
                 Home <span className="mx-1">›</span><span className="text-[#374151]">Services</span>
               </div>
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">WHAT WE OFFER</p>
-              <h1 className="text-[40px] md:text-[52px] font-extrabold text-[#0D0D0D] leading-[1.1] tracking-[-0.03em] max-w-[600px]">
+              <h1 className="text-[28px] md:text-[40px] lg:text-[52px] font-extrabold text-[#0D0D0D] leading-[1.1] tracking-[-0.03em] max-w-[600px]">
                 Every shipment.<br />Every destination.<br />Handled.
               </h1>
               <p className="text-[17px] text-[#6B7280] leading-[1.75] max-w-[520px] mt-[20px]">
@@ -153,9 +153,9 @@ const Services = () => {
         </section>
 
         {/* SECTION 2 — STUDENTS COURIER */}
-        <section id="students-courier" className="bg-white py-[100px] max-md:py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
-            <div className="flex flex-col md:flex-row items-center gap-[80px]">
+        <section id="students-courier" className="bg-white py-[100px] max-md:py-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
+            <div className="flex flex-col md:flex-row items-center gap-[40px] md:gap-[80px]">
 
               {/* LEFT */}
               <motion.div {...fadeUp()} className="w-full md:w-[52%] shrink-0">
@@ -211,9 +211,9 @@ const Services = () => {
         </section>
 
         {/* SECTION 3 — INDIAN FOOD & MEDICINES */}
-        <section id="indian-food-medicines" className="bg-[#F1F8F1] py-[100px] max-md:py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
-            <div className="flex flex-col md:flex-row items-center gap-[80px]">
+        <section id="indian-food-medicines" className="bg-[#F1F8F1] py-[100px] max-md:py-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
+            <div className="flex flex-col md:flex-row items-center gap-[40px] md:gap-[80px]">
 
               {/* LEFT — Item grid */}
               <motion.div {...fadeUp()} className="w-full md:w-[44%] shrink-0 order-2 md:order-1">
@@ -271,8 +271,8 @@ const Services = () => {
         </section>
 
         {/* SECTION 4 — EXCESS BAGGAGE */}
-        <section id="excess-baggage" className="bg-white py-[100px] max-md:py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section id="excess-baggage" className="bg-white py-[100px] max-md:py-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <motion.div {...fadeUp()}>
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">EXCESS BAGGAGE</p>
               <h2 className="text-[32px] md:text-[38px] font-bold text-[#0D0D0D] leading-[1.2] tracking-[-0.02em]">
@@ -360,8 +360,8 @@ const Services = () => {
         </section>
 
         {/* SECTION 5 — ON-BOARD COURIER (OBC) */}
-        <section id="on-board-courier" className="bg-[#F1F8F1] py-[100px] max-md:py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section id="on-board-courier" className="bg-[#F1F8F1] py-[100px] max-md:py-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <motion.div {...fadeUp()}>
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">ON-BOARD COURIER (OBC)</p>
               <h2 className="text-[32px] md:text-[38px] font-bold text-[#0D0D0D] leading-[1.2] tracking-[-0.02em]">
@@ -428,8 +428,8 @@ const Services = () => {
         </section>
 
         {/* SECTION 6 — EXPORT & IMPORT */}
-        <section id="export-import" className="bg-white py-[100px] max-md:py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section id="export-import" className="bg-white py-[100px] max-md:py-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1px_1fr] gap-[48px] items-start">
 
               {/* EXPORT */}
@@ -497,8 +497,8 @@ const Services = () => {
         </section>
 
         {/* SECTION 7 — CARRIER STRIP */}
-        <section className="bg-[#F9FAFB] border-t border-b border-[#E5E7EB] py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section className="bg-[#F9FAFB] border-t border-b border-[#E5E7EB] py-[40px] md:py-[60px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <div className="text-center mb-10">
               <h3 className="text-[13px] font-bold text-[#4CAF50] uppercase tracking-[0.2em]">Our Logistics Network</h3>
             </div>
@@ -513,8 +513,8 @@ const Services = () => {
         </section>
 
         {/* SECTION 8 — COVERAGE STRIP */}
-        <section className="bg-white py-[80px] max-md:py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section className="bg-white py-[80px] max-md:py-[48px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <motion.div {...fadeUp()} className="text-center mb-[40px]">
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">PICKUP NETWORK</p>
               <h2 className="text-[32px] md:text-[36px] font-bold text-[#0D0D0D] leading-[1.2] tracking-[-0.02em]">
@@ -547,13 +547,13 @@ const Services = () => {
         </section>
 
         {/* SECTION 9 — BOTTOM CTA BANNER */}
-        <section className="bg-[#0D0D0D] py-[80px]">
-          <div className="max-w-[800px] mx-auto px-[24px] text-center">
+        <section className="bg-[#0D0D0D] py-[56px] md:py-[80px]">
+          <div className="max-w-[800px] mx-auto px-4 md:px-6 text-center">
             <motion.div {...fadeUp()}>
               <div className="inline-flex items-center justify-center bg-[#1A1A1A] border border-[#2E7D32] text-[#4CAF50] rounded-full px-[16px] py-[6px] text-[11px] font-bold uppercase tracking-[0.08em] mb-[24px]">
                 READY TO SHIP?
               </div>
-              <h2 className="text-[36px] md:text-[44px] font-extrabold text-white leading-[1.15] tracking-[-0.02em] mb-[12px]">
+              <h2 className="text-[26px] sm:text-[36px] md:text-[44px] font-extrabold text-white leading-[1.15] tracking-[-0.02em] mb-[12px]">
                 Not sure which service<br />you need? Just call us.
               </h2>
               <p className="text-[14px] text-[#9CA3AF] max-w-[480px] mx-auto mt-[12px]">

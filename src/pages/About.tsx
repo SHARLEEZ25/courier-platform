@@ -113,14 +113,14 @@ const About = () => {
       <main>
 
         {/* SECTION 1 — PAGE HERO */}
-        <section className="bg-white pt-[80px] pb-[100px] max-md:pt-[60px] max-md:pb-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section className="bg-white pt-[80px] pb-[100px] max-md:pt-[48px] max-md:pb-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             {/* Breadcrumb */}
             <div className="text-[12px] font-medium text-[#9CA3AF] mb-[40px]">
               Home <span className="mx-1">›</span><span className="text-[#374151]">About Us</span>
             </div>
 
-            <div className="flex flex-col lg:flex-row items-start gap-[80px]">
+            <div className="flex flex-col lg:flex-row items-start gap-[40px] lg:gap-[80px]">
 
               {/* LEFT */}
               <motion.div
@@ -129,7 +129,7 @@ const About = () => {
                 className="w-full lg:w-[58%] shrink-0"
               >
                 <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">OUR STORY</p>
-                <h1 className="text-[40px] md:text-[52px] font-extrabold text-[#0D0D0D] leading-[1.1] tracking-[-0.03em] max-w-[560px]">
+                <h1 className="text-[28px] md:text-[40px] lg:text-[52px] font-extrabold text-[#0D0D0D] leading-[1.1] tracking-[-0.03em] max-w-[560px]">
                   18 years of getting<br />it there — reliably.
                 </h1>
                 <p className="text-[17px] font-normal text-[#6B7280] leading-[1.75] max-w-[480px] mt-[20px]">
@@ -199,9 +199,9 @@ const About = () => {
         </section>
 
         {/* SECTION 2 — WHO WE ARE */}
-        <section className="bg-[#F1F8F1] py-[100px] max-md:py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
-            <div className="flex flex-col md:flex-row items-center gap-[80px]">
+        <section className="bg-[#F1F8F1] py-[100px] max-md:py-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
+            <div className="flex flex-col md:flex-row items-center gap-[40px] md:gap-[80px]">
 
               {/* LEFT — Pull quote */}
               <motion.div {...fadeUp()} className="w-full md:w-[52%] shrink-0">
@@ -247,8 +247,8 @@ const About = () => {
         </section>
 
         {/* SECTION 3 — WHY CHOOSE UNIEX */}
-        <section className="bg-white py-[100px] max-md:py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section className="bg-white py-[100px] max-md:py-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <motion.div {...fadeUp()}>
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">WHY CHOOSE US</p>
               <h2 className="text-[32px] md:text-[38px] font-bold text-[#0D0D0D] leading-[1.2] tracking-[-0.02em]">
@@ -278,8 +278,8 @@ const About = () => {
         </section>
 
         {/* SECTION 4 — GLOBAL PRESENCE */}
-        <section className="bg-[#F1F8F1] py-[100px] max-md:py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section className="bg-[#F1F8F1] py-[100px] max-md:py-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <motion.div {...fadeUp()} className="text-center mb-[56px]">
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">OUR GLOBAL FOOTPRINT</p>
               <h2 className="text-[32px] md:text-[38px] font-bold text-[#0D0D0D] leading-[1.2] tracking-[-0.02em]">
@@ -290,7 +290,7 @@ const About = () => {
               </p>
             </motion.div>
 
-            <div className="flex flex-col md:flex-row items-start gap-[80px]">
+            <div className="flex flex-col md:flex-row items-start gap-[40px] md:gap-[80px]">
 
               {/* LEFT — Regions */}
               <motion.div {...fadeUp(0.1)} className="w-full md:w-[45%] shrink-0">
@@ -342,9 +342,9 @@ const About = () => {
         </section>
 
         {/* SECTION 5 — VISION & MISSION */}
-        <section className="bg-white py-[100px] max-md:py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
-            <div className="flex flex-col md:flex-row items-start gap-[80px]">
+        <section className="bg-white py-[100px] max-md:py-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
+            <div className="flex flex-col md:flex-row items-start gap-[40px] md:gap-[80px]">
 
               {/* LEFT — Mission */}
               <motion.div {...fadeUp()} className="w-full md:w-[50%] shrink-0">
@@ -406,8 +406,8 @@ const About = () => {
         </section>
 
         {/* SECTION 6 — CARRIER PARTNERS */}
-        <section className="bg-[#F1F8F1] py-[100px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section className="bg-[#F1F8F1] py-[60px] md:py-[100px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <div className="text-center mb-12">
               <h3 className="text-[13px] font-bold text-[#4CAF50] uppercase tracking-[0.2em]">Our Shipping Partners</h3>
             </div>
@@ -422,8 +422,8 @@ const About = () => {
         </section>
 
         {/* SECTION 7 — WHO WE SERVE */}
-        <section className="bg-white py-[100px] max-md:py-[60px]">
-          <div className="max-w-[1248px] mx-auto px-[24px]">
+        <section className="bg-white py-[100px] max-md:py-[56px]">
+          <div className="max-w-[1248px] mx-auto px-4 md:px-6">
             <motion.div {...fadeUp()}>
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4CAF50] mb-[12px]">WHO WE SERVE</p>
               <h2 className="text-[32px] md:text-[38px] font-bold text-[#0D0D0D] leading-[1.2] tracking-[-0.02em]">
@@ -464,13 +464,13 @@ const About = () => {
         </section>
 
         {/* SECTION 8 — BOTTOM CTA BANNER */}
-        <section className="bg-[#0D0D0D] py-[80px]">
-          <div className="max-w-[800px] mx-auto px-[24px] text-center">
+        <section className="bg-[#0D0D0D] py-[56px] md:py-[80px]">
+          <div className="max-w-[800px] mx-auto px-4 md:px-6 text-center">
             <motion.div {...fadeUp()}>
               <div className="inline-flex items-center justify-center bg-[#1A1A1A] border border-[#2E7D32] text-[#4CAF50] rounded-full px-[16px] py-[6px] text-[11px] font-bold uppercase tracking-[0.08em] mb-[24px]">
                 YOUR GLOBAL COURIER PARTNER
               </div>
-              <h2 className="text-[36px] md:text-[44px] font-extrabold text-white leading-[1.15] tracking-[-0.02em] mb-[12px]">
+              <h2 className="text-[26px] sm:text-[36px] md:text-[44px] font-extrabold text-white leading-[1.15] tracking-[-0.02em] mb-[12px]">
                 Fast. Affordable. Reliable.<br />From India to the world.
               </h2>
               <p className="text-[14px] text-[#9CA3AF] max-w-[480px] mx-auto mt-[12px]">

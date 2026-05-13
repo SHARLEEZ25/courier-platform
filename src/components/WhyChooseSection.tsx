@@ -27,7 +27,7 @@ const StatCounter = ({ value, suffix, isPrice = false }: { value: string; suffix
   }, [isInView, value, count]);
 
   return (
-    <div ref={ref} className="text-[52px] font-extrabold text-brand-black leading-none tracking-[-0.03em] flex items-baseline">
+    <div ref={ref} className="text-[36px] sm:text-[52px] font-extrabold text-brand-black leading-none tracking-[-0.03em] flex items-baseline">
       <motion.span>{rounded}</motion.span>
       <motion.span
         initial={{ opacity: 0 }}
@@ -60,12 +60,12 @@ const features = [
 const WhyChooseSection = () => (
   <section className="py-24 lg:py-28">
     <div className="container">
-      <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center">
+      <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-center">
         <div className="grid grid-cols-2">
           {stats.map((s, i) => (
             <div
               key={s.label}
-              className={`py-8 px-6 ${
+              className={`py-5 px-3 sm:py-8 sm:px-6 ${
                 i % 2 === 0 ? "border-r border-gray-200" : ""
               } ${i < 2 ? "border-b border-gray-200" : ""}`}
             >
