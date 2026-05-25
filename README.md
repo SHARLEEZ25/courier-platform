@@ -1,4 +1,4 @@
-# Uniex Courier — International Shipping Platform
+#  International Shipping Platform
 
 Built a full-stack multi-carrier courier aggregator — one system handling the complete shipment lifecycle from quote to delivery.
 
