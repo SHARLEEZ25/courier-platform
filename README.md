@@ -101,5 +101,8 @@ Interested in running it or exploring the architecture?
 - LinkedIn: https://www.linkedin.com/in/sharleez-tech/
 
 ---
+## Demo Video
+https://www.loom.com/share/3ee173a1493349d5a4e8f9d5aac5c286
 
-*Built with a focus on real-world patterns: multi-carrier aggregation, ops workflow management, and a pricing engine that stays accurate without redeployments.*
+---
+
