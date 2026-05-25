@@ -2,10 +2,18 @@
 rate-cards/
 
 # Claude Code tool internals
+CLAUDE.md
 .claude/worktrees/
 .claude/skills/
 .agents/
 skills-lock.json
+
+# Dev scratch folder
+scratch/
+
+# Bun lock files (project uses npm)
+bun.lock
+bun.lockb
 
 # Logs
 logs
