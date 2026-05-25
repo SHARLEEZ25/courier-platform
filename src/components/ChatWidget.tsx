@@ -24,7 +24,7 @@ const KNOWLEDGE_BASE = [
   },
   {
     keywords: ["student", "university", "application", "documents"],
-    response: "Students save over 50% with Uniex! We prioritize university applications and documents to ensure they reach on time. 🎓"
+    response: "Students save over 50% with CourierPro! We prioritize university applications and documents to ensure they reach on time. 🎓"
   },
   {
     keywords: ["price", "cost", "rate", "quote", "charges", "cheap", "affordable"],
@@ -46,7 +46,7 @@ const ChatWidget = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "👋 Hi there! I'm your Uniex assistant. How can I help you today?",
+      text: "👋 Hi there! I'm your CourierPro assistant. How can I help you today?",
       sender: "bot",
       timestamp: new Date()
     }
@@ -124,7 +124,7 @@ const ChatWidget = () => {
 
   const handleQuickAction = (action: string) => {
     let text = "";
-    if (action === "quote") text = "Hi Uniex! I'd like to get a shipping quote.";
+    if (action === "quote") text = "Hi CourierPro! I'd like to get a shipping quote.";
     if (action === "track") text = "Hello! I want to track my shipment.";
     if (action === "expert") text = "Hi! I need to speak with a logistics expert.";
     
@@ -154,7 +154,7 @@ const ChatWidget = () => {
                   <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0D0D0D] animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm leading-none mb-1">Uniex Assistant</h3>
+                  <h3 className="font-bold text-sm leading-none mb-1">CourierPro Assistant</h3>
                   <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                     Online & Ready to Help

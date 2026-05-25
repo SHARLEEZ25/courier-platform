@@ -8,19 +8,17 @@ const Footer = () => (
 
         {/* Brand */}
         <div>
-          <img 
-            src="/logos/logoforbrand.png" 
-            alt="Uniex Courier" 
-            className="h-14 w-auto object-contain mb-6"
-          />
+          <span className="text-[22px] font-black text-white tracking-tight mb-6 block">
+            Courier<span className="text-[#4CAF50]">Pro</span>
+          </span>
           <p className="text-sm text-[#6B7280] leading-[1.7] max-w-[240px] mb-5">
             Trusted international courier from Chennai since 2006.
             Delivering to 220+ countries worldwide.
           </p>
           <div className="flex gap-2">
             {[
-              { Icon: Facebook, href: "https://facebook.com/uniexcourier" },
-              { Icon: Instagram, href: "https://instagram.com/uniexcourier" },
+              { Icon: Facebook, href: "https://facebook.com/courierpro" },
+              { Icon: Instagram, href: "https://instagram.com/courierpro" },
               { Icon: MessageCircle, href: "https://wa.me/919600879666" },
             ].map(({ Icon, href }, i) => (
               <a
@@ -78,7 +76,7 @@ const Footer = () => (
           <div className="space-y-3 text-sm">
             <div className="flex items-center gap-2 text-[#6B7280]">
               <Mail className="w-4 h-4 text-[#4CAF50] shrink-0" />
-              uniexanr@gmail.com
+              support@courierpro.com
             </div>
             <div className="flex flex-col gap-1.5 text-[#6B7280]">
               <div className="flex items-center gap-2">
@@ -104,7 +102,7 @@ const Footer = () => (
 
       {/* Bottom */}
       <div className="border-t border-[#1A1A1A] pt-6 text-center text-xs text-[#6B7280]">
-        © 2024 Uniex Courier and Cargo. All rights reserved.
+        © 2024 CourierPro. All rights reserved.
       </div>
     </div>
   </footer>

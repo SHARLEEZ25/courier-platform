@@ -12,14 +12,14 @@ const TopBar = () => {
   const [showPromo, setShowPromo] = useState(false);
 
   useEffect(() => {
-    const isDismissed = localStorage.getItem("uniex-promo-dismissed");
+    const isDismissed = localStorage.getItem("courierpro-promo-dismissed");
     if (!isDismissed) {
       setShowPromo(true);
     }
   }, []);
 
   const handleDismiss = () => {
-    localStorage.setItem("uniex-promo-dismissed", "true");
+    localStorage.setItem("courierpro-promo-dismissed", "true");
     setShowPromo(false);
   };
 
@@ -79,9 +79,9 @@ const TopBar = () => {
         
         {/* Left: Contact Info */}
         <div className="flex items-center gap-4 shrink-0">
-          <a href="mailto:uniexanr@gmail.com" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+          <a href="mailto:support@courierpro.com" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
             <Mail className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">uniexanr@gmail.com</span>
+            <span className="hidden sm:inline">support@courierpro.com</span>
           </a>
           <span className="opacity-30">·</span>
           <a href="tel:+919600879666" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">

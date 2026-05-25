@@ -100,7 +100,7 @@ const Contact = () => {
                     EMAIL US
                   </div>
                   <div className="text-[16px] font-semibold text-[#0D0D0D]">
-                    uniexanr@gmail.com
+                    support@courierpro.com
                   </div>
                   <div className="text-[13px] text-[#6B7280] mt-[2px]">
                     We reply within a few hours.
@@ -177,9 +177,9 @@ const Contact = () => {
                   <div className="text-[12px] font-medium text-[#9CA3AF] mb-[12px]">Follow us</div>
                   <div className="flex items-center gap-[12px]">
                     {[
-                      { Icon: Facebook, href: "https://facebook.com/uniexcourier" },
-                      { Icon: Twitter, href: "https://twitter.com/uniexcourier" },
-                      { Icon: Instagram, href: "https://instagram.com/uniexcourier" },
+                      { Icon: Facebook, href: "https://facebook.com/courierpro" },
+                      { Icon: Twitter, href: "https://twitter.com/courierpro" },
+                      { Icon: Instagram, href: "https://instagram.com/courierpro" },
                       { Icon: MessageCircle, href: "https://wa.me/919600879666" }
                     ].map(({ Icon, href }, i) => (
                       <a 
@@ -325,7 +325,7 @@ const Contact = () => {
                             <input type="checkbox" required className="w-[16px] h-[16px] accent-[#4CAF50] cursor-pointer" />
                           </div>
                           <p className="text-[13px] text-[#6B7280] leading-[1.5]">
-                            I agree to be contacted by the Uniex team regarding my enquiry.
+                            I agree to be contacted by the CourierPro team regarding my enquiry.
                           </p>
                         </motion.div>
 
@@ -567,7 +567,7 @@ const Contact = () => {
                 <a href="tel:+919600879666" className="w-full sm:w-auto inline-flex items-center justify-center bg-[#4CAF50] hover:bg-[#3D9940] text-white rounded-[8px] px-[24px] py-[12px] text-[15px] font-semibold transition-colors">
                   Call +91 9600879666
                 </a>
-                <a href="mailto:uniexanr@gmail.com" className="w-full sm:w-auto inline-flex items-center justify-center bg-transparent border border-[#374151] hover:border-[#6B7280] hover:bg-[#1A1A1A] text-white rounded-[8px] px-[24px] py-[12px] text-[15px] font-semibold transition-colors">
+                <a href="mailto:support@courierpro.com" className="w-full sm:w-auto inline-flex items-center justify-center bg-transparent border border-[#374151] hover:border-[#6B7280] hover:bg-[#1A1A1A] text-white rounded-[8px] px-[24px] py-[12px] text-[15px] font-semibold transition-colors">
                   Send a Message
                 </a>
                 <a href="https://wa.me/919600879666" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto inline-flex items-center justify-center bg-transparent border border-[#374151] hover:border-[#6B7280] hover:bg-[#1A1A1A] text-white rounded-[8px] px-[24px] py-[12px] text-[15px] font-semibold transition-colors">

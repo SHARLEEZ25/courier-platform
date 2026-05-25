@@ -141,7 +141,7 @@ const Login = () => {
           </div>
 
           <p className="text-center text-sm text-gray-500 mt-5">
-            New to Uniex?{" "}
+            New to CourierPro?{" "}
             <Link to="/signup" className="text-green-primary font-semibold hover:underline">
               Create a free account
             </Link>

@@ -59,7 +59,7 @@ const About = () => {
     {
       icon: Shield,
       title: "Fast & Secure Shipping",
-      copy: "Timely and safe international parcel delivery through our robust logistics network — powered by DPD, DHL, Uniex Courier Go, DPEX, and UPS.",
+      copy: "Timely and safe international parcel delivery through our robust logistics network — powered by DPD, DHL, CourierPro Courier Go, DPEX, and UPS.",
     },
     {
       icon: Headphones,
@@ -133,7 +133,7 @@ const About = () => {
                   18 years of getting<br />it there — reliably.
                 </h1>
                 <p className="text-[17px] font-normal text-[#6B7280] leading-[1.75] max-w-[480px] mt-[20px]">
-                  Uniex International Courier Services is a trusted name in global logistics — headquartered in Chennai, India, delivering to 220+ countries for over 18 years.
+                  CourierPro International Courier Services is a trusted name in global logistics — headquartered in Chennai, India, delivering to 220+ countries for over 18 years.
                 </p>
 
                 {/* Certification badges */}
@@ -221,7 +221,7 @@ const About = () => {
                   ))}
                 </div>
                 <p className="text-[14px] font-medium text-[#9CA3AF] italic mt-[16px]">
-                  — Uniex Courier, Chennai · Since 2006
+                  — CourierPro Courier, Chennai · Since 2006
                 </p>
                 <div className="w-[60px] h-px bg-[#E5E7EB] mt-[28px]" />
                 <p className="text-[15px] text-[#6B7280] leading-[1.7] max-w-[420px] mt-[20px]">
@@ -236,10 +236,10 @@ const About = () => {
                   Your global courier<br />partner from India.
                 </h2>
                 <p className="text-[16px] text-[#6B7280] leading-[1.75] mt-[20px]">
-                  Uniex International Courier Services — widely known as Uniex — is headquartered in Chennai, India, and specializes in international courier and cargo delivery across 220+ countries including the USA, UK, Canada, Australia, Europe, Dubai, Singapore, and Malaysia.
+                  CourierPro International Courier Services — widely known as CourierPro — is headquartered in Chennai, India, and specializes in international courier and cargo delivery across 220+ countries including the USA, UK, Canada, Australia, Europe, Dubai, Singapore, and Malaysia.
                 </p>
                 <p className="text-[16px] text-[#6B7280] leading-[1.75] mt-[16px]">
-                  We are an ISO 9001:2015 certified courier company recognized for our commitment to reliability, affordability, and speed. As the official courier partner of major global events including the USA Global Tamil Conference and UKAT, Uniex continues to set the benchmark in international parcel delivery.
+                  We are an ISO 9001:2015 certified courier company recognized for our commitment to reliability, affordability, and speed. As the official courier partner of major global events including the USA Global Tamil Conference and UKAT, CourierPro continues to set the benchmark in international parcel delivery.
                 </p>
               </motion.div>
             </div>
@@ -295,7 +295,7 @@ const About = () => {
               {/* LEFT — Regions */}
               <motion.div {...fadeUp(0.1)} className="w-full md:w-[45%] shrink-0">
                 <p className="text-[15px] text-[#6B7280] leading-[1.75] mb-[36px]">
-                  Uniex has established operational offices in key international markets — enabling us to offer local expertise, faster customs clearance, and end-to-end delivery support in each region.
+                  CourierPro has established operational offices in key international markets — enabling us to offer local expertise, faster customs clearance, and end-to-end delivery support in each region.
                 </p>
 
                 {regions.map((region, i) => (
@@ -394,7 +394,7 @@ const About = () => {
                 <div className="bg-[#F1F8F1] border-l-[4px] border-[#4CAF50] rounded-[0_8px_8px_0] px-[24px] py-[20px] mt-[36px]">
                   <div className="text-[16px] font-bold text-[#0D0D0D]">Trusted by 1,00,000+ Customers</div>
                   <p className="text-[14px] text-[#6B7280] leading-[1.7] mt-[6px]">
-                    Across India and worldwide — individuals, students, SMEs, exporters, and enterprises trust Uniex for dependable international courier delivery.
+                    Across India and worldwide — individuals, students, SMEs, exporters, and enterprises trust CourierPro for dependable international courier delivery.
                   </p>
                   <p className="text-[13px] font-semibold text-[#4CAF50] italic mt-[16px]">
                     "Ithu Namma Courier" — This is Our Courier.
@@ -414,7 +414,6 @@ const About = () => {
             <motion.div {...fadeUp()} className="flex flex-wrap md:flex-nowrap items-center justify-center gap-12 md:gap-20">
               <img src="/logos/dpd.png" alt="DPD" className="h-[40px] md:h-[55px] w-auto object-contain mix-blend-multiply" />
               <img src="/logos/dhl.png" alt="DHL" className="h-[35px] md:h-[45px] w-auto object-contain mix-blend-multiply" />
-              <img src="/logos/logoforbrand.png" alt="Uniex Courier Go" className="h-[50px] md:h-[65px] w-auto object-contain mix-blend-multiply" />
               <img src="/logos/dpex.png" alt="DPEX" className="h-[35px] md:h-[45px] w-auto object-contain mix-blend-multiply" />
               <img src="/logos/aramex.png" alt="Aramex" className="h-[30px] md:h-[40px] w-auto object-contain mix-blend-multiply" />
             </motion.div>
@@ -430,7 +429,7 @@ const About = () => {
                 For individuals, students,<br />businesses, and exporters.
               </h2>
               <p className="text-[16px] text-[#6B7280] max-w-[480px] mt-[16px]">
-                Whether you're sending documents to the USA, gifts to the UK, or business shipments to Canada — Uniex is built for you.
+                Whether you're sending documents to the USA, gifts to the UK, or business shipments to Canada — CourierPro is built for you.
               </p>
             </motion.div>
 
@@ -474,7 +473,7 @@ const About = () => {
                 Fast. Affordable. Reliable.<br />From India to the world.
               </h2>
               <p className="text-[14px] text-[#9CA3AF] max-w-[480px] mx-auto mt-[12px]">
-                For over 18 years, Uniex has been the trusted choice for international courier from India. Join 1,00,000+ customers who ship with us.
+                For over 18 years, CourierPro has been the trusted choice for international courier from India. Join 1,00,000+ customers who ship with us.
               </p>
 
               <div className="flex flex-col sm:flex-row justify-center items-center gap-[12px] mt-[36px]">

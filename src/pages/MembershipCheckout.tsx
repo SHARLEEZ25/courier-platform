@@ -157,7 +157,7 @@ const MembershipCheckout = () => {
                      </button>
                      <h1 className="text-[24px] font-medium text-[#111827]">Membership Checkout</h1>
                   </div>
-                  <p className="text-[#6B7280] text-[14px] ml-9">Secure 1-step checkout for Uniex {state.planName}</p>
+                  <p className="text-[#6B7280] text-[14px] ml-9">Secure 1-step checkout for CourierPro {state.planName}</p>
                </div>
 
                {/* Personal Info */}

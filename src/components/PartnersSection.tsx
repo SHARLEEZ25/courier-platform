@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 const CARRIERS = [
   { name: "DPD", src: "/logos/dpd.png", height: "h-[80px] md:h-[120px]" },
   { name: "DHL", src: "/logos/dhl.png", height: "h-[70px] md:h-[100px]" },
-  { name: "Uniex Courier Go", src: "/logos/logoforbrand.png", height: "h-[90px] md:h-[130px]" },
   { name: "DPEX", src: "/logos/dpex.png", height: "h-[70px] md:h-[105px]" },
   { name: "Aramex", src: "/logos/aramex.png", height: "h-[65px] md:h-[95px]" },
 ];

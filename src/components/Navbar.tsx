@@ -41,11 +41,9 @@ const Navbar = () => {
     >
       <div className="container h-full flex items-center justify-between">
         <Link to="/" className="flex items-center py-2">
-          <img
-            src="/logos/logoforbrand.png"
-            alt="Uniex Courier"
-            className="h-[55px] md:h-[70px] w-auto object-contain"
-          />
+          <span className="text-[22px] md:text-[26px] font-black text-[#0D0D0D] tracking-tight">
+            Courier<span className="text-green-primary">Pro</span>
+          </span>
         </Link>
 
         {/* Desktop nav */}

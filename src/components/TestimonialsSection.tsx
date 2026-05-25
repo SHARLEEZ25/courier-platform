@@ -3,7 +3,7 @@ import { Star } from "lucide-react";
 
 const testimonials = [
   {
-    text: "Sent my university documents to Canada and they arrived in 3 days. Uniex is the only courier I trust for time-sensitive admissions submissions.",
+    text: "Sent my university documents to Canada and they arrived in 3 days. CourierPro is the only courier I trust for time-sensitive admissions submissions.",
     name: "Priya R.",
     detail: "Chennai — University Documents to Canada",
     initials: "PR",

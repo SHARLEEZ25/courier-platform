@@ -57,7 +57,7 @@ const obcCards = [
   { icon: Zap, title: "Time-Critical Freight", copy: "Emergency parts and urgent freight for industries where downtime means financial loss. Speed and precision, guaranteed." },
   { icon: Cpu, title: "Technology & Prototypes", copy: "Sensitive tech components and prototypes handled with full confidentiality and integrity — from pickup to delivery." },
   { icon: Film, title: "Film & Media Equipment", copy: "Valuable production equipment delivered securely across continents — so your shoot goes on without interruption." },
-  { icon: Truck, title: "Send Parcels to the UK", copy: "Fast, reliable, and affordable parcel delivery from Chennai to the UK. Powered by DPD, DHL, Uniex Courier Go, DPEX & UPS. Call +91 9380839266." },
+  { icon: Truck, title: "Send Parcels to the UK", copy: "Fast, reliable, and affordable parcel delivery from Chennai to the UK. Powered by DPD, DHL, CourierPro Courier Go, DPEX & UPS. Call +91 9380839266." },
 ];
 
 const cities = [
@@ -125,7 +125,7 @@ const Services = () => {
                 Every shipment.<br />Every destination.<br />Handled.
               </h1>
               <p className="text-[17px] text-[#6B7280] leading-[1.75] max-w-[520px] mt-[20px]">
-                From urgent documents and student parcels to bulk cargo and on-board couriers — Uniex handles it all, end-to-end, from India to 220+ countries worldwide.
+                From urgent documents and student parcels to bulk cargo and on-board couriers — CourierPro handles it all, end-to-end, from India to 220+ countries worldwide.
               </p>
 
               {/* Anchor Pills */}
@@ -164,7 +164,7 @@ const Services = () => {
                   Save over 50% on<br />student document courier.
                 </h2>
                 <p className="text-[16px] text-[#6B7280] leading-[1.75] mt-[20px]">
-                  Uniex specializes in sending student documents, university applications, and personal parcels worldwide — at rates far below standard courier providers.
+                  CourierPro specializes in sending student documents, university applications, and personal parcels worldwide — at rates far below standard courier providers.
                 </p>
 
                 <div className="mt-[28px]">
@@ -241,7 +241,7 @@ const Services = () => {
                   Missing home?<br />We'll get it there.
                 </h2>
                 <p className="text-[16px] text-[#6B7280] leading-[1.75] mt-[20px]">
-                  Do you miss Indian food abroad? Uniex guarantees your goods arrive at your doorstep on time — safely packed and cleared through customs. We ship Indian food items, spices, homemade eatables, and life-saving medicines from India to the USA, UK, Singapore, Malaysia, and more.
+                  Do you miss Indian food abroad? CourierPro guarantees your goods arrive at your doorstep on time — safely packed and cleared through customs. We ship Indian food items, spices, homemade eatables, and life-saving medicines from India to the USA, UK, Singapore, Malaysia, and more.
                 </p>
 
                 <div className="mt-[24px]">
@@ -317,14 +317,14 @@ const Services = () => {
               {/* Vertical divider */}
               <div className="hidden md:block w-px bg-[#E5E7EB] self-stretch" />
 
-              {/* Uniex Way */}
+              {/* CourierPro Way */}
               <motion.div 
                 initial={{ opacity: 0, x: 24 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
               >
-                <div className="text-[15px] font-bold text-[#0D0D0D] mb-[12px]">The Uniex Way</div>
+                <div className="text-[15px] font-bold text-[#0D0D0D] mb-[12px]">The CourierPro Way</div>
                 <ul className="space-y-[4px]">
                   {[
                     "Save 50%+ compared to airline excess rates",
@@ -368,7 +368,7 @@ const Services = () => {
                 The fastest shipment<br />option in the world.
               </h2>
               <p className="text-[16px] text-[#6B7280] leading-[1.75] max-w-[520px] mt-[16px]">
-                In today's interconnected global marketplace, ensuring the swift and secure delivery of time-critical shipments is paramount. Uniex's On-Board Courier service assigns a dedicated courier who personally carries your shipment on the next available flight — no warehouses, no delays.
+                In today's interconnected global marketplace, ensuring the swift and secure delivery of time-critical shipments is paramount. CourierPro's On-Board Courier service assigns a dedicated courier who personally carries your shipment on the next available flight — no warehouses, no delays.
               </p>
               <div className="flex flex-wrap items-center gap-[20px] mt-[28px]">
                 <a href="/get-quote" className="inline-flex items-center gap-[8px] bg-[#4CAF50] hover:bg-[#3D9940] text-white rounded-[8px] px-[20px] py-[11px] text-[14px] font-semibold transition-colors">
@@ -505,7 +505,6 @@ const Services = () => {
             <div className="flex flex-wrap md:flex-nowrap items-center justify-center gap-12 md:gap-20">
               <img src="/logos/dpd.png" alt="DPD" className="h-[65px] md:h-[90px] w-auto object-contain mix-blend-multiply" />
               <img src="/logos/dhl.png" alt="DHL" className="h-[55px] md:h-[75px] w-auto object-contain mix-blend-multiply" />
-              <img src="/logos/logoforbrand.png" alt="Uniex Courier Go" className="h-[75px] md:h-[105px] w-auto object-contain mix-blend-multiply" />
               <img src="/logos/dpex.png" alt="DPEX" className="h-[55px] md:h-[75px] w-auto object-contain mix-blend-multiply" />
               <img src="/logos/aramex.png" alt="Aramex" className="h-[50px] md:h-[70px] w-auto object-contain mix-blend-multiply" />
             </div>

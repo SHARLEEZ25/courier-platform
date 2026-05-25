@@ -223,7 +223,7 @@ export default function AdminStaffPage() {
               </div>
               <div>
                 <Label className="text-xs">Email *</Label>
-                <Input className="mt-1" type="email" placeholder="name@uniex.in" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required />
+                <Input className="mt-1" type="email" placeholder="name@courierpro.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} required />
               </div>
               <div>
                 <Label className="text-xs">Role</Label>

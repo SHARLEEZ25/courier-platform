@@ -40,7 +40,7 @@ const CARRIER_CONFIG: Record<string, {
   },
 };
 
-// Item-specific notes from Uniex website content (client-provided copy)
+// Item-specific notes from website content
 const ITEM_NOTE: Partial<Record<string, string>> = {
   university: "University document specialists — trusted by students shipping to 50+ countries",
   excess:     "Skip the airline excess baggage counter — ship smarter, arrive lighter",

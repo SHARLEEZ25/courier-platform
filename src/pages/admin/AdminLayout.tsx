@@ -41,7 +41,7 @@ export default function AdminLayout() {
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-600">
           <Package className="h-4 w-4 text-white" />
         </div>
-        <span className="text-base font-bold text-gray-900">Uniex Admin</span>
+        <span className="text-base font-bold text-gray-900">CourierPro Admin</span>
         <button
           onClick={() => setSidebarOpen(false)}
           className="ml-auto lg:hidden text-gray-400 hover:text-gray-600"
@@ -72,7 +72,7 @@ export default function AdminLayout() {
         {navItem("/admin/config", "Config", Settings)}
       </nav>
       <div className="border-t border-gray-200 p-3">
-        <p className="px-3 text-xs text-gray-400">Uniex Courier Ops</p>
+        <p className="px-3 text-xs text-gray-400">CourierPro Ops</p>
       </div>
     </>
   );
@@ -116,7 +116,7 @@ export default function AdminLayout() {
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-600">
               <Package className="h-3.5 w-3.5 text-white" />
             </div>
-            <span className="text-sm font-bold text-gray-900">Uniex Admin</span>
+            <span className="text-sm font-bold text-gray-900">CourierPro Admin</span>
           </div>
         </header>
 

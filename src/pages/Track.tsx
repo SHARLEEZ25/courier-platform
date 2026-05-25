@@ -50,7 +50,7 @@ const Track = () => {
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-10">
             <h1 className="text-4xl font-bold text-brand-black mb-4">Track Your Shipment</h1>
-            <p className="text-brand-gray">Enter your Uniex tracking number to get live updates</p>
+            <p className="text-brand-gray">Enter your CourierPro tracking number to get live updates</p>
           </div>
 
           {/* Search bar */}
@@ -254,9 +254,9 @@ const Track = () => {
                     <Phone className="w-4 h-4 text-green-primary group-hover:scale-110 transition-transform" />
                     <span className="text-sm font-bold text-brand-black">+91 9600879666</span>
                   </a>
-                  <a href="mailto:uniexanr@gmail.com" className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-green-100 hover:bg-green-50 transition-all group">
+                  <a href="mailto:support@courierpro.com" className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-green-100 hover:bg-green-50 transition-all group">
                     <Mail className="w-4 h-4 text-green-primary group-hover:scale-110 transition-transform" />
-                    <span className="text-sm font-bold text-brand-black">uniexanr@gmail.com</span>
+                    <span className="text-sm font-bold text-brand-black">support@courierpro.com</span>
                   </a>
                   <a href="https://wa.me/919600879666" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-green-100 hover:bg-green-50 transition-all group">
                     <MessageCircle className="w-4 h-4 text-green-primary group-hover:scale-110 transition-transform" />

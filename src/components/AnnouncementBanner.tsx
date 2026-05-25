@@ -12,14 +12,14 @@ const AnnouncementBanner = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const isDismissed = localStorage.getItem("uniex-banner-dismissed");
+    const isDismissed = localStorage.getItem("courierpro-banner-dismissed");
     if (!isDismissed) {
       setIsVisible(true);
     }
   }, []);
 
   const handleDismiss = () => {
-    localStorage.setItem("uniex-banner-dismissed", "true");
+    localStorage.setItem("courierpro-banner-dismissed", "true");
     setIsVisible(false);
   };
 
@@ -32,7 +32,7 @@ const AnnouncementBanner = () => {
           <div className="flex items-center justify-center gap-3 w-full">
             <Shield className="w-[14px] h-[14px] stroke-[#86EFAC]" />
             <p className="text-[13px] text-[#D1FAE5] whitespace-nowrap overflow-hidden text-ellipsis">
-              <span className="text-white font-bold">Limited time</span>: Join Uniex Silver for ₹299 (was ₹499) — free packaging on every shipment, locked rates for 12 months.
+              <span className="text-white font-bold">Limited time</span>: Join CourierPro Silver for ₹299 (was ₹499) — free packaging on every shipment, locked rates for 12 months.
             </p>
             <Link 
               to="/membership"

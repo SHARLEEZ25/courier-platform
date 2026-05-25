@@ -67,7 +67,7 @@ export default function AdminLogin() {
           <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 shadow-sm">
             <ShieldCheck className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900">Uniex Admin</h1>
+          <h1 className="text-xl font-bold text-gray-900">CourierPro Admin</h1>
           <p className="mt-1 text-sm text-gray-500">Sign in to access the operations panel</p>
         </div>
 
@@ -81,7 +81,7 @@ export default function AdminLogin() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@uniex.in"
+                placeholder="admin@courierpro.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -136,7 +136,7 @@ export default function AdminLogin() {
         <p className="mt-6 text-center text-xs text-gray-400">
           Not an admin?{" "}
           <a href="/" className="text-blue-600 hover:underline">
-            Go to Uniex website
+            Go to CourierPro website
           </a>
         </p>
       </div>

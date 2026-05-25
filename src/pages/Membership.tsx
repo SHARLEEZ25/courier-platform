@@ -52,7 +52,7 @@ const Membership = () => {
     },
     {
       q: "What is the locked rates benefit?",
-      a: "Your rate stays frozen at joining date even if Uniex revises prices. Protected for 12 months."
+      a: "Your rate stays frozen at joining date even if CourierPro revises prices. Protected for 12 months."
     },
     {
       q: "Does free packaging apply to every shipment?",
@@ -72,7 +72,7 @@ const Membership = () => {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F0FDF4] border border-[#BBF7D0] rounded-full text-[12px] font-medium text-[#166634] mb-6">
               <Shield className="w-3.5 h-3.5" />
-              Uniex membership
+              CourierPro membership
             </div>
             <h1 className="text-[30px] font-medium leading-[1.2] text-[#111827] mb-4">
               Ship more. Pay less.<br />Every time.

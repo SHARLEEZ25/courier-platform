@@ -24,13 +24,13 @@ function EmailPreview() {
           <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-100 mb-2">
             <Mail className="h-7 w-7 text-green-600" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900">Thank You for Shipping with Uniex!</h3>
+          <h3 className="text-lg font-bold text-gray-900">Thank You for Shipping with CourierPro!</h3>
           <p className="text-sm text-gray-500 mt-1">Your shipment has been delivered successfully.</p>
         </div>
         <div className="my-4 rounded-lg border-2 border-dashed border-green-400 bg-green-50 p-4 text-center">
           <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Your Exclusive Offer</p>
           <p className="text-4xl font-extrabold text-green-600 my-1">10% OFF</p>
-          <p className="text-xs text-gray-500">on your next shipment with Uniex</p>
+          <p className="text-xs text-gray-500">on your next shipment with CourierPro</p>
           <div className="mt-3 rounded bg-green-600 px-4 py-1.5 text-sm font-semibold text-white inline-block">
             UNIEX10
           </div>
