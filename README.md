@@ -1,104 +1,100 @@
-# Uniex Courier — International Shipping Aggregator
+# Uniex Courier — International Shipping Platform
 
-A full-stack platform for international courier booking. Customers get live shipping quotes from DHL, FedEx, and UPS, book shipments, and track deliveries. A built-in admin panel handles the full ops workflow: pickup assignment, inscan, outscan, and NDR management.
+Built a full-stack multi-carrier courier aggregator — one system handling the complete shipment lifecycle from quote to delivery.
+
+Customers get live rates, book shipments, and track deliveries. The ops team manages the entire workflow through a dedicated admin panel, all in the same application.
+
+---
+
+## What It Does
+
+### Customer Side
+- Live rate quotes across DHL, FedEx, and UPS — calculated in real time
+- Multi-step booking flow with server-side price verification
+- Shipment tracking with a milestone timeline view
+- Membership plans (Silver / Gold) with subscription management
+
+### Admin / Ops Side
+- Pickup queue management and assignment
+- Inscan and outscan workflow for warehouse operations
+- NDR (Non-Delivery Report) handling
+- Lead tracking and remarketing tools
+- Staff management and system config
+
+---
 
 ## Tech Stack
 
-| Layer | Technology |
+### Frontend
+| | |
 |---|---|
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, TanStack Query, Framer Motion |
-| Backend | Hono (Node.js), TypeScript |
-| Database | PostgreSQL 17 (Neon, Singapore) via postgres.js |
-| Auth | Firebase Auth (frontend SDK + firebase-admin on backend) |
-| Testing | Vitest (unit), Playwright (E2E) |
-| Deployment | Render (frontend + backend as separate web services) |
+| Framework | React 18 + TypeScript |
+| Build Tool | Vite |
+| State / Data | TanStack Query |
+| Routing | React Router v6 |
+| UI | Tailwind CSS + shadcn/ui |
+| Animation | Framer Motion |
+| Forms | react-hook-form + Zod |
 
-## Features
+### Backend
+| | |
+|---|---|
+| Runtime | Node.js + Hono |
+| Database | PostgreSQL 17 (Neon) via postgres.js |
+| Auth | Firebase Auth (SDK + firebase-admin) |
+| Validation | Zod + @hono/zod-validator |
+| Rate Limiting | hono-rate-limiter |
+| Testing | Vitest + Playwright |
 
-- **Multi-carrier rate engine** — live quotes from DHL, FedEx, UPS with a DB-driven pricing pipeline: base rate → margin → FSC → demand surcharge → carrier-specific extras → GST (18%)
-- **Booking flow** — multi-step form with server-side rate recalculation at submission; full pricing snapshot locked at booking time
-- **Admin operations panel** — 13 screens covering bookings, pickup queue, inscan, outscan, NDR handling, leads, remarketing, staff, and config
-- **Shipment tracking** — timeline view with status badges
-- **Membership plans** — Silver and Gold tiers with DB-driven pricing
-- **Firebase Auth** — login, signup, protected routes on both frontend and backend
+---
 
-## Project Structure
+## System Design Highlights
 
+- **Multi-carrier rate engine** — DB-driven pricing pipeline: base rate → margin → FSC → demand surcharge → carrier extras → GST
+- **TTL-based in-memory caching** — scoped per data type: 5 min for config, 30 min for zones and rate cards, 1 hr for fuel surcharges
+- **Server-side rate recalculation at booking** — price is re-derived on the backend at submission; client-side quote is never trusted
+- **Firebase Auth with backend verification** — every protected route validates the Firebase ID token via firebase-admin
+- **DB-driven surcharge config** — FSC %, margin %, and demand surcharge are toggled via database rows, no code deploy needed
+
+---
+
+## Repository Structure
+
+**Frontend**
 ```
-uniex-courier/
-├── src/                    # React frontend
-│   ├── pages/              # Customer-facing pages + admin panel
-│   ├── components/         # Shared UI components
-│   ├── hooks/              # TanStack Query hooks
-│   └── lib/                # Firebase client, utilities
-├── server/                 # Hono API server
-│   ├── routes/             # Route handlers (rates, bookings, tracking, admin…)
-│   ├── services/
-│   │   └── rate-engine/    # Multi-carrier pricing logic
-│   ├── db/                 # Schema, migrations, seed data
-│   └── config/             # DB connection, Firebase Admin SDK
-├── admin-calculator/       # Standalone admin rate-verification tool (Alpine.js)
-└── docs/                   # Handover docs, rate engine flowchart
-```
-
-## Getting Started
-
-```bash
-# Install dependencies
-npm install
-
-# Start the frontend dev server (http://localhost:5173)
-npm run dev
-
-# Start the backend API server — separate terminal (uses tsx watch)
-npm run server:dev
-
-# Seed the database
-npm run db:seed
+src/
+├── pages/          Route-level views — customer flow (quote, booking, tracking) + full admin panel subtree
+├── components/     Shared UI — navbar, hero, chat widget, quote results, rate breakdown
+├── hooks/          TanStack Query hooks scoped per feature (rates, bookings, membership)
+├── lib/            Firebase client config, utility helpers
+└── context/        Auth context — Firebase session and user state
 ```
 
-## Environment Variables
-
-```env
-# Frontend (.env)
-VITE_API_URL=http://localhost:3000
-
-# Backend (.env)
-DATABASE_URL=postgres://...
-FIREBASE_PROJECT_ID=...
-FIREBASE_CLIENT_EMAIL=...
-FIREBASE_PRIVATE_KEY=...
-DHL_API_KEY=...
-FEDEX_API_KEY=...
-UPS_API_KEY=...
+**Backend**
+```
+server/
+├── routes/         API route handlers — rates, bookings, tracking, admin, membership, pincode
+├── services/
+│   └── rate-engine/   Multi-carrier pricing logic — weight calc, FSC, GST, zone resolution
+├── controllers/    Request handlers decoupled from routes
+├── middleware/     Auth guard — Firebase ID token verification
+├── db/             Schema, versioned migrations, seed data
+└── config/         DB connection (postgres.js), Firebase Admin SDK initialisation
 ```
 
-## API Routes
+---
 
-| Method | Route | Description |
-|---|---|---|
-| POST | `/api/rates/calculate` | Live shipping quotes (DHL / FedEx / UPS) |
-| POST | `/api/bookings` | Create booking (auth required) |
-| GET | `/api/bookings` | List user bookings (auth required) |
-| GET | `/api/tracking/:id` | Tracking by AWB or booking ref |
-| GET | `/api/pincode/:pincode` | Pickup serviceability check |
-| GET | `/api/membership/plans` | Available membership tiers |
+## Running Locally
 
-## Running Tests
+This project requires environment variables for Firebase, PostgreSQL, and carrier API keys (DHL, FedEx, UPS).
 
-```bash
-npm run test          # Vitest unit tests
-npm run test:watch    # Vitest in watch mode
-npx playwright test   # Playwright E2E tests
-```
+Interested in running it or exploring the architecture?
 
-## Deployment
+**Reach out and I'll walk you through it.**
 
-Frontend and backend are deployed as separate Render web services. Database is hosted on Neon (Postgres 17, `ap-southeast-1`).
+- Email: sharleez.work@gmail.com
+- LinkedIn: https://www.linkedin.com/in/sharleez-tech/
 
-Build commands:
-```bash
-npm run build          # Frontend (outputs to dist/)
-npm run server:build   # Backend (tsc compile)
-npm run server:start   # Run compiled backend
-```
+---
+
+*Built with a focus on real-world patterns: multi-carrier aggregation, ops workflow management, and a pricing engine that stays accurate without redeployments.*
