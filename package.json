@@ -11,10 +11,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "server:dev": "tsx watch server/index.ts",
-    "server:build": "tsc -p server/tsconfig.json",
-    "server:start": "node dist/server/server/index.js",
-    "db:seed": "tsx server/db/seed.ts"
+    "server:dev": "tsx watch backend/index.ts",
+    "server:build": "tsc -p backend/tsconfig.json",
+    "server:start": "node dist/backend/backend/index.js",
+    "db:seed": "tsx backend/db/seed.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.11",

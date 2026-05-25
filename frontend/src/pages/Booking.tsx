@@ -4,7 +4,7 @@ import { usePincode } from "@/hooks/usePincode";
 import { useCreateBooking } from "@/hooks/useBooking";
 import { useAuth } from "@/context/AuthContext";
 import type { BookingCreate, CarrierSlug, ItemType } from "@/types/api";
-import { CARRIERS, ITEM_TYPES } from "../../shared/schemas/rate-request.schema";
+import { CARRIERS, ITEM_TYPES } from "../../../shared/schemas/rate-request.schema";
 
 // Reverse-lookup: display label → slug (for carrier and item type)
 function toCarrierSlug(val: string): CarrierSlug {

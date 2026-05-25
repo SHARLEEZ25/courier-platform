@@ -4,6 +4,10 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
+  root: "./frontend",
+  build: {
+    outDir: "../dist",
+  },
   server: {
     host: "::",
     port: 8080,
@@ -20,7 +24,7 @@ export default defineConfig(() => ({
   plugins: [react()].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "./frontend/src"),
     },
   },
 }));

@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"d:\\\\uniex-application\\\\shared\" -Force)",
+      "PowerShell(Remove-Item -Force \"d:\\\\uniex-application\\\\src\\\\lib\\\\supabase.ts\" -Confirm:$false)",
+      "PowerShell(Remove-Item -Force \"d:\\\\uniex-application\\\\server\\\\config\\\\supabase.ts\" -Confirm:$false)",
+      "PowerShell(Remove-Item -Force \"d:\\\\uniex-application\\\\server\\\\auth\\\\better-auth.ts\" -Confirm:$false)",
+      "PowerShell(Remove-Item -Recurse -Force \"d:\\\\uniex-application\\\\server\\\\auth\" -Confirm:$false)",
+      "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\uniex-application\\\\frontend\")",
+      "PowerShell(Move-Item \"d:\\\\uniex-application\\\\src\" \"d:\\\\uniex-application\\\\frontend\\\\src\")",
+      "PowerShell(Move-Item \"d:\\\\uniex-application\\\\public\" \"d:\\\\uniex-application\\\\frontend\\\\public\")",
+      "PowerShell(Move-Item \"d:\\\\uniex-application\\\\index.html\" \"d:\\\\uniex-application\\\\frontend\\\\index.html\")",
+      "PowerShell(Rename-Item \"d:\\\\uniex-application\\\\server\" \"backend\")",
+      "PowerShell(Copy-Item -Recurse \"d:\\\\uniex-application\\\\server\" \"d:\\\\uniex-application\\\\backend\")",
+      "PowerShell(Remove-Item -Recurse -Force \"d:\\\\uniex-application\\\\server\" -Confirm:$false)"
+    ]
+  }
+}

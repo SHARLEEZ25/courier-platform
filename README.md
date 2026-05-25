@@ -62,24 +62,29 @@ Customers get live rates, book shipments, and track deliveries. The ops team man
 
 **Frontend**
 ```
-src/
-├── pages/          Route-level views — customer flow (quote, booking, tracking) + full admin panel subtree
-├── components/     Shared UI — navbar, hero, chat widget, quote results, rate breakdown
-├── hooks/          TanStack Query hooks scoped per feature (rates, bookings, membership)
-├── lib/            Firebase client config, utility helpers
-└── context/        Auth context — Firebase session and user state
+frontend/
+├── src/
+│   ├── pages/          Route-level views — customer flow (quote, booking, tracking) + full admin panel subtree
+│   ├── components/     Page sections, shared UI, shadcn primitives (ui/)
+│   ├── hooks/          TanStack Query hooks per feature + admin/ subfolder
+│   ├── lib/            Firebase client, Axios instance, utilities
+│   ├── context/        AuthContext — Firebase session and user state
+│   └── types/          Shared TypeScript types
+├── public/
+└── index.html
 ```
 
 **Backend**
 ```
-server/
-├── routes/         API route handlers — rates, bookings, tracking, admin, membership, pincode
+backend/
+├── routes/             API route handlers — rates, bookings, tracking, admin, membership, pincode
 ├── services/
-│   └── rate-engine/   Multi-carrier pricing logic — weight calc, FSC, GST, zone resolution
-├── controllers/    Request handlers decoupled from routes
-├── middleware/     Auth guard — Firebase ID token verification
-├── db/             Schema, versioned migrations, seed data
-└── config/         DB connection (postgres.js), Firebase Admin SDK initialisation
+│   ├── rate-engine/    Multi-carrier pricing logic — weight calc, FSC, GST, zone resolution
+│   └── aftership.ts    AfterShip webhook integration
+├── controllers/        Request handlers decoupled from routes
+├── middleware/         Auth, rate-limit, and request validation
+├── db/                 Schema, versioned migrations, seed data
+└── config/             DB connection (postgres.js), Firebase Admin SDK, env validation
 ```
 
 ---
