@@ -91,7 +91,7 @@ backend/
 
 ## Running Locally
 
-This project requires environment variables for Firebase, PostgreSQL, and carrier API keys (DHL, FedEx, UPS).
+This project requires environment variables for Firebase, PostgreSQL
 
 Interested in running it or exploring the architecture?
 
