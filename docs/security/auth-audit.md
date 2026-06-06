@@ -4,6 +4,14 @@
 **Score at time of audit:** 52 / 100
 **Score after critical fixes:** ~65 / 100
 
+> ⚠️ **HISTORICAL — SUPERSEDED.** This audit covered the auth system as it existed
+> on 2026-03-21, when the project ran on **Supabase Auth**. The project has since
+> migrated fully to **Firebase Auth** (see root `CLAUDE.md`), and `src/lib/supabase.ts`
+> no longer exists. The Supabase-specific findings below (items referencing
+> `supabase.ts`, the Supabase Dashboard, `supabase.auth.*`, etc.) **no longer apply**
+> to the current system. Kept for historical record of the security-review process;
+> a fresh audit against the Firebase Auth implementation is recommended before launch.
+
 ---
 
 ## System Overview

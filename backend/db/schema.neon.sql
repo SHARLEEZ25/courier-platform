@@ -1,9 +1,10 @@
 -- ============================================================
 -- Uniex Courier — Neon DB Schema
--- Differences from schema.sql (Supabase version):
+-- This is the canonical, current schema (the project previously ran on
+-- Supabase Postgres; that schema has been retired in favor of this one):
 --   1. user_id columns are TEXT (Firebase UIDs) instead of
 --      UUID REFERENCES auth.users(id)
---   2. All RLS policies removed (auth enforced at API layer)
+--   2. No RLS policies (auth enforced at API layer)
 --   3. rate_card_steps + rate_card_bands included (from migration 001)
 --   4. All indexes included (from migration 002)
 --

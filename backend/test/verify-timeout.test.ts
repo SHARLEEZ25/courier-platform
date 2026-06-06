@@ -1,8 +1,8 @@
 import { calculateRates } from "../services/rate-engine/index.js";
 import { vi, describe, it, expect } from "vitest";
 
-// NOTE: This is a conceptual test. Since we can't easily mock the ESM default export 
-// and the internal 'supabase' object without a full test runner setup, 
+// NOTE: This is a conceptual test. Since we can't easily mock the ESM default export
+// and the internal DB client without a full test runner setup,
 // we will verify the behavior by reading the code and ensuring the abortSignal is used.
 
 describe("Rate Engine Timeout", () => {

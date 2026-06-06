@@ -1,5 +1,5 @@
 -- Migration 001: structured pickup address + nullable email fields
--- Run once against your Supabase project if the DB was already provisioned.
+-- Historical migration — already applied. Folded into schema.neon.sql for fresh installs.
 
 ALTER TABLE bookings
   ADD COLUMN IF NOT EXISTS pickup_city  TEXT NOT NULL DEFAULT '',

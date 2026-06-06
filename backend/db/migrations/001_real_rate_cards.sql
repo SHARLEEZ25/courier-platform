@@ -1,6 +1,6 @@
 -- ============================================================
 -- Migration 001 — Real 2026 Rate Cards
--- Run in Supabase SQL Editor BEFORE running npm run db:seed
+-- Historical migration — already applied. Folded into schema.neon.sql for fresh installs.
 -- Safe to re-run (uses IF NOT EXISTS / DO NOTHING)
 -- ============================================================
 

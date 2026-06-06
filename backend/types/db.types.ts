@@ -1,5 +1,5 @@
-// Supabase database row types — mirrors the schema.sql exactly.
-// Re-generate with: npx supabase gen types typescript --project-id <id>
+// Database row types — mirrors schema.neon.sql exactly.
+// Hand-maintained; update alongside schema changes.
 
 export type BookingStatus =
   | "pending"
