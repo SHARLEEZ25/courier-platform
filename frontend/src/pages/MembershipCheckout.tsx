@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSubscribe } from "@/hooks/useMembership";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
 import { 
   Check, 
   ArrowLeft, 
@@ -29,15 +28,6 @@ import Footer from "@/components/Footer";
 const MembershipCheckout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login?redirect=/membership-checkout", { replace: true, state: location.state });
-    }
-  }, [user, authLoading, navigate, location.state]);
-
-  if (authLoading || !user) return null;
 
   const state = location.state || {
     planName: "Silver", 

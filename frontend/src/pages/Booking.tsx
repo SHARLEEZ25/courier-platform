@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePincode } from "@/hooks/usePincode";
 import { useCreateBooking } from "@/hooks/useBooking";
-import { useAuth } from "@/context/AuthContext";
 import type { BookingCreate, CarrierSlug, ItemType } from "@/types/api";
 import { CARRIERS, ITEM_TYPES } from "../../../shared/schemas/rate-request.schema";
 
@@ -101,7 +100,6 @@ const POPULAR_BANKS = [
 const Booking = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
 
   const routeState = location.state || null;
 
@@ -171,16 +169,17 @@ const Booking = () => {
     }
   }, [pincodeData]);
 
-  // Redirect to login if not signed in
+  // QR Timer logic
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/login?redirect=/booking", { replace: true, state: location.state });
+    let interval: NodeJS.Timeout;
+    if (currentStep === 3 && paymentTab === 'upi' && upiOption === 'qr' && qrTimer > 0) {
+      interval = setInterval(() => {
+        setQrTimer(prev => prev - 1);
+      }, 1000);
     }
-  }, [user, authLoading, navigate, location.state]);
+    return () => clearInterval(interval);
+  }, [currentStep, paymentTab, upiOption, qrTimer]);
 
-  if (authLoading || !user) return null;
-
-  // Safe to use routeState after auth guard — fallback uses a valid carrier
   const state = routeState || {
     origin: "India",
     destination: "USA",
@@ -217,17 +216,6 @@ const Booking = () => {
     };
     return prefixes[dest] || '+';
   };
-
-  // QR Timer logic
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (currentStep === 3 && paymentTab === 'upi' && upiOption === 'qr' && qrTimer > 0) {
-      interval = setInterval(() => {
-        setQrTimer(prev => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [currentStep, paymentTab, upiOption, qrTimer]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

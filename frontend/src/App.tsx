@@ -4,6 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/AuthContext";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminRoute from "@/components/AdminRoute";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Contact from "./pages/Contact.tsx";
@@ -18,7 +21,6 @@ import Booking from "./pages/Booking.tsx";
 import MembershipCheckout from "./pages/MembershipCheckout.tsx";
 import Login from "./pages/Login.tsx";
 import Signup from "./pages/Signup.tsx";
-import AdminLayout from "./pages/admin/AdminLayout.tsx";
 import AdminLogin from "./pages/admin/AdminLogin.tsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
 import AdminBookings from "./pages/admin/AdminBookings.tsx";
@@ -41,39 +43,46 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/get-quote" element={<GetQuote />} />
-            <Route path="/track" element={<Track />} />
-            <Route path="/rate-breakdown" element={<RateBreakdown />} />
-            <Route path="/booking-confirmation" element={<BookingConfirmation />} />
-            <Route path="/membership" element={<Membership />} />
-            <Route path="/booking" element={<Booking />} />
-            <Route path="/membership-checkout" element={<MembershipCheckout />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            {/* Admin panel — login is outside layout (no sidebar) */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="dashboard"   element={<AdminDashboard />} />
-              <Route path="bookings"   element={<AdminBookings />} />
-              <Route path="bookings/:id" element={<AdminBookingDetail />} />
-              <Route path="pickups"    element={<AdminPickupQueue />} />
-              <Route path="inscan"     element={<AdminInscan />} />
-              <Route path="outscan"    element={<AdminOutscan />} />
-              <Route path="ndr"        element={<AdminNDR />} />
-              <Route path="leads"      element={<AdminLeads />} />
-              <Route path="staff"      element={<AdminStaff />} />
-              <Route path="remarketing" element={<AdminRemarketing />} />
-              <Route path="config"     element={<AdminConfig />} />
-            </Route>
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/get-quote" element={<GetQuote />} />
+              <Route path="/track" element={<Track />} />
+              <Route path="/booking-confirmation" element={<BookingConfirmation />} />
+              <Route path="/membership" element={<Membership />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+
+              {/* Customer pages that require a signed-in user */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/rate-breakdown" element={<RateBreakdown />} />
+                <Route path="/booking" element={<Booking />} />
+                <Route path="/membership-checkout" element={<MembershipCheckout />} />
+              </Route>
+
+              {/* Admin panel — login is outside the guarded layout (no sidebar) */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminRoute />}>
+                <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                <Route path="dashboard"   element={<AdminDashboard />} />
+                <Route path="bookings"   element={<AdminBookings />} />
+                <Route path="bookings/:id" element={<AdminBookingDetail />} />
+                <Route path="pickups"    element={<AdminPickupQueue />} />
+                <Route path="inscan"     element={<AdminInscan />} />
+                <Route path="outscan"    element={<AdminOutscan />} />
+                <Route path="ndr"        element={<AdminNDR />} />
+                <Route path="leads"      element={<AdminLeads />} />
+                <Route path="staff"      element={<AdminStaff />} />
+                <Route path="remarketing" element={<AdminRemarketing />} />
+                <Route path="config"     element={<AdminConfig />} />
+              </Route>
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

@@ -210,12 +210,13 @@ function BandTable({
   highlightZone: string | null;
   highlightChargeable: number | null;
 }) {
-  if (bandMatrix.rows.length === 0) return null;
   const isEffective = viewMode === "effective";
 
   const hlRowRef = useCallback((node: HTMLTableRowElement | null) => {
     if (node) node.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [highlightChargeable]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (bandMatrix.rows.length === 0) return null;
 
   return (
     <div className="mt-4">
