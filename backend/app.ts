@@ -14,7 +14,10 @@ export function createApp(): Hono {
     cors({
       origin: (origin, c) => {
         if (c.req.path.startsWith("/api/admin")) return origin || "*";
-        const allowed = [env.FRONTEND_URL, "http://localhost:8080"];
+        const extra = env.EXTRA_ALLOWED_ORIGINS.split(",")
+          .map((o) => o.trim())
+          .filter(Boolean);
+        const allowed = [env.FRONTEND_URL, "http://localhost:8080", ...extra];
         return allowed.includes(origin) ? origin : env.FRONTEND_URL;
       },
       allowHeaders: ["Content-Type", "Authorization", "Cookie"],
