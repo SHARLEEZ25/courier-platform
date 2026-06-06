@@ -54,19 +54,6 @@ const GetQuote = () => {
                     onCalculate={(data) => setQuoteData(data)} 
                   />
                 </div>
-
-                {/* Trust mini-bar */}
-                <div className="mt-12 flex flex-wrap items-center justify-center gap-8 md:gap-12 opacity-40">
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand-black">
-                    <div className="w-1 h-1 rounded-full bg-green-primary" /> Transparent Pricing
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand-black">
-                    <div className="w-1 h-1 rounded-full bg-green-primary" /> No Calls Needed
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand-black">
-                    <div className="w-1 h-1 rounded-full bg-green-primary" /> Door-to-Door
-                  </div>
-                </div>
               </div>
 
               {/* Decorative Blobs */}

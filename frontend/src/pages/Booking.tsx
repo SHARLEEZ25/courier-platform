@@ -1434,17 +1434,17 @@ const Booking = () => {
 
       {/* Mobile Fixed CTA */}
       {currentStep === 3 && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 flex gap-4 animate-in slide-in-from-bottom duration-500 z-[100]">
-           <Button 
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 animate-in slide-in-from-bottom duration-500 z-[100]">
+           {submitError && (
+             <p className="text-sm text-red-500 text-center mb-2">{submitError}</p>
+           )}
+           <Button
             onClick={handleFinalPayment}
             disabled={isCreatingBooking}
-            className="flex-1 bg-[#16A34A] hover:bg-[#15803D] text-white h-14 rounded-xl font-bold text-lg shadow-xl shadow-green-primary/20"
+            className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white h-14 rounded-xl font-bold text-lg shadow-xl shadow-green-primary/20"
            >
              {isCreatingBooking ? <RotateCcw className="w-5 h-5 animate-spin" /> : `Pay ₹${state.totalPrice.toLocaleString()}`}
            </Button>
-           {submitError && (
-             <p className="text-sm text-red-500 text-center mt-3">{submitError}</p>
-           )}
         </div>
       )}
 

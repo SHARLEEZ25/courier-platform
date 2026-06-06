@@ -15,7 +15,6 @@ import TestimonialsSection from "@/components/TestimonialsSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 import ChatWidget from "@/components/ChatWidget";
-import WhatsAppButton from "@/components/WhatsAppButton";
 
 const Index = () => {
   const [quoteData, setQuoteData] = useState<{ origin: string; destination: string; weight: number; itemType: string } | null>(null);
@@ -73,7 +72,6 @@ const Index = () => {
       <CTASection />
       <Footer />
       <ChatWidget />
-      <WhatsAppButton />
     </div>
   );
 };

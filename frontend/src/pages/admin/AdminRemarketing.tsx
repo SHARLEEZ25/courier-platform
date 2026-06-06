@@ -41,6 +41,57 @@ function EmailPreview() {
   );
 }
 
+function RemarketingCard({
+  record, selected, onToggleSelect, onSendOne, isSending,
+}: {
+  record: AdminRemarketingRecord;
+  selected: boolean;
+  onToggleSelect: (bookingId: string) => void;
+  onSendOne: (bookingId: string) => void;
+  isSending: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {record.email_status === "pending" && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelect(record.booking_id)}
+              className="rounded"
+            />
+          )}
+          <span className="font-mono text-sm font-semibold text-gray-700">{record.booking_ref}</span>
+        </div>
+        <span className={cn("inline-flex shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium", EMAIL_STATUS_COLOURS[record.email_status])}>
+          {record.email_status}
+        </span>
+      </div>
+
+      <div className="mt-3 space-y-1 text-sm">
+        <p className="text-gray-600">{record.customer_email}</p>
+        <p className="text-xs text-gray-400">
+          Delivered {new Date(record.delivered_at).toLocaleDateString("en-IN")}
+        </p>
+      </div>
+
+      {record.email_status === "pending" && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-3 w-full text-xs"
+          disabled={isSending}
+          onClick={() => onSendOne(record.booking_id)}
+        >
+          <Send className="h-3 w-3 mr-1" />
+          Send
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export default function AdminRemarketing() {
   const { toast } = useToast();
   const { data: records, isLoading } = useAdminRemarketing();
@@ -86,7 +137,7 @@ export default function AdminRemarketing() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -106,7 +157,7 @@ export default function AdminRemarketing() {
         {/* Left: table */}
         <div className="lg:col-span-2 space-y-4">
           {/* Stats + bulk action */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex gap-3">
               {[
                 { label: "Pending", value: pending.length, colour: "bg-gray-50 border-gray-200 text-gray-800" },
@@ -150,67 +201,86 @@ export default function AdminRemarketing() {
               <p className="text-sm text-gray-400">No delivered bookings in the last 30 days.</p>
             </div>
           ) : (
-            <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="border-b border-gray-100 bg-gray-50">
-                  <tr>
-                    <th className="w-10 px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selected.size === pending.length && pending.length > 0}
-                        onChange={() => selected.size === pending.length ? setSelected(new Set()) : selectAll()}
-                        className="rounded"
-                      />
-                    </th>
-                    {["Booking Ref", "Customer Email", "Delivered", "Status", "Action"].map((h) => (
-                      <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {(records ?? []).map((r) => (
-                    <tr key={r.booking_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        {r.email_status === "pending" && (
+            <>
+              {/* Mobile card list */}
+              <div className="space-y-3 lg:hidden">
+                {(records ?? []).map((r) => (
+                  <RemarketingCard
+                    key={r.booking_id}
+                    record={r}
+                    selected={selected.has(r.booking_id)}
+                    onToggleSelect={toggleSelect}
+                    onSendOne={handleSendOne}
+                    isSending={sendEmails.isPending}
+                  />
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden rounded-lg border border-gray-200 bg-white shadow-sm lg:block overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="border-b border-gray-100 bg-gray-50">
+                      <tr>
+                        <th className="w-10 px-4 py-3">
                           <input
                             type="checkbox"
-                            checked={selected.has(r.booking_id)}
-                            onChange={() => toggleSelect(r.booking_id)}
+                            checked={selected.size === pending.length && pending.length > 0}
+                            onChange={() => selected.size === pending.length ? setSelected(new Set()) : selectAll()}
                             className="rounded"
                           />
-                        )}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-sm font-semibold text-gray-700">
-                        {r.booking_ref}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{r.customer_email}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {new Date(r.delivered_at).toLocaleDateString("en-IN")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={cn("inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium", EMAIL_STATUS_COLOURS[r.email_status])}>
-                          {r.email_status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {r.email_status === "pending" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-7"
-                            disabled={sendEmails.isPending}
-                            onClick={() => handleSendOne(r.booking_id)}
-                          >
-                            <Send className="h-3 w-3 mr-1" />
-                            Send
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        </th>
+                        {["Booking Ref", "Customer Email", "Delivered", "Status", "Action"].map((h) => (
+                          <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {(records ?? []).map((r) => (
+                        <tr key={r.booking_id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            {r.email_status === "pending" && (
+                              <input
+                                type="checkbox"
+                                checked={selected.has(r.booking_id)}
+                                onChange={() => toggleSelect(r.booking_id)}
+                                className="rounded"
+                              />
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-sm font-semibold text-gray-700">
+                            {r.booking_ref}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{r.customer_email}</td>
+                          <td className="px-4 py-3 text-xs text-gray-500">
+                            {new Date(r.delivered_at).toLocaleDateString("en-IN")}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={cn("inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium", EMAIL_STATUS_COLOURS[r.email_status])}>
+                              {r.email_status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {r.email_status === "pending" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-7"
+                                disabled={sendEmails.isPending}
+                                onClick={() => handleSendOne(r.booking_id)}
+                              >
+                                <Send className="h-3 w-3 mr-1" />
+                                Send
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
           )}
         </div>
 

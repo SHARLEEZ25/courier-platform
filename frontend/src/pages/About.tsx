@@ -106,7 +106,7 @@ const About = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white font-sans text-[#0D0D0D]">
+    <div className="min-h-screen overflow-x-hidden bg-white font-sans text-[#0D0D0D]">
       <TopBar />
       <Navbar />
 

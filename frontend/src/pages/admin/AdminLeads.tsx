@@ -28,7 +28,7 @@ const SOURCE_LABELS: Record<AdminLead["source"], string> = {
   quote:        "Quote Tool",
 };
 
-function LeadRow({ lead }: { lead: AdminLead }) {
+function useLeadStatusActions(lead: AdminLead) {
   const { toast } = useToast();
   const update = useUpdateLeadStatus(lead.id);
 
@@ -40,6 +40,81 @@ function LeadRow({ lead }: { lead: AdminLead }) {
       toast({ title: "Failed", variant: "destructive" });
     }
   }
+
+  return { update, handleStatus };
+}
+
+function LeadStatusActions({ lead, isPending, onStatus }: { lead: AdminLead; isPending: boolean; onStatus: (s: AdminLead["status"]) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {lead.status === "new" && (
+        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => onStatus("contacted")}>
+          {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Contacted"}
+        </Button>
+      )}
+      {(lead.status === "new" || lead.status === "contacted") && (
+        <Button size="sm" className="text-xs h-7 bg-green-600 hover:bg-green-700" onClick={() => onStatus("converted")}>
+          {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Converted"}
+        </Button>
+      )}
+      {lead.status !== "lost" && lead.status !== "converted" && (
+        <Button size="sm" variant="ghost" className="text-xs h-7 text-gray-400" onClick={() => onStatus("lost")}>
+          Lost
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function LeadCard({ lead }: { lead: AdminLead }) {
+  const { update, handleStatus } = useLeadStatusActions(lead);
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold text-gray-800">{lead.name}</p>
+          <p className="text-xs text-gray-400">
+            {new Date(lead.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+          </p>
+        </div>
+        <span className={cn("inline-flex shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium", STATUS_COLOURS[lead.status])}>
+          {lead.status}
+        </span>
+      </div>
+
+      <div className="mt-2 space-y-0.5">
+        {lead.email && (
+          <div className="flex items-center gap-1 text-xs text-gray-600">
+            <Mail className="h-3.5 w-3.5 text-gray-400" />
+            {lead.email}
+          </div>
+        )}
+        {lead.phone && (
+          <div className="flex items-center gap-1 text-xs text-gray-600">
+            <Phone className="h-3.5 w-3.5 text-gray-400" />
+            {lead.phone}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-2 flex items-center gap-2">
+        <Badge variant="outline" className="text-xs">{SOURCE_LABELS[lead.source]}</Badge>
+      </div>
+
+      {lead.message && (
+        <p className="mt-2 text-xs text-gray-600 line-clamp-2">{lead.message}</p>
+      )}
+
+      <div className="mt-3">
+        <LeadStatusActions lead={lead} isPending={update.isPending} onStatus={handleStatus} />
+      </div>
+    </div>
+  );
+}
+
+function LeadRow({ lead }: { lead: AdminLead }) {
+  const { update, handleStatus } = useLeadStatusActions(lead);
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
@@ -75,23 +150,7 @@ function LeadRow({ lead }: { lead: AdminLead }) {
         </span>
       </td>
       <td className="px-4 py-3">
-        <div className="flex flex-wrap gap-1">
-          {lead.status === "new" && (
-            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleStatus("contacted")}>
-              {update.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Contacted"}
-            </Button>
-          )}
-          {(lead.status === "new" || lead.status === "contacted") && (
-            <Button size="sm" className="text-xs h-7 bg-green-600 hover:bg-green-700" onClick={() => handleStatus("converted")}>
-              {update.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Converted"}
-            </Button>
-          )}
-          {lead.status !== "lost" && lead.status !== "converted" && (
-            <Button size="sm" variant="ghost" className="text-xs h-7 text-gray-400" onClick={() => handleStatus("lost")}>
-              Lost
-            </Button>
-          )}
-        </div>
+        <LeadStatusActions lead={lead} isPending={update.isPending} onStatus={handleStatus} />
       </td>
     </tr>
   );
@@ -118,7 +177,7 @@ export default function AdminLeads() {
   const thisWeek    = leads?.filter((l) => new Date(l.created_at).getTime() > thisWeekMs).length ?? 0;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -154,7 +213,7 @@ export default function AdminLeads() {
           placeholder="Search name, email, phone…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-56"
+          className="w-full sm:w-56"
         />
         <Select value={filterStatus || "all"} onValueChange={(v) => setFilterStatus(v === "all" ? "" : v)}>
           <SelectTrigger className="w-36">
@@ -186,29 +245,35 @@ export default function AdminLeads() {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
         </div>
-      ) : (
-        <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="border-b border-gray-100 bg-gray-50">
-              <tr>
-                {["Name / Date", "Contact", "Source", "Message", "Status", "Actions"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400">
-                    No leads match the current filters.
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((l) => <LeadRow key={l.id} lead={l} />)
-              )}
-            </tbody>
-          </table>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-lg border border-gray-200 bg-white py-12 text-center text-sm text-gray-400 shadow-sm">
+          No leads match the current filters.
         </div>
+      ) : (
+        <>
+          {/* Mobile card list */}
+          <div className="space-y-3 lg:hidden">
+            {filtered.map((l) => <LeadCard key={l.id} lead={l} />)}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden rounded-lg border border-gray-200 bg-white shadow-sm lg:block overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="border-b border-gray-100 bg-gray-50">
+                  <tr>
+                    {["Name / Date", "Contact", "Source", "Message", "Status", "Actions"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filtered.map((l) => <LeadRow key={l.id} lead={l} />)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

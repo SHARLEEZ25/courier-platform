@@ -193,7 +193,7 @@ export default function AdminBookingDetail() {
   const weightMismatchLevel = weightDiffPct > 20 ? "error" : weightDiffPct > 10 ? "warn" : actualKg > 0 ? "ok" : "none";
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Back + Header */}
       <div className="mb-4 flex items-center gap-3">
         <button

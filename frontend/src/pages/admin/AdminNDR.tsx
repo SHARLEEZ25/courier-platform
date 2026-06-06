@@ -48,16 +48,101 @@ function StatBadge({ label, value, colour }: { label: string; value: number; col
   );
 }
 
+function NDRNoteDialog({ record }: { record: AdminNDRRecord }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [text, setText] = useState("");
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="text-xs">
+          Add Note
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add NDR Note — {record.booking_ref}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div>
+            <Label className="text-xs">NDR Reason</Label>
+            <Select value={reason} onValueChange={setReason}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select reason…" />
+              </SelectTrigger>
+              <SelectContent>
+                {NDR_REASONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Notes</Label>
+            <Input
+              className="mt-1"
+              placeholder="Additional notes…"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+          </div>
+          <Button
+            className="w-full"
+            onClick={() => {
+              toast({ title: "Note saved (dummy)", description: "NDR note not persisted yet." });
+              setOpen(false);
+              setReason(""); setText("");
+            }}
+          >
+            Save Note
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function NDRCard({ record, onNavigate }: { record: AdminNDRRecord; onNavigate: (bookingId: string) => void }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <button
+          onClick={() => onNavigate(record.booking_id)}
+          className="font-mono text-sm text-blue-600 hover:underline flex items-center gap-1"
+        >
+          {record.booking_ref} <ExternalLink className="h-3 w-3 opacity-60" />
+        </button>
+        <span className={cn("inline-flex shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium", NDR_STATUS_COLOURS[record.status])}>
+          {record.status.replace("_", " ")}
+        </span>
+      </div>
+
+      <div className="mt-3 space-y-1.5 text-sm">
+        <p className="text-gray-700">{record.customer_name}</p>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs uppercase">{record.carrier_id}</Badge>
+          <span className="font-mono text-xs text-gray-500">{record.awb ?? "—"}</span>
+        </div>
+        <p className="text-xs text-gray-500">Destination: {record.destination_country}</p>
+        <p className="text-xs text-gray-500">
+          Last attempt: {new Date(record.last_attempt_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+        </p>
+        <p className="text-xs text-gray-500">Reason: {record.ndr_reason ?? "—"}</p>
+      </div>
+
+      <div className="mt-3">
+        <NDRNoteDialog record={record} />
+      </div>
+    </div>
+  );
+}
+
 export default function AdminNDR() {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { data: records, isLoading } = useAdminNDR();
 
   const [filterStatus, setFilterStatus] = useState("");
   const [filterCarrier, setFilterCarrier] = useState("");
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [noteReason, setNoteReason] = useState("");
-  const [noteText, setNoteText] = useState("");
 
   const filtered = (records ?? []).filter((r) => {
     if (filterStatus && r.status !== filterStatus) return false;
@@ -70,7 +155,7 @@ export default function AdminNDR() {
   const unresolved = records?.filter((r) => r.status === "unresolved").length ?? 0;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -136,92 +221,61 @@ export default function AdminNDR() {
           <p className="text-xs text-gray-400">NDR events will appear here once AfterShip is integrated.</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="border-b border-gray-100 bg-gray-50">
-              <tr>
-                {["Booking Ref", "Customer", "AWB", "Carrier", "Destination", "Last Attempt", "NDR Reason", "Status", "Actions"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => navigate(`/admin/bookings/${r.booking_id}`)}
-                      className="font-mono text-sm text-blue-600 hover:underline flex items-center gap-1"
-                    >
-                      {r.booking_ref} <ExternalLink className="h-3 w-3 opacity-60" />
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{r.customer_name}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-600">{r.awb ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className="text-xs uppercase">{r.carrier_id}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{r.destination_country}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500">
-                    {new Date(r.last_attempt_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{r.ndr_reason ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-xs font-medium", NDR_STATUS_COLOURS[r.status])}>
-                      {r.status.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Dialog open={noteOpen} onOpenChange={setNoteOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-xs">
-                          Add Note
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Add NDR Note — {r.booking_ref}</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 pt-2">
-                          <div>
-                            <Label className="text-xs">NDR Reason</Label>
-                            <Select value={noteReason} onValueChange={setNoteReason}>
-                              <SelectTrigger className="mt-1">
-                                <SelectValue placeholder="Select reason…" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {NDR_REASONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="text-xs">Notes</Label>
-                            <Input
-                              className="mt-1"
-                              placeholder="Additional notes…"
-                              value={noteText}
-                              onChange={(e) => setNoteText(e.target.value)}
-                            />
-                          </div>
-                          <Button
-                            className="w-full"
-                            onClick={() => {
-                              toast({ title: "Note saved (dummy)", description: "NDR note not persisted yet." });
-                              setNoteOpen(false);
-                              setNoteReason(""); setNoteText("");
-                            }}
-                          >
-                            Save Note
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Mobile card list */}
+          <div className="space-y-3 lg:hidden">
+            {filtered.map((r) => (
+              <NDRCard key={r.id} record={r} onNavigate={(bookingId) => navigate(`/admin/bookings/${bookingId}`)} />
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden rounded-lg border border-gray-200 bg-white shadow-sm lg:block overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="border-b border-gray-100 bg-gray-50">
+                  <tr>
+                    {["Booking Ref", "Customer", "AWB", "Carrier", "Destination", "Last Attempt", "NDR Reason", "Status", "Actions"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filtered.map((r) => (
+                    <tr key={r.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => navigate(`/admin/bookings/${r.booking_id}`)}
+                          className="font-mono text-sm text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          {r.booking_ref} <ExternalLink className="h-3 w-3 opacity-60" />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{r.customer_name}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-gray-600">{r.awb ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className="text-xs uppercase">{r.carrier_id}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{r.destination_country}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500">
+                        {new Date(r.last_attempt_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{r.ndr_reason ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-xs font-medium", NDR_STATUS_COLOURS[r.status])}>
+                          {r.status.replace("_", " ")}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <NDRNoteDialog record={r} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

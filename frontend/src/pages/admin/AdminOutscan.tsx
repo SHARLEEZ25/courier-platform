@@ -14,13 +14,13 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, SendHorizonal, CheckCircle2, Package, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const CARRIER_LABELS: Record<string, string> = {
   dhl: "DHL", fedex: "FedEx", ups: "UPS", aramex: "Aramex",
 };
 
-function OutscanRow({ booking, onDone }: { booking: AdminBookingListItem; onDone: () => void }) {
-  const navigate = useNavigate();
+function useOutscanActions(booking: AdminBookingListItem, onDone: () => void) {
   const { toast } = useToast();
   const outscan = useOutscanBooking(booking.id);
   const [awb, setAwb] = useState("");
@@ -36,6 +36,90 @@ function OutscanRow({ booking, onDone }: { booking: AdminBookingListItem; onDone
       toast({ title: "Outscan failed", description: (err as Error).message, variant: "destructive" });
     }
   }
+
+  return { outscan, awb, setAwb, handleOutscan };
+}
+
+function OutscanForm({
+  booking, awb, onAwbChange, onSubmit, isPending, className,
+}: {
+  booking: AdminBookingListItem;
+  awb: string;
+  onAwbChange: (v: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  isPending: boolean;
+  className?: string;
+}) {
+  return (
+    <form onSubmit={onSubmit} className={cn("flex gap-2", className)}>
+      <Input
+        placeholder={`${CARRIER_LABELS[booking.carrier_id] ?? "Carrier"} AWB…`}
+        value={awb}
+        onChange={(e) => onAwbChange(e.target.value)}
+        required
+        className="flex-1 h-8 text-sm"
+      />
+      <Button
+        type="submit"
+        size="sm"
+        disabled={!awb.trim() || isPending}
+        className="bg-indigo-600 hover:bg-indigo-700 shrink-0"
+      >
+        {isPending
+          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          : <><SendHorizonal className="h-3.5 w-3.5 mr-1" />Outscan</>}
+      </Button>
+    </form>
+  );
+}
+
+function OutscanCard({ booking, onDone }: { booking: AdminBookingListItem; onDone: () => void }) {
+  const navigate = useNavigate();
+  const { outscan, awb, setAwb, handleOutscan } = useOutscanActions(booking, onDone);
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <button
+          onClick={() => navigate(`/admin/bookings/${booking.id}`)}
+          className="font-mono text-sm font-semibold text-blue-600 hover:underline flex items-center gap-1"
+        >
+          {booking.booking_ref}
+          <ExternalLink className="h-3 w-3 opacity-60" />
+        </button>
+        <Badge variant="outline" className="text-xs font-semibold uppercase shrink-0">
+          {CARRIER_LABELS[booking.carrier_id] ?? booking.carrier_id}
+        </Badge>
+      </div>
+      <p className="text-xs text-gray-400 mt-0.5">
+        {new Date(booking.created_at).toLocaleDateString("en-IN")}
+      </p>
+
+      <div className="mt-3 space-y-1 text-sm">
+        <p className="font-medium text-gray-800">{booking.sender_company}</p>
+        <p className="text-xs text-gray-400">{booking.sender_mobile}</p>
+        <p className="text-gray-700">{booking.origin_country} → {booking.destination_country}</p>
+        <p className="font-semibold text-gray-800">{booking.chargeable_weight_kg} kg</p>
+        <p className="text-xs text-gray-400">
+          Inscanned {new Date(booking.updated_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+        </p>
+      </div>
+
+      <OutscanForm
+        booking={booking}
+        awb={awb}
+        onAwbChange={setAwb}
+        onSubmit={handleOutscan}
+        isPending={outscan.isPending}
+        className="mt-3"
+      />
+    </div>
+  );
+}
+
+function OutscanRow({ booking, onDone }: { booking: AdminBookingListItem; onDone: () => void }) {
+  const navigate = useNavigate();
+  const { outscan, awb, setAwb, handleOutscan } = useOutscanActions(booking, onDone);
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
@@ -70,25 +154,7 @@ function OutscanRow({ booking, onDone }: { booking: AdminBookingListItem; onDone
         {new Date(booking.updated_at).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
       </td>
       <td className="px-4 py-3 min-w-[280px]">
-        <form onSubmit={handleOutscan} className="flex gap-2">
-          <Input
-            placeholder={`${CARRIER_LABELS[booking.carrier_id] ?? "Carrier"} AWB…`}
-            value={awb}
-            onChange={(e) => setAwb(e.target.value)}
-            required
-            className="flex-1 h-8 text-sm"
-          />
-          <Button
-            type="submit"
-            size="sm"
-            disabled={!awb.trim() || outscan.isPending}
-            className="bg-indigo-600 hover:bg-indigo-700 shrink-0"
-          >
-            {outscan.isPending
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              : <><SendHorizonal className="h-3.5 w-3.5 mr-1" />Outscan</>}
-          </Button>
-        </form>
+        <OutscanForm booking={booking} awb={awb} onAwbChange={setAwb} onSubmit={handleOutscan} isPending={outscan.isPending} />
       </td>
     </tr>
   );
@@ -105,9 +171,9 @@ export default function AdminOutscan() {
   );
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 sm:p-6 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
             <SendHorizonal className="h-5 w-5 text-indigo-600" />
@@ -162,28 +228,44 @@ export default function AdminOutscan() {
             <p className="text-xs text-gray-400">No in-transit bookings are missing an AWB.</p>
           </div>
         ) : (
-          <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <table className="w-full text-left">
-              <thead className="border-b border-gray-100 bg-gray-50">
-                <tr>
-                  {["Booking", "Customer", "Carrier", "Route", "Weight", "Inscanned At", "Assign AWB"].map((h) => (
-                    <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {bookings.map((b) => (
-                  <OutscanRow
-                    key={b.id}
-                    booking={b}
-                    onDone={() => setCompletedIds((s) => new Set(s).add(b.id))}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Mobile card list */}
+            <div className="space-y-3 lg:hidden">
+              {bookings.map((b) => (
+                <OutscanCard
+                  key={b.id}
+                  booking={b}
+                  onDone={() => setCompletedIds((s) => new Set(s).add(b.id))}
+                />
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden rounded-lg border border-gray-200 bg-white shadow-sm lg:block overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="border-b border-gray-100 bg-gray-50">
+                    <tr>
+                      {["Booking", "Customer", "Carrier", "Route", "Weight", "Inscanned At", "Assign AWB"].map((h) => (
+                        <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {bookings.map((b) => (
+                      <OutscanRow
+                        key={b.id}
+                        booking={b}
+                        onDone={() => setCompletedIds((s) => new Set(s).add(b.id))}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )
       )}
     </div>
