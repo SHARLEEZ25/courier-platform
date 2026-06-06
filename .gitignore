@@ -5,6 +5,7 @@ rate-cards/
 CLAUDE.md
 .claude/worktrees/
 .claude/skills/
+.claude/settings.local.json
 .agents/
 skills-lock.json
 
